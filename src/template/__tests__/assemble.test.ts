@@ -4,6 +4,7 @@ import { defaultEmailDocument } from '../../registry'
 import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
 import { inlineTheme } from '../../themes/inlineTheme'
+import { resolveGlobalVars } from '../../global/vars'
 
 describe('assembleEmailHtml', () => {
   it('replaces the FOOTER marker exactly once with the rendered footer snippet', () => {
@@ -50,10 +51,38 @@ describe('assembleEmailHtml', () => {
 
   it('touches nothing besides the theme and the FOOTER marker', () => {
     const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'problack' } }
-    const expected = inlineTheme(templateBaseRaw, 'problack').replace(
+    const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)).replace(
       '<!-- FOOTER -->',
       renderFooterSnippet(doc.footer, 'problack'),
     )
     expect(assembleEmailHtml(doc)).toBe(expected)
+  })
+})
+
+describe('assembleEmailHtml · fondo personalizado', () => {
+  const withFondo = (fondoUrl: string) =>
+    assembleEmailHtml({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, fondoUrl } })
+
+  it('drops the URL into the bg_imgevento_mail_general of the fondomobile td', () => {
+    const url = 'https://lh3.googleusercontent.com/d/1qztlsmSfPI2eNsQ'
+    expect(withFondo(url)).toContain(`background-image: url(${url})`)
+  })
+
+  it('leaves url() empty when no background is set, as it was before', () => {
+    // Ningún tema asigna bg_imgevento_mail_general, así que sin fondo la
+    // variable resuelve a vacío — el comportamiento histórico.
+    expect(withFondo('')).toContain('background-image: url()')
+  })
+
+  it('escapes what would break out of the url(...)', () => {
+    const html = withFondo('https://x.test/a(b).png')
+    expect(html).toContain('background-image: url(https://x.test/a%28b%29.png)')
+    expect(html).not.toContain('a(b).png')
+  })
+
+  it('accepts Liquid as the background, for a Braze content block', () => {
+    expect(withFondo('{{content_blocks.${FONDO}}}')).toContain(
+      'background-image: url({{content_blocks.${FONDO}}})',
+    )
   })
 })

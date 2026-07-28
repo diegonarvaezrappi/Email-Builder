@@ -7,8 +7,11 @@
 // Solo se toca lo del tema. El resto del Liquid se conserva intacto porque lo
 // necesita Braze: `{{content_blocks.${...}}}`, los `${...}` de atributos, y los
 // `{% assign %}` / `{% if font_style_look %}` del footer.
+//
+// Recibe el mapa de variables ya resuelto (lo arma global/vars.ts) en vez del
+// nombre del tema: así los ajustes globales que no son del tema — como el
+// fondo personalizado — entran por el mismo camino.
 // ============================================================================
-import { themeVars } from './themes'
 
 /**
  * Referencias a variables de tema. El sufijo `_mail_general` es lo que las
@@ -50,13 +53,14 @@ export function stripThemeDefinitions(html: string): string {
 }
 
 /**
- * Limpia las definiciones y resuelve las variables del tema indicado.
+ * Limpia las definiciones de temas y resuelve las variables con los valores
+ * dados (ver global/vars.ts).
  *
  * Al final se descarta el espacio en blanco inicial que dejan el assign y el
  * comentario borrados, para que el HTML arranque en su `<!doctype html>`. Solo
  * espacios: si el maestro llegara a tener otro Liquid antes del doctype, se
  * conserva.
  */
-export function inlineTheme(html: string, slug: string): string {
-  return resolveThemeVars(stripThemeDefinitions(html), themeVars(slug)).replace(/^\s+/, '')
+export function inlineTheme(html: string, vars: Record<string, string>): string {
+  return resolveThemeVars(stripThemeDefinitions(html), vars).replace(/^\s+/, '')
 }

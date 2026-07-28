@@ -2,6 +2,7 @@ import templateBaseRaw from '../assets/templates/template_base.html?raw'
 import { SLOT_ORDER, type EmailDocument } from '../model'
 import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
+import { resolveGlobalVars } from '../global/vars'
 
 /**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
@@ -15,7 +16,7 @@ import { inlineTheme } from '../themes/inlineTheme'
 export function assembleEmailHtml(doc: EmailDocument): string {
   // El tema no se deja como Liquid: sus variables salen con el valor puesto y
   // las 11 ramas condicionales se borran, así el HTML para Braze va limpio.
-  let html = inlineTheme(templateBaseRaw, doc.global.tema)
+  let html = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]

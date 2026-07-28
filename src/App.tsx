@@ -5,7 +5,7 @@ import type { SlotName } from './model'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
-import { ThemeSelect } from './ui/ThemeSelect'
+import { ToolbarGlobals } from './ui/ToolbarGlobals'
 import { applyTheme, getEffectiveTheme, type Theme } from './ui/theme'
 
 function App() {
@@ -42,7 +42,7 @@ function App() {
         <div className="toolbar-brand">
           <h1>Email Builder — Braze / Liquid</h1>
           <span className="toolbar-divider" aria-hidden="true" />
-          <ThemeSelect value={doc.global} onChange={setGlobalFields} />
+          <ToolbarGlobals value={doc.global} onChange={setGlobalFields} />
         </div>
         <span className={`save-status${saveStatus === 'error' ? ' error' : ''}`}>{saveStatusLabel}</span>
         <button type="button" onClick={undo} disabled={!canUndo}>

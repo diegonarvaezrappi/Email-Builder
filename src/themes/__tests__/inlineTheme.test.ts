@@ -83,24 +83,23 @@ describe('inlineTheme', () => {
       '<td bgcolor="{{bg_solid_mail_general}}">{{content_blocks.${X}}}</td>',
     ].join('\n')
 
-    const out = inlineTheme(html, 'beige100')
+    const out = inlineTheme(html, { bg_solid_mail_general: '#FFF0DD' })
     expect(out).toContain('<td bgcolor="#FFF0DD">')
     expect(out).toContain('{{content_blocks.${X}}}')
     expect(out).not.toMatch(/tema_general_mail_general|_mail_general\}\}/)
   })
 
-  it('empties the theme variables when the theme does not exist', () => {
-    const out = inlineTheme('<td bgcolor="{{bg_solid_mail_general}}">', 'no-existe')
-    expect(out).toBe('<td bgcolor="">')
+  it('empties the variables it was given no value for', () => {
+    expect(inlineTheme('<td bgcolor="{{bg_solid_mail_general}}">', {})).toBe('<td bgcolor="">')
   })
 
   it('starts the document at its doctype, with no whitespace left behind', () => {
     const html = ["{% assign tema_general_mail_general = 'beige100' %}", '', '\t\t  ', '', '<!doctype html>'].join('\n')
-    expect(inlineTheme(html, 'beige100')).toBe('<!doctype html>')
+    expect(inlineTheme(html, {})).toBe('<!doctype html>')
   })
 
   it('keeps any non-theme Liquid that sits before the doctype', () => {
     const html = "{% assign otra_cosa = 'x' %}\n<!doctype html>"
-    expect(inlineTheme(html, 'beige100')).toBe(html)
+    expect(inlineTheme(html, {})).toBe(html)
   })
 })

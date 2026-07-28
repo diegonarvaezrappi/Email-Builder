@@ -35,7 +35,7 @@
   background: var(--border);
 }
 
-.toolbar-theme {
+.toolbar-field {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -43,13 +43,58 @@
   color: var(--text);
 }
 
-.toolbar-theme select {
+.toolbar-field select,
+.toolbar-field input {
   font: inherit;
   font-size: 13px;
   padding: 5px 8px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg);
+  color: var(--text-h);
+}
+
+/* El campo de fondo cede espacio antes que el resto de la barra. */
+.toolbar-field-fondo {
+  position: relative;
+  min-width: 0;
+  flex: 0 1 320px;
+}
+
+.toolbar-field-fondo input {
+  width: 100%;
+  min-width: 0;
+  /* Deja sitio a la × de limpiar. */
+  padding-right: 26px;
+  text-overflow: ellipsis;
+}
+
+.toolbar-field input:focus-visible,
+.toolbar-field select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.toolbar-clear {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toolbar-clear:hover {
+  background: var(--border);
   color: var(--text-h);
 }
 

@@ -16,7 +16,8 @@ import footerSinAmorRaw from '../assets/templates/footer_sinamor.html?raw'
 import { renderFooterAssignLines } from '../components/footer/render'
 import type { FooterFields, TipoFooter } from '../components/footer/schema'
 import { resolveThemeVars } from '../themes/inlineTheme'
-import { themeVars } from '../themes/themes'
+import { resolveGlobalVars } from '../global/vars'
+import type { GlobalFields } from '../global/schema'
 
 export const PREVIEW_COUNTRIES = ['AR', 'BR', 'CL', 'CO', 'CR', 'EC', 'MX', 'PE', 'UY'] as const
 export type PreviewCountry = (typeof PREVIEW_COUNTRIES)[number]
@@ -98,18 +99,28 @@ export interface FooterPreviewResult {
 }
 
 /**
- * Envuelve el footer renderizado en el fondo y color de texto del tema, que es
- * lo que le da el mail real (`bg_solid_mail_general` en el wrapper del maestro).
- * Sin esto el preview se vería siempre sobre blanco y cambiar de tema no se
- * notaría, porque los content blocks del footer no usan variables de tema.
+ * Envuelve el footer renderizado en la superficie que le da el mail real:
+ * el fondo y color de texto del tema (`bg_solid_mail_general` /
+ * `color_texto_mail_general` del wrapper del maestro) y, si se fijó uno, la
+ * imagen de fondo (`bg_imgevento_mail_general`) con las MISMAS propiedades que
+ * el `<td class="fondomobile">` del maestro. El footer va dentro de ese td, así
+ * que el fondo efectivamente se ve detrás de él.
+ *
+ * Sin esto, el preview se vería siempre sobre blanco y ni el tema ni el fondo
+ * se notarían, porque los content blocks del footer no usan estas variables.
  */
 function wrapInThemeSurface(bodyHtml: string, vars: Record<string, string>): string {
   const bg = vars.bg_solid_mail_general || '#ffffff'
   const fg = vars.color_texto_mail_general || '#000000'
+  const fondo = vars.bg_imgevento_mail_general
+  const fondoCss = fondo
+    ? `background-image:url(${fondo});background-size:100% auto;` +
+      'background-position:center top;background-repeat:no-repeat;'
+    : ''
   return [
     '<!doctype html><html><head><meta charset="utf-8"><style>',
     'html,body{margin:0;padding:0}',
-    `body{background:${bg};color:${fg};font-family:arial,helvetica,sans-serif}`,
+    `body{background-color:${bg};${fondoCss}color:${fg};font-family:arial,helvetica,sans-serif}`,
     '</style></head><body>',
     bodyHtml,
     '</body></html>',
@@ -119,10 +130,13 @@ function wrapInThemeSurface(bodyHtml: string, vars: Record<string, string>): str
 export async function renderFooterPreview(
   fields: FooterFields,
   country: PreviewCountry,
-  tema: string,
+  global: GlobalFields,
 ): Promise<FooterPreviewResult> {
-  const vars = themeVars(tema)
-  const source = [...renderFooterAssignLines(fields, tema), CONTENT_BLOCK_BODY_BY_TIPO[fields.tipoFooter]].join('\n')
+  const vars = resolveGlobalVars(global)
+  const source = [
+    ...renderFooterAssignLines(fields, global.tema),
+    CONTENT_BLOCK_BODY_BY_TIPO[fields.tipoFooter],
+  ].join('\n')
   // Las variables de tema se resuelven antes de Liquid, igual que en el HTML
   // exportado (themes/inlineTheme.ts) — hoy los content blocks del footer no
   // usan ninguna, pero así el preview no miente si mañana las usan.

@@ -38,7 +38,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
 
   useEffect(() => {
     let cancelled = false
-    renderFooterPreview(doc.footer, country, doc.global.tema).then((result) => {
+    renderFooterPreview(doc.footer, country, doc.global).then((result) => {
       if (cancelled) return
       setPreviewHtml(result.html)
       setPreviewError(result.error)
@@ -46,7 +46,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
     return () => {
       cancelled = true
     }
-  }, [doc.footer, country, doc.global.tema])
+  }, [doc.footer, country, doc.global])
 
   const handleCopy = async () => {
     try {
