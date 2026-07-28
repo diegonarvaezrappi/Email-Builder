@@ -4,6 +4,7 @@ import type { EmailDocument, SlotName } from './model'
 import { defaultFooterFields, footerSchema, type FooterFields } from './components/footer/schema'
 import { renderFooterSnippet } from './components/footer/render'
 import { FooterPropertiesPanel } from './components/footer/PropertiesPanel'
+import { defaultGlobalFields } from './global/schema'
 
 /**
  * Definición de un slot registrable. `render` recibe el documento completo
@@ -30,8 +31,17 @@ const footerSlotDef: SlotDef<FooterFields> = {
   docKey: 'footer',
   schema: footerSchema,
   defaultFields: defaultFooterFields,
-  render: (fields) => renderFooterSnippet(fields),
+  render: (fields, doc) => renderFooterSnippet(fields, doc.global.tema),
   PropertiesPanel: FooterPropertiesPanel,
+}
+
+/** Label del slot en la librería de componentes (panel izquierdo). */
+export const SLOT_LABELS: Record<SlotName, string> = {
+  HEADER: 'Header',
+  BANNER: 'Banner',
+  CONTENIDOS: 'Contenidos',
+  CIERRE: 'Cierre',
+  FOOTER: 'Footer',
 }
 
 /**
@@ -45,5 +55,6 @@ export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
 }
 
 export const defaultEmailDocument: EmailDocument = {
+  global: defaultGlobalFields,
   footer: defaultFooterFields,
 }

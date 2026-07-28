@@ -98,8 +98,9 @@ export interface FooterPreviewResult {
 export async function renderFooterPreview(
   fields: FooterFields,
   country: PreviewCountry,
+  tema: string,
 ): Promise<FooterPreviewResult> {
-  const source = [...renderFooterAssignLines(fields), CONTENT_BLOCK_BODY_BY_TIPO[fields.tipoFooter]].join('\n')
+  const source = [...renderFooterAssignLines(fields, tema), CONTENT_BLOCK_BODY_BY_TIPO[fields.tipoFooter]].join('\n')
   const preprocessed = preprocessBrazeShorthand(source)
   const engine = getPreviewEngine()
 

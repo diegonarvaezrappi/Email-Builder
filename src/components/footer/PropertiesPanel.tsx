@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, TIPO_KV_VALUES, TIPO_KV_LABELS } from './schema'
+import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS } from './schema'
 import type { FooterFields } from './schema'
 
 interface FooterPropertiesPanelProps {
@@ -14,22 +14,6 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
 
   return (
     <div className="properties-panel">
-      <h2>Footer</h2>
-
-      <label className="field">
-        <span>Tipo de Kv</span>
-        <select
-          value={value.tipoKv}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => set('tipoKv', e.target.value as FooterFields['tipoKv'])}
-        >
-          {TIPO_KV_VALUES.map((kv) => (
-            <option key={kv} value={kv}>
-              {TIPO_KV_LABELS[kv]}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <label className="field">
         <span>Tipo de Footer</span>
         <select

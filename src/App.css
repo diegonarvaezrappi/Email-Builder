@@ -56,38 +56,127 @@
   color: var(--danger);
 }
 
-/* --- Layout de 2 paneles ---------------------------------------------- */
+/* --- Layout de 3 paneles: librería | viewport | inspector --------------- */
 .app-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 340px;
   flex: 1;
   min-height: 0;
 }
 
-.panel-form {
-  width: 340px;
-  flex-shrink: 0;
+.panel-library,
+.panel-inspector {
   overflow-y: auto;
-  border-right: 1px solid var(--border);
   background: var(--bg-panel);
   padding: 20px;
 }
 
-.panel-preview {
-  flex: 1;
+.panel-library {
+  border-right: 1px solid var(--border);
+}
+
+.panel-inspector {
+  border-left: 1px solid var(--border);
+}
+
+.panel-viewport {
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-/* --- Formulario de propiedades ----------------------------------------- */
-.properties-panel h2 {
+/* --- Panel izquierdo: librería + globales ------------------------------- */
+.lib-section + .lib-section {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.lib-section h2,
+.panel-inspector h2 {
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
+.lib-hint,
+.inspector-hint {
+  font-size: 12px;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.lib-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lib-item {
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lib-item:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--border);
+}
+
+.lib-item.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lib-item:disabled {
+  color: var(--text);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lib-item-name {
+  flex: 1;
+}
+
+.lib-item-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+/* --- Panel derecho vacío ------------------------------------------------ */
+.panel-inspector.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.panel-inspector.empty .inspector-hint {
+  margin: 0;
+  max-width: 22ch;
+  line-height: 1.6;
+}
+
+/* --- Formulario de propiedades ----------------------------------------- */
 .field {
   display: flex;
   flex-direction: column;
@@ -125,8 +214,8 @@
   color: var(--text-h);
 }
 
-/* --- Tabs de Preview/Código --------------------------------------------- */
-.preview-tabs {
+/* --- Barra de Preview/Código -------------------------------------------- */
+.viewport-bar {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -135,7 +224,7 @@
   flex-shrink: 0;
 }
 
-.preview-tabs button {
+.viewport-bar button {
   font: inherit;
   font-size: 13px;
   padding: 6px 14px;
@@ -146,13 +235,13 @@
   cursor: pointer;
 }
 
-.preview-tabs button.active {
+.viewport-bar button.active {
   background: var(--accent-bg);
   color: var(--accent);
   border-color: var(--accent-border);
 }
 
-.preview-tabs .country-select {
+.viewport-bar .country-select {
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -160,7 +249,7 @@
   font-size: 13px;
 }
 
-.preview-tabs select {
+.viewport-bar select {
   font: inherit;
   font-size: 13px;
   padding: 6px 8px;
@@ -170,23 +259,98 @@
   color: var(--text-h);
 }
 
-.preview-body {
+/* --- Canvas del email --------------------------------------------------- */
+.viewport-canvas {
   flex: 1;
   min-height: 0;
-  position: relative;
+  overflow-y: auto;
+  padding: 24px;
 }
 
-.preview-body iframe {
+.email-doc {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Slots todavía sin componente: solo comunican el orden real del mail. */
+.slot-pending {
+  padding: 22px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+}
+
+/* Bloque seleccionable del email (iframe + capa que captura el click). */
+.slot-block {
+  position: relative;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.slot-block:hover {
+  border-color: var(--accent-border);
+}
+
+.slot-block.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.slot-block iframe {
+  display: block;
   width: 100%;
-  height: 100%;
   border: 0;
   background: #fff;
 }
 
-.preview-error {
+/* Capa transparente sobre el iframe: dentro no corre JS, así que el click se
+   captura desde acá. */
+.slot-hit {
   position: absolute;
   inset: 0;
+  cursor: pointer;
+}
+
+.slot-hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.slot-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  padding: 2px 8px;
+  border-bottom-right-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--accent-bg);
+  color: var(--accent);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.slot-block:hover .slot-badge,
+.slot-block.selected .slot-badge {
+  opacity: 1;
+}
+
+.slot-block.error {
+  border-color: var(--danger);
   padding: 20px;
+}
+
+.preview-error {
   color: var(--danger);
   font-size: 13px;
   font-family: var(--mono);

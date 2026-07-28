@@ -1,4 +1,5 @@
 import { toLiquidStringLiteral, wrapUrlsAsFooterLinks } from '../../template/liquidText'
+import { colorFooterForTheme } from '../../themes/themes'
 import type { FooterFields, TipoFooter } from './schema'
 
 /** Nombre del Content Block de Braze a referenciar, según Tipo de Footer. */
@@ -12,13 +13,25 @@ export const FOOTER_CONTENT_BLOCK_BY_TIPO: Record<TipoFooter, string> = {
 export const FOOTER_SNIPPET_INDENT = ' '.repeat(28)
 
 /**
- * font_style_look: Generico/Turbo/TurboSelecto/Neutro -> 'negro', Pro/ProBlack -> 'pro'.
- * Si Tipo de Footer = RTS, se fuerza siempre a 'negro' sin importar el Tipo de Kv
- * (regla documentada en Referencias/instrucciones.md, sección B.5).
+ * font_style_look del footer. Lo define el TEMA, no el footer:
+ * `color_footer_mail_general` vale 'pro' en Pro/ProBlack y 'negro' en los otros
+ * 9 temas — ver 06-docs/GUIA-DE-TEMAS.md y el comentario de
+ * 03-components/footer/footer.html.
+ *
+ * Se emite el valor ya RESUELTO como literal ('negro' / 'pro'), igual que hace
+ * el footer.html del repo. Ojo: NO se puede emitir
+ * `{% assign font_style_look = '{{color_footer_mail_general}}' %}` — Liquid no
+ * interpola `{{ }}` dentro de un string literal, así que asignaría el texto
+ * crudo y no coincidiría con ninguna rama de estilo del content block. Esa
+ * variante estuvo en el repo (commits 4499862 y c88b818) y se revirtió en
+ * bf7e9eb justamente por eso.
+ *
+ * Excepción: con Tipo de Footer = RTS se fuerza 'negro' sin importar el tema
+ * (regla heredada de Referencias/instrucciones.md, sección B.5).
  */
-export function resolveFontStyleLook(fields: Pick<FooterFields, 'tipoKv' | 'tipoFooter'>): 'negro' | 'pro' {
-  if (fields.tipoFooter === 'RTS') return 'negro'
-  return fields.tipoKv === 'Pro' || fields.tipoKv === 'ProBlack' ? 'pro' : 'negro'
+export function resolveFontStyleLook(tema: string, tipoFooter: TipoFooter): string {
+  if (tipoFooter === 'RTS') return 'negro'
+  return colorFooterForTheme(tema)
 }
 
 /**
@@ -28,8 +41,8 @@ export function resolveFontStyleLook(fields: Pick<FooterFields, 'tipoKv' | 'tipo
  * con el cuerpo real del content block (en vez de con la referencia opaca
  * `{{content_blocks.$...}}`, que Liquid no puede resolver en el navegador).
  */
-export function renderFooterAssignLines(fields: FooterFields): string[] {
-  const fontStyleLook = resolveFontStyleLook(fields)
+export function renderFooterAssignLines(fields: FooterFields, tema: string): string[] {
+  const fontStyleLook = resolveFontStyleLook(tema, fields.tipoFooter)
   const cond = wrapUrlsAsFooterLinks(fields.legalesAdicionales)
   return [
     `{% assign cond = ${toLiquidStringLiteral(cond)} %}`,
@@ -49,8 +62,8 @@ export function renderFooterAssignLines(fields: FooterFields): string[] {
  * comentarios pedagógicos de Footer/footer.html son notas de autor, no
  * forman parte del output generado.
  */
-export function renderFooterSnippet(fields: FooterFields): string {
+export function renderFooterSnippet(fields: FooterFields, tema: string): string {
   const contentBlockName = FOOTER_CONTENT_BLOCK_BY_TIPO[fields.tipoFooter]
-  const lines = [...renderFooterAssignLines(fields), `{{content_blocks.\${${contentBlockName}}}}`]
+  const lines = [...renderFooterAssignLines(fields, tema), `{{content_blocks.\${${contentBlockName}}}}`]
   return lines.map((line) => FOOTER_SNIPPET_INDENT + line).join('\n')
 }

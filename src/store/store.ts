@@ -5,14 +5,21 @@
 import { create, useStore as useZustandStore } from 'zustand'
 import { temporal } from 'zundo'
 import type { EmailDocument } from '../model'
-import type { FooterFields } from '../components/footer/schema'
+import type { GlobalFields } from '../global/schema'
 import { loadDocument, saveDocument } from './persistence'
 
 interface BuilderState {
   document: EmailDocument
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
   saveError: string | null
-  setFooterFields: (fields: FooterFields) => void
+  /**
+   * Escribe los campos de un slot por su `docKey` del registry. Genérico a
+   * propósito: el panel de propiedades sale del registry, así que no puede
+   * conocer un setter por slot. `unknown` porque el registry es dinámico —
+   * lo que entra ya fue validado por el schema del slot.
+   */
+  setSlotFields: (docKey: keyof EmailDocument, fields: unknown) => void
+  setGlobalFields: (fields: GlobalFields) => void
 }
 
 export const useBuilder = create<BuilderState>()(
@@ -21,7 +28,9 @@ export const useBuilder = create<BuilderState>()(
       document: loadDocument(),
       saveStatus: 'idle',
       saveError: null,
-      setFooterFields: (fields) => set((s) => ({ document: { ...s.document, footer: fields } })),
+      setSlotFields: (docKey, fields) =>
+        set((s) => ({ document: { ...s.document, [docKey]: fields } as EmailDocument })),
+      setGlobalFields: (fields) => set((s) => ({ document: { ...s.document, global: fields } })),
     }),
     {
       limit: 100,

@@ -28,7 +28,7 @@ describe('preprocessBrazeShorthand', () => {
 
 describe('renderFooterPreview', () => {
   it('resolves real, visible legal copy for General/CO with no Liquid left over', async () => {
-    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'CO')
+    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'CO', 'beige100')
     expect(result.error).toBeUndefined()
     expect(result.html).toContain('Centro de ayuda')
     expect(result.html).toContain('RAPPI S.A.S.')
@@ -36,25 +36,25 @@ describe('renderFooterPreview', () => {
   })
 
   it('resolves country-specific copy for a different country (BR)', async () => {
-    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'BR')
+    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'BR', 'beige100')
     expect(result.error).toBeUndefined()
     expect(result.html).toContain('Rappi Brasil Intermediação de Negócios')
   })
 
   it('resolves the RTS variant without throwing', async () => {
-    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'RTS' }, 'MX')
+    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'RTS' }, 'MX', 'beige100')
     expect(result.error).toBeUndefined()
     expect(result.html.length).toBeGreaterThan(0)
   })
 
   it('resolves the RTS variant for BR (exercises the {{${x}}} if-condition convention)', async () => {
-    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'RTS' }, 'BR')
+    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'RTS' }, 'BR', 'beige100')
     expect(result.error).toBeUndefined()
     expect(result.html).not.toMatch(/\{%|\{\{/)
   })
 
   it('resolves the SinAmor variant without throwing', async () => {
-    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'SinAmor' }, 'AR')
+    const result = await renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'SinAmor' }, 'AR', 'beige100')
     expect(result.error).toBeUndefined()
     expect(result.html.length).toBeGreaterThan(0)
   })
@@ -63,7 +63,20 @@ describe('renderFooterPreview', () => {
     const result = await renderFooterPreview(
       { ...defaultFooterFields, tipoFooter: 'General', legalesAdicionales: 'Promo exclusiva de prueba' },
       'CO',
+      'beige100',
     )
     expect(result.html).toContain('Promo exclusiva de prueba')
+  })
+
+  it('picks up the pro footer styling from a Pro/ProBlack theme', async () => {
+    // El content block solo entra a su rama 'pro' si font_style_look llegó
+    // resuelto — es la comprobación de que el tema atraviesa hasta el preview.
+    const [negro, pro] = await Promise.all([
+      renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'CO', 'beige100'),
+      renderFooterPreview({ ...defaultFooterFields, tipoFooter: 'General' }, 'CO', 'problack'),
+    ])
+    expect(negro.error).toBeUndefined()
+    expect(pro.error).toBeUndefined()
+    expect(pro.html).not.toBe(negro.html)
   })
 })

@@ -7,7 +7,12 @@
 //    vive en un solo lugar (01-foundations) en vez de estar hardcodeado
 //    dentro del maestro.
 // 2. Copia 03-components/footer/*.html → src/assets/templates/ tal cual.
-// 3. VALIDA el contrato antes de escribir nada:
+// 3. Copia head-meta-tags.html SUELTO a src/assets/templates/ (además de
+//    inyectarlo en el maestro): la app parsea de ahí la lista de temas y el
+//    `color_footer_mail_general` de cada uno — ver src/themes/themes.ts. Así
+//    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
+//    agrega un tema nuevo la app lo levanta sin tocar código.
+// 4. VALIDA el contrato antes de escribir nada:
 //    - Los 4 marcadores de slot ya implementables como componente
 //      (BANNER, CONTENIDOS, CIERRE, FOOTER) deben aparecer EXACTAMENTE una
 //      vez en el maestro. HEADER queda fuera de este chequeo: en el maestro
@@ -15,6 +20,12 @@
 //      componente de header implementado en registry.ts).
 //    - Los 2 placeholders de 01-foundations deben aparecer EXACTAMENTE una
 //      vez cada uno.
+//    - El `{% assign tema_general_mail_general = '...' %}` del maestro debe
+//      aparecer EXACTAMENTE una vez (template/assemble.ts lo reescribe con el
+//      tema elegido).
+//    - head-meta-tags.html debe declarar al menos un tema, y CADA tema debe
+//      definir su `color_footer_mail_general` (de ahí sale el font_style_look
+//      del footer).
 //    Si algo falla → aborta SIN escribir nada, y la app conserva la última
 //    copia buena de los assets.
 //
@@ -48,6 +59,12 @@ const TEMPLATE_BASE_SOURCE = path.join('07-examples', 'test_claude_1_original.ht
 const TEMPLATE_BASE_FILE = 'template_base.html'
 const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
 
+/** Debe quedar sincronizado con TEMA_ASSIGN_RE de src/template/assemble.ts. */
+const TEMA_ASSIGN_RE = /\{%\s*assign\s+tema_general_mail_general\s*=\s*'[^']*'\s*%\}/g
+/** Deben quedar sincronizados con src/themes/themes.ts. */
+const THEME_BRANCH_RE = /tema_general_mail_general\s*==\s*'([^']+)'/g
+const COLOR_FOOTER_RE = /color_footer_mail_general\s*=\s*'([^']+)'/
+
 const FOUNDATIONS_INJECTIONS = [
   {
     file: 'head-meta-tags.html',
@@ -75,6 +92,13 @@ if (!fs.existsSync(templateBasePath)) {
       fail(`El marcador <!-- ${marker} --> aparece ${matches.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`)
     }
   }
+
+  const temaAssigns = templateBaseHtml.match(TEMA_ASSIGN_RE) ?? []
+  if (temaAssigns.length !== 1) {
+    fail(
+      `El {% assign tema_general_mail_general = '...' %} aparece ${temaAssigns.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+    )
+  }
 }
 
 // --- 01-foundations/global-styles: leer + validar placeholders -----------------
@@ -91,6 +115,26 @@ if (templateBaseHtml) {
     const count = templateBaseHtml.split(placeholder).length - 1
     if (count !== 1) {
       fail(`El placeholder de ${file} aparece ${count} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`)
+    }
+  }
+}
+
+// --- head-meta-tags.html: validar que los temas estén completos ------------------
+// Cada rama del {% if tema_general_mail_general == '...' %} debe asignar su
+// color_footer_mail_general; si falta en alguna, el footer de ese tema saldría
+// sin estilo y es mejor enterarse acá que en producción.
+const headMetaHtml = foundationsFileContents['head-meta-tags.html']
+let themeCount = 0
+if (headMetaHtml) {
+  const branches = [...headMetaHtml.matchAll(THEME_BRANCH_RE)]
+  themeCount = branches.length
+  if (themeCount === 0) {
+    fail('head-meta-tags.html no declara ningún tema (no se encontró tema_general_mail_general == \'...\')')
+  }
+  for (const [i, branch] of branches.entries()) {
+    const chunk = headMetaHtml.slice(branch.index, branches[i + 1]?.index ?? headMetaHtml.length)
+    if (!COLOR_FOOTER_RE.test(chunk)) {
+      fail(`El tema '${branch[1]}' no define color_footer_mail_general en head-meta-tags.html`)
     }
   }
 }
@@ -128,8 +172,11 @@ fs.writeFileSync(path.join(ASSETS_DIR, TEMPLATE_BASE_FILE), assembledTemplateBas
 for (const [name, content] of Object.entries(footerFileContents)) {
   fs.writeFileSync(path.join(ASSETS_DIR, name), content, 'utf8')
 }
+// Suelto además de inyectado: src/themes/themes.ts parsea los temas de acá.
+fs.writeFileSync(path.join(ASSETS_DIR, 'head-meta-tags.html'), headMetaHtml, 'utf8')
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + 2 inyecciones de 01-foundations OK) + ${Object.keys(footerFileContents).length} archivos de 03-components/footer/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + 2 inyecciones de 01-foundations OK) + ${Object.keys(footerFileContents).length} archivos de 03-components/footer/`,
 )
+console.log(`${GREEN}✓${RESET} ${themeCount} temas con color_footer_mail_general OK`)
 console.log(`${GREEN}✓ sync-master OK${RESET}`)
