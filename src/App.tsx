@@ -5,6 +5,7 @@ import type { SlotName } from './model'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
+import { ThemeSelect } from './ui/ThemeSelect'
 import { applyTheme, getEffectiveTheme, type Theme } from './ui/theme'
 
 function App() {
@@ -38,7 +39,11 @@ function App() {
   return (
     <div className="app-shell">
       <header className="toolbar">
-        <h1>Email Builder — Braze / Liquid</h1>
+        <div className="toolbar-brand">
+          <h1>Email Builder — Braze / Liquid</h1>
+          <span className="toolbar-divider" aria-hidden="true" />
+          <ThemeSelect value={doc.global} onChange={setGlobalFields} />
+        </div>
         <span className={`save-status${saveStatus === 'error' ? ' error' : ''}`}>{saveStatusLabel}</span>
         <button type="button" onClick={undo} disabled={!canUndo}>
           Deshacer
@@ -52,7 +57,7 @@ function App() {
       </header>
 
       <div className="app-body">
-        <LibraryPanel document={doc} selected={selected} onSelect={setSelected} onGlobalChange={setGlobalFields} />
+        <LibraryPanel selected={selected} onSelect={setSelected} />
         <Viewport document={doc} selected={selected} onSelect={setSelected} />
         <InspectorPanel document={doc} selected={selected} onChange={setSlotFields} />
       </div>

@@ -15,9 +15,42 @@
   flex-shrink: 0;
 }
 
+.toolbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: auto;
+  min-width: 0;
+}
+
 .toolbar h1 {
   font-size: 15px;
-  margin-right: auto;
+  white-space: nowrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  background: var(--border);
+}
+
+.toolbar-theme {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.toolbar-theme select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
 }
 
 .toolbar button {
@@ -91,12 +124,6 @@
 }
 
 /* --- Panel izquierdo: librería + globales ------------------------------- */
-.lib-section + .lib-section {
-  margin-top: 28px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
-}
-
 .lib-section h2,
 .panel-inspector h2 {
   font-size: 13px;
@@ -106,7 +133,6 @@
   margin-bottom: 12px;
 }
 
-.lib-hint,
 .inspector-hint {
   font-size: 12px;
   color: var(--text);

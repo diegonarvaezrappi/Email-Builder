@@ -1,24 +1,23 @@
 // ============================================================================
-// Panel izquierdo: la librería de componentes del mail + los ajustes globales.
+// Panel izquierdo: la librería de componentes del mail.
 //
-// "Componentes" lista los slots del maestro. Solo los que tienen entrada en el
-// registry son seleccionables; el resto se muestra deshabilitado para que se
-// vea qué falta por implementar (y en qué orden va dentro del mail).
+// Lista los slots del maestro. Solo los que tienen entrada en el registry son
+// seleccionables; el resto se muestra deshabilitado para que se vea qué falta
+// por implementar (y en qué orden va dentro del mail).
+//
+// Los ajustes globales (el tema) NO viven acá — van en la barra superior, ver
+// ui/ThemeSelect.tsx.
 // ============================================================================
 import type { SlotName } from '../model'
-import { SLOT_ORDER, type EmailDocument } from '../model'
+import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
-import type { GlobalFields } from '../global/schema'
-import { groupedThemes, themeLabel } from '../themes/themes'
 
 interface LibraryPanelProps {
-  document: EmailDocument
   selected: SlotName | null
   onSelect: (slot: SlotName) => void
-  onGlobalChange: (next: GlobalFields) => void
 }
 
-export function LibraryPanel({ document: doc, selected, onSelect, onGlobalChange }: LibraryPanelProps) {
+export function LibraryPanel({ selected, onSelect }: LibraryPanelProps) {
   return (
     <aside className="panel-library">
       <section className="lib-section">
@@ -42,26 +41,6 @@ export function LibraryPanel({ document: doc, selected, onSelect, onGlobalChange
             )
           })}
         </ul>
-      </section>
-
-      <section className="lib-section">
-        <h2>Global</h2>
-        <p className="lib-hint">Afecta a todo el email.</p>
-
-        <label className="field">
-          <span>Tema</span>
-          <select value={doc.global.tema} onChange={(e) => onGlobalChange({ ...doc.global, tema: e.target.value })}>
-            {groupedThemes().map((group) => (
-              <optgroup key={group.label} label={group.label}>
-                {group.themes.map((t) => (
-                  <option key={t.slug} value={t.slug}>
-                    {themeLabel(t.slug)}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
       </section>
     </aside>
   )
