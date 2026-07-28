@@ -5,27 +5,28 @@
 // — Regla de oro #4 del README del repo. Si David agrega un tema nuevo,
 // aparece solo en la app.
 //
-// De cada tema nos interesa hoy una sola variable: color_footer_mail_general,
-// que define el `font_style_look` del footer ('negro' en los 9 temas normales,
-// 'pro' en Pro/ProBlack). Ver 06-docs/GUIA-DE-TEMAS.md.
+// De cada tema se extraen TODAS sus variables (`bg_solid_mail_general`,
+// `color_texto_mail_general`, …, `color_footer_mail_general`), porque el HTML
+// final las lleva ya resueltas: ver themes/inlineTheme.ts.
+// Ver 06-docs/GUIA-DE-TEMAS.md para qué controla cada una.
 // ============================================================================
 import headMetaTagsRaw from '../assets/templates/head-meta-tags.html?raw'
 
 /** Debe quedar sincronizado con THEME_BRANCH_RE de scripts/sync-master.mjs. */
 const THEME_BRANCH_RE = /tema_general_mail_general\s*==\s*'([^']+)'/g
-const COLOR_FOOTER_RE = /color_footer_mail_general\s*=\s*'([^']+)'/
+const ASSIGN_RE = /\{%\s*assign\s+([a-z_0-9]+_mail_general)\s*=\s*'([^']*)'\s*%\}/g
 
 export interface ThemeDef {
   /** Valor de `tema_general_mail_general` (ej. 'beige100', 'problack'). */
   slug: string
-  /** Valor de `color_footer_mail_general` — el font_style_look del footer. */
-  colorFooter: string
+  /** Todas las variables que asigna la rama del tema, por nombre. */
+  vars: Record<string, string>
 }
 
 /**
  * Extrae los temas de head-meta-tags.html. Cada rama del
  * `{% if tema_general_mail_general == '...' %}` se toma hasta el inicio de la
- * siguiente, y dentro de ese trozo se busca su color_footer_mail_general.
+ * siguiente, y dentro de ese trozo se leen todos sus `{% assign %}`.
  *
  * Exportada aparte de THEMES para poder testearla con fixtures sin depender
  * del estado actual del repo.
@@ -34,7 +35,9 @@ export function parseThemes(headMetaHtml: string): ThemeDef[] {
   const branches = [...headMetaHtml.matchAll(THEME_BRANCH_RE)]
   return branches.map((branch, i) => {
     const chunk = headMetaHtml.slice(branch.index, branches[i + 1]?.index ?? headMetaHtml.length)
-    return { slug: branch[1], colorFooter: COLOR_FOOTER_RE.exec(chunk)?.[1] ?? 'negro' }
+    const vars: Record<string, string> = {}
+    for (const [, name, value] of chunk.matchAll(ASSIGN_RE)) vars[name] = value
+    return { slug: branch[1], vars }
   })
 }
 
@@ -46,12 +49,24 @@ export const THEME_SLUGS: string[] = THEMES.map((t) => t.slug)
 export const DEFAULT_THEME = THEME_SLUGS[0] ?? 'beige100'
 
 /**
+ * Variables del tema, listas para inyectar en el HTML. Incluye
+ * `tema_general_mail_general` (el propio slug) para que una referencia a él
+ * también quede resuelta. Un tema inexistente devuelve {} — ver
+ * resolveThemeVars, que trata lo no definido como vacío, igual que Liquid.
+ */
+export function themeVars(slug: string): Record<string, string> {
+  const theme = THEMES.find((t) => t.slug === slug)
+  if (!theme) return {}
+  return { ...theme.vars, tema_general_mail_general: theme.slug }
+}
+
+/**
  * `font_style_look` que le corresponde al footer según el tema. Si el tema no
  * existe (ej. un documento viejo en localStorage apuntando a un tema que David
  * borró), cae a 'negro', el valor por defecto de los content blocks.
  */
 export function colorFooterForTheme(slug: string): string {
-  return THEMES.find((t) => t.slug === slug)?.colorFooter ?? 'negro'
+  return THEMES.find((t) => t.slug === slug)?.vars.color_footer_mail_general ?? 'negro'
 }
 
 // --- Presentación (solo UI) ---------------------------------------------------

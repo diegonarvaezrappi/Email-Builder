@@ -3,6 +3,7 @@ import templateBaseRaw from '../../assets/templates/template_base.html?raw'
 import { defaultEmailDocument } from '../../registry'
 import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
+import { inlineTheme } from '../../themes/inlineTheme'
 
 describe('assembleEmailHtml', () => {
   it('replaces the FOOTER marker exactly once with the rendered footer snippet', () => {
@@ -20,34 +21,39 @@ describe('assembleEmailHtml', () => {
     }
   })
 
-  it('writes the selected theme into the tema_general_mail_general assign', () => {
+  it('bakes the selected theme in, leaving no theme Liquid in the output', () => {
     const html = assembleEmailHtml({
       ...defaultEmailDocument,
       global: { ...defaultEmailDocument.global, tema: 'problack' },
     })
-    expect(html).toContain("{% assign tema_general_mail_general = 'problack' %}")
-    // Y el footer se estiliza según ese tema, sin campo propio.
+    // ProBlack: bg_solid #ECEFF3 y footer 'pro'.
+    expect(html).toContain('#ECEFF3')
     expect(html).toContain("{% assign font_style_look = 'pro' %}")
+    // Ni el assign de entrada, ni las 11 ramas, ni referencias sin resolver.
+    expect(html).not.toContain('tema_general_mail_general')
+    expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+_mail_general\s*\}\}/)
   })
 
-  it('replaces the theme assign exactly once', () => {
+  it('produces different colours for different themes', () => {
+    const withTheme = (tema: string) =>
+      assembleEmailHtml({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema } })
+    expect(withTheme('beige100')).toContain('#FFF0DD')
+    expect(withTheme('verde100')).toContain('#C0FDD3')
+    expect(withTheme('beige100')).not.toContain('#C0FDD3')
+  })
+
+  it('keeps the Braze Liquid that must reach the platform', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    const matches = html.match(/\{%\s*assign\s+tema_general_mail_general\s*=/g) ?? []
-    expect(matches).toHaveLength(1)
+    expect(html).toContain('{{content_blocks.${FOOTER_q1_2024_legales}}}')
+    expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme assign and the FOOTER marker', () => {
+  it('touches nothing besides the theme and the FOOTER marker', () => {
     const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'problack' } }
-
-    // El assign actual se lee del maestro en vez de hardcodearlo, para no
-    // romperse si David cambia el tema por defecto del archivo.
-    const currentAssign = /\{% assign tema_general_mail_general = '[^']*' %\}/.exec(templateBaseRaw)?.[0]
-    expect(currentAssign).toBeDefined()
-
-    const expected = templateBaseRaw
-      .replace(currentAssign as string, "{% assign tema_general_mail_general = 'problack' %}")
-      .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'problack'))
-
+    const expected = inlineTheme(templateBaseRaw, 'problack').replace(
+      '<!-- FOOTER -->',
+      renderFooterSnippet(doc.footer, 'problack'),
+    )
     expect(assembleEmailHtml(doc)).toBe(expected)
   })
 })

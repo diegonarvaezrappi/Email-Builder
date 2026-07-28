@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colorFooterForTheme, groupedThemes, parseThemes, THEMES, themeLabel } from '../themes'
+import { colorFooterForTheme, groupedThemes, parseThemes, THEMES, themeLabel, themeVars } from '../themes'
 
 describe('parseThemes', () => {
   it('pairs each theme branch with the color_footer_mail_general inside it', () => {
@@ -13,23 +13,23 @@ describe('parseThemes', () => {
       {% endif %}
     `
     expect(parseThemes(fixture)).toEqual([
-      { slug: 'beige100', colorFooter: 'negro' },
-      { slug: 'problack', colorFooter: 'pro' },
+      { slug: 'beige100', vars: { bg_solid_mail_general: '#FFF0DD', color_footer_mail_general: 'negro' } },
+      { slug: 'problack', vars: { bg_solid_mail_general: '#ECEFF3', color_footer_mail_general: 'pro' } },
     ])
   })
 
-  it('does not bleed a color_footer from the following branch', () => {
-    // Un tema sin color_footer propio cae al default 'negro', NO toma el del
-    // tema siguiente (por eso el chunk se corta en la rama siguiente).
+  it('does not bleed variables from the following branch', () => {
+    // El chunk de cada tema se corta en la rama siguiente, así que un tema sin
+    // variables propias queda vacío en vez de heredar las del que le sigue.
     const fixture = `
-      {% if tema_general_mail_general == 'sinfooter' %}
+      {% if tema_general_mail_general == 'sinvars' %}
       {% elsif tema_general_mail_general == 'conpro' %}
         {% assign color_footer_mail_general = 'pro' %}
       {% endif %}
     `
     expect(parseThemes(fixture)).toEqual([
-      { slug: 'sinfooter', colorFooter: 'negro' },
-      { slug: 'conpro', colorFooter: 'pro' },
+      { slug: 'sinvars', vars: {} },
+      { slug: 'conpro', vars: { color_footer_mail_general: 'pro' } },
     ])
   })
 
@@ -56,7 +56,32 @@ describe('THEMES (parsed from the real repo file)', () => {
   })
 
   it('maps only Pro/ProBlack to the pro footer style', () => {
-    expect(THEMES.filter((t) => t.colorFooter === 'pro').map((t) => t.slug)).toEqual(['pro', 'problack'])
+    expect(THEMES.filter((t) => t.vars.color_footer_mail_general === 'pro').map((t) => t.slug)).toEqual([
+      'pro',
+      'problack',
+    ])
+  })
+
+  it('gives every theme the surface variables the master template consumes', () => {
+    // bg_solid + color_texto los usa el wrapper del maestro y global-styles;
+    // si a un tema le faltaran, el mail saldría sin fondo o sin color de texto.
+    for (const t of THEMES) {
+      expect(t.vars.bg_solid_mail_general, t.slug).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(t.vars.color_texto_mail_general, t.slug).toMatch(/^#[0-9A-Fa-f]{6}$/)
+    }
+  })
+})
+
+describe('themeVars', () => {
+  it('resolves the real values of a theme, including its own slug', () => {
+    expect(themeVars('beige100')).toMatchObject({
+      bg_solid_mail_general: '#FFF0DD',
+      tema_general_mail_general: 'beige100',
+    })
+  })
+
+  it('returns nothing for an unknown theme', () => {
+    expect(themeVars('no-existe')).toEqual({})
   })
 })
 
