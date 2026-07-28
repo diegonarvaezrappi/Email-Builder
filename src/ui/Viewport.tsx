@@ -13,6 +13,7 @@ import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
 import { assembleEmailHtml } from '../template/assemble'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
+import { CodeView } from './CodeView'
 import {
   PREVIEW_COUNTRIES,
   PREVIEW_COUNTRY_LABELS,
@@ -112,7 +113,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
               Descargar .html
             </button>
           </div>
-          <pre>{assembleEmailHtml(doc)}</pre>
+          <CodeView code={assembleEmailHtml(doc)} />
         </div>
       )}
     </div>

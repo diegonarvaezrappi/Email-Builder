@@ -10,6 +10,19 @@
   --accent-border: rgba(170, 59, 255, 0.5);
   --danger: #d1293d;
 
+  /* Sintaxis de la vista de código (ui/CodeView.tsx) */
+  --code-text: #1f2328;
+  --code-gutter: #b3af9f;
+  --code-comment: #6e7781;
+  --code-tag: #116329;
+  --code-punct: #57606a;
+  --code-attr: #953800;
+  --code-string: #0a3069;
+  --code-keyword: #cf222e;
+  --code-liquid: #8250df;
+  --code-liquid-bg: rgba(130, 80, 223, 0.1);
+  --code-braze: #bf3989;
+
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
@@ -36,6 +49,18 @@
   --accent: #c084fc;
   --accent-bg: rgba(192, 132, 252, 0.15);
   --accent-border: rgba(192, 132, 252, 0.5);
+
+  --code-text: #e6edf3;
+  --code-gutter: #4b5263;
+  --code-comment: #8b949e;
+  --code-tag: #7ee787;
+  --code-punct: #9aa4b2;
+  --code-attr: #ffa657;
+  --code-string: #a5d6ff;
+  --code-keyword: #ff7b72;
+  --code-liquid: #d2a8ff;
+  --code-liquid-bg: rgba(210, 168, 255, 0.14);
+  --code-braze: #f778ba;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -49,6 +74,18 @@
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
+
+    --code-text: #e6edf3;
+    --code-gutter: #4b5263;
+    --code-comment: #8b949e;
+    --code-tag: #7ee787;
+    --code-punct: #9aa4b2;
+    --code-attr: #ffa657;
+    --code-string: #a5d6ff;
+    --code-keyword: #ff7b72;
+    --code-liquid: #d2a8ff;
+    --code-liquid-bg: rgba(210, 168, 255, 0.14);
+    --code-braze: #f778ba;
   }
 }
 

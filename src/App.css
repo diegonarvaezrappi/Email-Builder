@@ -60,12 +60,16 @@
 .app-body {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr) 340px;
+  /* La fila debe poder encogerse por debajo de su contenido; con el `auto`
+     por defecto el grid crece con el código/preview y nada scrollea. */
+  grid-template-rows: minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
 
 .panel-library,
 .panel-inspector {
+  min-height: 0;
   overflow-y: auto;
   background: var(--bg-panel);
   padding: 20px;
@@ -81,6 +85,7 @@
 
 .panel-viewport {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -372,17 +377,85 @@
   border-bottom: 1px solid var(--border);
 }
 
-.code-view pre {
+/* --- Vista de código estilo editor -------------------------------------- */
+.code-scroll {
   flex: 1;
   min-height: 0;
-  margin: 0;
-  padding: 16px;
   overflow: auto;
+  display: flex;
+  align-items: flex-start;
+  background: var(--code-bg);
   font-family: var(--mono);
   font-size: 12px;
-  line-height: 1.5;
+  /* line-height fijo: el gutter y el código deben cuadrar línea por línea. */
+  line-height: 1.55;
+  tab-size: 4;
+}
+
+.code-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px 12px 14px;
+  text-align: right;
   background: var(--code-bg);
-  color: var(--text-h);
-  white-space: pre-wrap;
-  word-break: break-word;
+  border-right: 1px solid var(--border);
+  color: var(--code-gutter);
+  user-select: none;
+}
+
+.code-text {
+  margin: 0;
+  padding: 12px 20px 12px 14px;
+  /* `pre`, no `pre-wrap`: el HTML se muestra con su formato exacto, sin
+     envolver, para no descuadrar la numeración. */
+  white-space: pre;
+  color: var(--code-text);
+}
+
+/* Sintaxis */
+.tk-comment {
+  color: var(--code-comment);
+  font-style: italic;
+}
+.tk-doctype {
+  color: var(--code-comment);
+}
+.tk-tagName {
+  color: var(--code-tag);
+}
+.tk-punct {
+  color: var(--code-punct);
+}
+.tk-attrName {
+  color: var(--code-attr);
+}
+.tk-attrValue {
+  color: var(--code-string);
+}
+.tk-cssSelector {
+  color: var(--code-tag);
+}
+.tk-cssAtRule {
+  color: var(--code-keyword);
+}
+.tk-cssProp {
+  color: var(--code-attr);
+}
+.tk-cssValue {
+  color: var(--code-string);
+}
+
+/* Liquid y Braze: lo que de verdad hay que poder leer de un vistazo. */
+.tk-liquid {
+  color: var(--code-liquid);
+  background: var(--code-liquid-bg);
+  border-radius: 3px;
+}
+.tk-braze {
+  color: var(--code-braze);
+  font-weight: 600;
 }
