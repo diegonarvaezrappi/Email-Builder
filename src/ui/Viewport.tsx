@@ -39,9 +39,23 @@ type Tab = 'preview' | 'code'
  */
 type EmailClientScheme = 'light' | 'dark'
 
+/**
+ * Ancho del canvas de preview — Escritorio (sin límite práctico, como se ve
+ * hoy) o Móvil (375px, el ancho lógico estándar de iPhone que usan Litmus /
+ * Email on Acid para simular "mobile"). Al angostar el <iframe> a ese ancho
+ * se disparan de verdad los `@media (max-width:480px/620px)` que ya trae el
+ * template maestro, así que la vista Móvil es el mismo responsive real del
+ * mail, no una maqueta aparte.
+ *
+ * Es un ajuste de VISTA, igual que EmailClientScheme: no entra al historial
+ * de undo/redo, no se persiste, y nunca toca el HTML exportado.
+ */
+type PreviewDevice = 'desktop' | 'mobile'
+
 export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
+  const [device, setDevice] = useState<PreviewDevice>('desktop')
   // Simula el color-scheme del CLIENTE de correo (Gmail/Outlook/Apple Mail con
   // dark mode activado), no de la app. Es un ajuste de vista, no del email:
   // arranca en 'light' cada carga y nunca toca el HTML exportado — ver
@@ -115,13 +129,33 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
                 🌙 Oscuro
               </button>
             </div>
+
+            <div className="device-scheme" role="group" aria-label="Tamaño de preview (solo vista)">
+              <span>Vista</span>
+              <button
+                type="button"
+                className={device === 'desktop' ? 'active' : ''}
+                aria-pressed={device === 'desktop'}
+                onClick={() => setDevice('desktop')}
+              >
+                🖥️ Escritorio
+              </button>
+              <button
+                type="button"
+                className={device === 'mobile' ? 'active' : ''}
+                aria-pressed={device === 'mobile'}
+                onClick={() => setDevice('mobile')}
+              >
+                📱 Móvil
+              </button>
+            </div>
           </>
         )}
       </div>
 
       {tab === 'preview' ? (
         <div className="viewport-canvas">
-          <div className="email-doc">
+          <div className={`email-doc${device === 'mobile' ? ' email-doc-mobile' : ''}`}>
             {SLOT_ORDER.map((slot) =>
               registry[slot] === undefined ? (
                 <div key={slot} className="slot-pending">

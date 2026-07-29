@@ -339,6 +339,19 @@
   padding: 5px 10px;
 }
 
+/* Toggle Escritorio / Móvil — angosta el canvas a un ancho de celular real. */
+.viewport-bar .device-scheme {
+  margin-left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.viewport-bar .device-scheme button {
+  padding: 5px 10px;
+}
+
 .viewport-bar select {
   font: inherit;
   font-size: 13px;
@@ -363,6 +376,17 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+/* Vista Móvil: 375px es el ancho lógico estándar de iPhone (el mismo que usan
+   Litmus / Email on Acid para su preview "mobile"). Angostar el canvas a ese
+   ancho angosta también los <iframe> (width:100% de .slot-block iframe), lo
+   que dispara los @media (max-width:480px/620px) reales del template. */
+.email-doc-mobile {
+  max-width: 375px;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 0 1px;
 }
 
 /* Slots todavía sin componente: solo comunican el orden real del mail. */
