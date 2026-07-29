@@ -40,32 +40,36 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
         />
       </label>
 
-      <label className="field field-checkbox">
-        <input
-          type="checkbox"
-          checked={value.legalPromos}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalPromos', e.target.checked)}
-        />
-        <span>Legal promos</span>
-      </label>
+      {value.tipoFooter !== 'RTS' && (
+        <>
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={value.legalPromos}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalPromos', e.target.checked)}
+            />
+            <span>Legal promos</span>
+          </label>
 
-      <label className="field field-checkbox">
-        <input
-          type="checkbox"
-          checked={value.legalTurbo}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalTurbo', e.target.checked)}
-        />
-        <span>Legal turbo</span>
-      </label>
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={value.legalTurbo}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalTurbo', e.target.checked)}
+            />
+            <span>Legal turbo</span>
+          </label>
 
-      <label className="field field-checkbox">
-        <input
-          type="checkbox"
-          checked={value.legalLicores}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalLicores', e.target.checked)}
-        />
-        <span>Legal licores</span>
-      </label>
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={value.legalLicores}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('legalLicores', e.target.checked)}
+            />
+            <span>Legal licores</span>
+          </label>
+        </>
+      )}
     </div>
   )
 }
