@@ -4,6 +4,9 @@ import type { EmailDocument, SlotName } from './model'
 import { defaultFooterFields, footerSchema, type FooterFields } from './components/footer/schema'
 import { renderFooterSnippet } from './components/footer/render'
 import { FooterPropertiesPanel } from './components/footer/PropertiesPanel'
+import { defaultHeaderFields, headerSchema, type HeaderFields } from './components/header/schema'
+import { renderHeaderSnippet } from './components/header/render'
+import { HeaderPropertiesPanel } from './components/header/PropertiesPanel'
 import { defaultGlobalFields } from './global/schema'
 
 /**
@@ -35,6 +38,15 @@ const footerSlotDef: SlotDef<FooterFields> = {
   PropertiesPanel: FooterPropertiesPanel,
 }
 
+const headerSlotDef: SlotDef<HeaderFields> = {
+  slot: 'HEADER',
+  docKey: 'header',
+  schema: headerSchema,
+  defaultFields: defaultHeaderFields,
+  render: (fields, doc) => renderHeaderSnippet(fields, doc.global.tema),
+  PropertiesPanel: HeaderPropertiesPanel,
+}
+
 /** Label del slot en la librería de componentes (panel izquierdo). */
 export const SLOT_LABELS: Record<SlotName, string> = {
   HEADER: 'Header',
@@ -51,10 +63,12 @@ export const SLOT_LABELS: Record<SlotName, string> = {
  * quedan intactos en el HTML ensamblado hasta que se implementen.
  */
 export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
+  HEADER: headerSlotDef,
   FOOTER: footerSlotDef,
 }
 
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
+  header: defaultHeaderFields,
   footer: defaultFooterFields,
 }

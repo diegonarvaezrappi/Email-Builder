@@ -5,6 +5,16 @@ import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
 
 /**
+ * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
+ * slots: HEADER vive como el comentario multilínea "HEADER WRAPPER … CIERRE
+ * HEADER WRAPPER" (ver 06-examples/test_claude_1_original.html). Regex no
+ * codiciosa, mismo estilo que THEME_IF_RE en themes/inlineTheme.ts. Debe
+ * quedar sincronizado con HEADER_WRAPPER_PLACEHOLDER_RE de
+ * scripts/sync-master.mjs, que valida esta misma forma antes de sincronizar.
+ */
+const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/
+
+/**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
  * por scripts/sync-master.mjs), deja el tema ya resuelto y reemplaza, por
  * string literal, cada marcador de slot que tenga una entrada en el registry.
@@ -22,10 +32,18 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     const def = registry[slot]
     if (!def) continue
 
-    const marker = `<!-- ${slot} -->`
     const fields = doc[def.docKey]
     const rendered = def.render(fields, doc)
 
+    if (slot === 'HEADER') {
+      if (!HEADER_WRAPPER_PLACEHOLDER_RE.test(html)) {
+        throw new Error('No se encontró el placeholder "HEADER WRAPPER" en template_base.html')
+      }
+      html = html.replace(HEADER_WRAPPER_PLACEHOLDER_RE, rendered)
+      continue
+    }
+
+    const marker = `<!-- ${slot} -->`
     if (!html.includes(marker)) {
       throw new Error(`No se encontró el marcador ${marker} en template_base.html`)
     }

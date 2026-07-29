@@ -1,20 +1,35 @@
 // ============================================================================
-// Panel central: el email en construcción. El footer va siempre cargado; al
-// hacer click sobre él queda seleccionado y sus opciones aparecen en el panel
-// derecho. Los slots todavía sin implementar se dibujan como placeholders para
-// que se lea el orden real del mail.
+// Panel central: el email en construcción, renderizado como UN SOLO documento
+// — el HTML real exportado, resuelto (ver preview/liquidPreview.ts). Se ve
+// igual que en Gmail: el fondo del tema a todo lo ancho y el contenido
+// centrado a 600px, porque esos valores salen del maestro y no de la app.
+//
+// Los slots todavía sin implementar no se dibujan: el maestro deja sus
+// marcadores como comentarios HTML, así que simplemente no ocupan espacio —
+// el mail se ve tal cual saldría hoy. Qué falta por implementar se lee en la
+// librería de la izquierda.
+//
+// Para seleccionar un componente NO se toca el HTML del mail (debe quedar byte
+// a byte igual al exportado): se mide dónde cayó cada slot dentro del iframe
+// —el header es el div `#HEADERn`, el footer es todo lo que va después del
+// `role="paddedcontainer"`— y se dibujan capas clickeables encima, del lado de
+// la app. Medir requiere `allow-same-origin`; los scripts siguen bloqueados.
 //
 // La pestaña "Código" muestra el HTML ensamblado (con el Liquid intacto), que
 // es lo que se copia/descarga — nunca pasa por LiquidJS.
 // ============================================================================
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { EmailDocument, SlotName } from '../model'
-import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
 import { assembleEmailHtml } from '../template/assemble'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
 import { CodeView } from './CodeView'
-import { PREVIEW_COUNTRIES, PREVIEW_COUNTRY_LABELS, renderFooterPreview, type PreviewCountry } from '../preview/liquidPreview'
+import {
+  PREVIEW_COUNTRIES,
+  PREVIEW_COUNTRY_LABELS,
+  renderEmailPreview,
+  type PreviewCountry,
+} from '../preview/liquidPreview'
 
 interface ViewportProps {
   document: EmailDocument
@@ -35,22 +50,32 @@ type Tab = 'preview' | 'code'
  *
  * Es un ajuste de VISTA, nunca del documento: no entra al historial de
  * undo/redo, no se persiste, y jamás toca el HTML exportado — se aplica como
- * filtro CSS al <iframe> del preview, ver SlotBlock más abajo.
+ * filtro CSS al <iframe> del preview.
  */
 type EmailClientScheme = 'light' | 'dark'
 
 /**
- * Ancho del canvas de preview — Escritorio (sin límite práctico, como se ve
- * hoy) o Móvil (375px, el ancho lógico estándar de iPhone que usan Litmus /
- * Email on Acid para simular "mobile"). Al angostar el <iframe> a ese ancho
- * se disparan de verdad los `@media (max-width:480px/620px)` que ya trae el
- * template maestro, así que la vista Móvil es el mismo responsive real del
- * mail, no una maqueta aparte.
+ * Ancho del preview — Escritorio (todo el ancho del panel, como la ventana de
+ * Gmail) o Móvil (375px, el ancho lógico estándar de iPhone que usan Litmus /
+ * Email on Acid). Al angostar el <iframe> a ese ancho se disparan de verdad
+ * los `@media (max-width:480px/620px)` que ya trae el maestro, así que la
+ * vista Móvil es el mismo responsive real del mail, no una maqueta aparte.
  *
- * Es un ajuste de VISTA, igual que EmailClientScheme: no entra al historial
- * de undo/redo, no se persiste, y nunca toca el HTML exportado.
+ * Es un ajuste de VISTA, igual que EmailClientScheme.
  */
 type PreviewDevice = 'desktop' | 'mobile'
+
+const MOBILE_WIDTH = 375
+
+/** Cómo se ubica cada slot implementado dentro del documento del mail. */
+const SLOT_LOCATORS: Record<'HEADER' | 'FOOTER', string> = {
+  // El div que envuelve la tabla del header — HEADER1..HEADER4 según la marca
+  // (ver 01-foundations/global-styles/global-styles.html).
+  HEADER: '[id^="HEADER"]',
+  // El footer no trae id ni role propios: es el hermano que sigue al
+  // contenedor con padding donde viven header/banner/contenidos/cierre.
+  FOOTER: 'table[role="paddedcontainer"]',
+}
 
 export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
@@ -58,8 +83,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
   const [device, setDevice] = useState<PreviewDevice>('desktop')
   // Simula el color-scheme del CLIENTE de correo (Gmail/Outlook/Apple Mail con
   // dark mode activado), no de la app. Es un ajuste de vista, no del email:
-  // arranca en 'light' cada carga y nunca toca el HTML exportado — ver
-  // preview/liquidPreview.ts.
+  // arranca en 'light' cada carga y nunca toca el HTML exportado.
   const [clientScheme, setClientScheme] = useState<EmailClientScheme>('light')
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewError, setPreviewError] = useState<string | undefined>()
@@ -67,7 +91,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
 
   useEffect(() => {
     let cancelled = false
-    renderFooterPreview(doc.footer, country, doc.global).then((result) => {
+    renderEmailPreview(doc, country).then((result) => {
       if (cancelled) return
       setPreviewHtml(result.html)
       setPreviewError(result.error)
@@ -75,7 +99,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
     return () => {
       cancelled = true
     }
-  }, [doc.footer, country, doc.global])
+  }, [doc, country])
 
   const handleCopy = async () => {
     try {
@@ -154,27 +178,19 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
       </div>
 
       {tab === 'preview' ? (
-        <div className="viewport-canvas">
-          <div className={`email-doc${device === 'mobile' ? ' email-doc-mobile' : ''}`}>
-            {SLOT_ORDER.map((slot) =>
-              registry[slot] === undefined ? (
-                <div key={slot} className="slot-pending">
-                  {SLOT_LABELS[slot]} · pendiente
-                </div>
-              ) : (
-                <SlotBlock
-                  key={slot}
-                  label={SLOT_LABELS[slot]}
-                  html={previewHtml}
-                  error={previewError}
-                  selected={selected === slot}
-                  clientScheme={clientScheme}
-                  onSelect={() => onSelect(slot)}
-                />
-              ),
-            )}
+        previewError ? (
+          <div className="viewport-canvas">
+            <div className="preview-error">{previewError}</div>
           </div>
-        </div>
+        ) : (
+          <EmailFrame
+            html={previewHtml}
+            device={device}
+            clientScheme={clientScheme}
+            selected={selected}
+            onSelect={onSelect}
+          />
+        )
       ) : (
         <div className="code-view">
           <div className="code-actions">
@@ -192,78 +208,115 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
   )
 }
 
-interface SlotBlockProps {
-  label: string
+interface EmailFrameProps {
   html: string
-  error?: string
-  selected: boolean
+  device: PreviewDevice
   clientScheme: EmailClientScheme
-  onSelect: () => void
+  selected: SlotName | null
+  onSelect: (slot: SlotName) => void
+}
+
+/** Dónde cayó un slot dentro del documento del iframe. */
+interface SlotRect {
+  slot: SlotName
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+/** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
+const SELECTABLE_SLOTS = ['HEADER', 'FOOTER'] as const
+
+/**
+ * Mide dónde quedó cada slot implementado dentro del documento ya renderizado.
+ * El iframe se estira a su alto completo (no scrollea por dentro), así que
+ * getBoundingClientRect ya devuelve coordenadas del contenido y no hace falta
+ * corregir por scroll.
+ */
+function measureSlots(root: Document): SlotRect[] {
+  const rects: SlotRect[] = []
+  const padded = root.querySelector(SLOT_LOCATORS.FOOTER)
+
+  for (const slot of SELECTABLE_SLOTS) {
+    if (!registry[slot]) continue
+
+    if (slot === 'HEADER') {
+      const el = root.querySelector(SLOT_LOCATORS.HEADER)
+      if (!el) continue
+      const r = el.getBoundingClientRect()
+      rects.push({ slot, top: r.top, left: r.left, width: r.width, height: r.height })
+    } else if (slot === 'FOOTER') {
+      // El footer no tiene contenedor propio: es todo lo que sigue al
+      // paddedcontainer, hasta el final del documento.
+      if (!padded || !root.body) continue
+      const top = padded.getBoundingClientRect().bottom
+      const body = root.body.getBoundingClientRect()
+      const height = Math.max(body.bottom - top, 0)
+      if (height === 0) continue
+      rects.push({ slot, top, left: body.left, width: body.width, height })
+    }
+  }
+  return rects
 }
 
 /**
- * Un bloque seleccionable del email. El HTML va en un iframe (para que su CSS
- * no se filtre a la app ni al revés) con una capa transparente encima que
- * captura el click: dentro del iframe no corre JS, así que no puede escuchar
- * eventos por sí mismo.
- *
- * La simulación de cliente oscuro es un `filter: invert() hue-rotate()` en
- * el <iframe> MISMO (no en su contenido interno): se probó ponerlo dentro del
- * srcDoc y Chromium simplemente no lo pinta, aunque el computed style lo
- * reporte aplicado — es un límite real del navegador con filtros dentro de un
- * documento de iframe, verificado con capturas. La consecuencia es que las
- * imágenes/logos también se invierten (no hay forma de cancelarlo solo en
- * ellas desde acá): es una aproximación, no una réplica exacta de cómo Gmail
- * distingue fotos del resto.
+ * El email completo en un iframe. Va con `allow-same-origin` (sin
+ * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
+ * desde acá su alto real y la posición de cada slot.
  */
-function SlotBlock({ label, html, error, selected, clientScheme, onSelect }: SlotBlockProps) {
+function EmailFrame({ html, device, clientScheme, selected, onSelect }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [height, setHeight] = useState(240)
+  const [height, setHeight] = useState(600)
+  const [slotRects, setSlotRects] = useState<SlotRect[]>([])
 
-  // Ajusta el alto al del contenido real para que el bloque se vea como la
-  // sección del mail y no como una ventana con scroll. Requiere
-  // allow-same-origin para poder leer el documento; los scripts siguen
-  // deshabilitados (no se pasa allow-scripts), así que el HTML no ejecuta nada.
-  const measure = () => {
-    const body = iframeRef.current?.contentDocument?.body
-    if (body) setHeight(Math.max(body.scrollHeight, 40))
-  }
+  const syncFrame = useCallback(() => {
+    const root = iframeRef.current?.contentDocument
+    if (!root?.body) return
+    setHeight(Math.max(root.body.scrollHeight, 200))
+    setSlotRects(measureSlots(root))
+  }, [])
 
-  if (error) {
-    return (
-      <div className="slot-block error">
-        <span className="slot-badge">{label}</span>
-        <div className="preview-error">{error}</div>
-      </div>
-    )
-  }
+  // Re-medir cuando cambia el HTML o el ancho: el srcDoc puede terminar de
+  // cargar después de este efecto (de ahí el onLoad del iframe), y el alto
+  // definitivo llega recién cuando cargan las imágenes del mail.
+  useEffect(() => {
+    syncFrame()
+    const id = setTimeout(syncFrame, 300)
+    const onResize = () => syncFrame()
+    window.addEventListener('resize', onResize)
+    return () => {
+      clearTimeout(id)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [html, device, syncFrame])
 
   return (
-    <div className={`slot-block${selected ? ' selected' : ''}`}>
-      <span className="slot-badge">{label}</span>
-      <iframe
-        ref={iframeRef}
-        title={`${label} preview`}
-        srcDoc={html}
-        sandbox="allow-same-origin"
-        onLoad={measure}
-        className={clientScheme === 'dark' ? 'client-dark-sim' : undefined}
-        style={{ height }}
-      />
-      <div
-        className="slot-hit"
-        role="button"
-        tabIndex={0}
-        aria-label={`Seleccionar ${label}`}
-        aria-pressed={selected}
-        onClick={onSelect}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onSelect()
-          }
-        }}
-      />
+    <div className="viewport-canvas">
+      <div className="email-frame" style={device === 'mobile' ? { width: MOBILE_WIDTH } : undefined}>
+        <iframe
+          ref={iframeRef}
+          title="Preview del email"
+          srcDoc={html}
+          sandbox="allow-same-origin"
+          onLoad={syncFrame}
+          className={clientScheme === 'dark' ? 'client-dark-sim' : undefined}
+          style={{ height }}
+        />
+        {slotRects.map(({ slot, top, left, width, height: h }) => (
+          <button
+            key={slot}
+            type="button"
+            className={`slot-hit${selected === slot ? ' selected' : ''}`}
+            aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
+            aria-pressed={selected === slot}
+            onClick={() => onSelect(slot)}
+            style={{ top, left, width, height: h }}
+          >
+            <span className="slot-badge">{SLOT_LABELS[slot]}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

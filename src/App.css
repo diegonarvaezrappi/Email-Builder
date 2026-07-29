@@ -363,61 +363,27 @@
 }
 
 /* --- Canvas del email --------------------------------------------------- */
+/* Sin padding: el preview va de borde a borde, como el cuerpo del mensaje en
+   Gmail. El ancho de 600px del contenido y el fondo a todo lo ancho los pone
+   el HTML del mail (tabla `.wrapper` a width:100% + tabla interior a
+   max-width:600px), no la app. */
 .viewport-canvas {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px;
 }
 
-.email-doc {
-  max-width: 700px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* Vista Móvil: 375px es el ancho lógico estándar de iPhone (el mismo que usan
-   Litmus / Email on Acid para su preview "mobile"). Angostar el canvas a ese
-   ancho angosta también los <iframe> (width:100% de .slot-block iframe), lo
-   que dispara los @media (max-width:480px/620px) reales del template. */
-.email-doc-mobile {
-  max-width: 375px;
-  border-left: 1px solid var(--border);
-  border-right: 1px solid var(--border);
-  padding: 0 1px;
-}
-
-/* Slots todavía sin componente: solo comunican el orden real del mail. */
-.slot-pending {
-  padding: 22px;
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0.6;
-}
-
-/* Bloque seleccionable del email (iframe + capa que captura el click). */
-.slot-block {
+/* Contenedor del iframe único. En Escritorio ocupa todo el ancho; en Móvil se
+   le fija 375px (ancho lógico estándar de iPhone, el que usan Litmus / Email
+   on Acid), lo que dispara de verdad los @media (max-width:480px/620px) del
+   maestro. `position: relative` es el marco de referencia del outline de
+   selección. */
+.email-frame {
   position: relative;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  overflow: hidden;
+  margin: 0 auto;
 }
 
-.slot-block:hover {
-  border-color: var(--accent-border);
-}
-
-.slot-block.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg);
-}
-
-.slot-block iframe {
+.email-frame iframe {
   display: block;
   width: 100%;
   border: 0;
@@ -430,51 +396,60 @@
    estándar de cómo Gmail/Outlook auto-oscurecen un correo sin soporte nativo
    de dark mode; como se aplica a todo el iframe, las imágenes también se
    invierten (no hay forma de cancelarlo solo en ellas desde afuera). */
-.slot-block iframe.client-dark-sim {
+.email-frame iframe.client-dark-sim {
   filter: invert(1) hue-rotate(180deg);
 }
 
-/* Capa transparente sobre el iframe: dentro no corre JS, así que el click se
-   captura desde acá. */
+/* Capa clickeable por slot, posicionada sobre el iframe según lo que se midió
+   dentro del documento del mail. Va acá y no dentro del iframe para no tocar
+   ni un byte del HTML del mail (que debe quedar igual al exportado). */
 .slot-hit {
   position: absolute;
-  inset: 0;
+  padding: 0;
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 4px;
   cursor: pointer;
+  font: inherit;
+}
+
+.slot-hit:hover {
+  border-color: var(--accent-border);
+}
+
+.slot-hit.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
 .slot-hit:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .slot-badge {
   position: absolute;
   top: 0;
   left: 0;
-  z-index: 1;
   padding: 2px 8px;
   border-bottom-right-radius: 6px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: var(--accent);
+  color: #fff;
   opacity: 0;
   transition: opacity 0.12s;
 }
 
-.slot-block:hover .slot-badge,
-.slot-block.selected .slot-badge {
+.slot-hit:hover .slot-badge,
+.slot-hit.selected .slot-badge {
   opacity: 1;
 }
 
-.slot-block.error {
-  border-color: var(--danger);
-  padding: 20px;
-}
-
 .preview-error {
+  margin: 24px;
   color: var(--danger);
   font-size: 13px;
   font-family: var(--mono);

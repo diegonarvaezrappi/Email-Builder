@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { footerSchema, type FooterFields } from './components/footer/schema'
+import { headerSchema, type HeaderFields } from './components/header/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
 /** Nombres de los marcadores de slot presentes en template_base.html. */
@@ -21,11 +22,13 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  */
 export interface EmailDocument {
   global: GlobalFields
+  header: HeaderFields
   footer: FooterFields
 }
 
 /** Usado por store/persistence.ts para validar lo que viene de localStorage. */
 export const emailDocumentSchema = z.object({
   global: globalSchema,
+  header: headerSchema,
   footer: footerSchema,
 })

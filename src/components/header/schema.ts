@@ -1,0 +1,77 @@
+import { z } from 'zod'
+
+/**
+ * Las 10 marcas de 02-components/headers/ (una subcarpeta por marca). Lista
+ * fija a propósito, igual que FOOTER_FILES en scripts/sync-master.mjs — con
+ * la que este arreglo debe quedar sincronizado si el repo agrega una marca.
+ */
+export const HEADER_BRAND_VALUES = [
+  'rappi',
+  'rappi-travel',
+  'soyrappi',
+  'rappi-turbo',
+  'rappi-turbo-rest',
+  'rappi-pro',
+  'rappi-pro-black',
+  'rappi-defensoria',
+  'rappi-entregador',
+  'contenido-aliado',
+] as const
+
+export type HeaderBrand = (typeof HEADER_BRAND_VALUES)[number]
+
+export const HEADER_LAYOUT_VALUES = ['centrado', 'columnas'] as const
+export type HeaderLayout = (typeof HEADER_LAYOUT_VALUES)[number]
+
+/**
+ * Versión del logo — forzada por el usuario, INDEPENDIENTE del tema general
+ * del mail (ver 02-components/README.md: "cualquiera de los 10 headers puede
+ * combinarse con cualquiera de los 11 temas"). 'claro' = logo para fondo
+ * claro, 'oscuro' = logo blanco para fondo oscuro.
+ */
+export const HEADER_LOGO_BACKGROUND_VALUES = ['claro', 'oscuro'] as const
+export type HeaderLogoBackground = (typeof HEADER_LOGO_BACKGROUND_VALUES)[number]
+
+export const COBRANDING_SIZE_VALUES = ['s', 'm', 'l'] as const
+export type CobrandingSize = (typeof COBRANDING_SIZE_VALUES)[number]
+
+export const headerSchema = z.object({
+  brand: z.enum(HEADER_BRAND_VALUES).default('rappi'),
+  layout: z.enum(HEADER_LAYOUT_VALUES).default('centrado'),
+  logoBackground: z.enum(HEADER_LOGO_BACKGROUND_VALUES).default('claro'),
+  cobranding: z.boolean().default(false),
+  cobrandingSize: z.enum(COBRANDING_SIZE_VALUES).default('m'),
+})
+
+export type HeaderFields = z.infer<typeof headerSchema>
+
+export const defaultHeaderFields: HeaderFields = headerSchema.parse({})
+
+export const HEADER_BRAND_LABELS: Record<HeaderBrand, string> = {
+  rappi: 'Rappi',
+  'rappi-travel': 'Rappi Travel',
+  soyrappi: 'Soy Rappi',
+  'rappi-turbo': 'Rappi Turbo',
+  'rappi-turbo-rest': 'Rappi Turbo Restaurantes',
+  'rappi-pro': 'Rappi Pro',
+  'rappi-pro-black': 'Rappi Pro Black',
+  'rappi-defensoria': 'Defensoría',
+  'rappi-entregador': 'Rappi Entregador',
+  'contenido-aliado': 'Contenido aliado',
+}
+
+export const HEADER_LAYOUT_LABELS: Record<HeaderLayout, string> = {
+  centrado: 'Centrado',
+  columnas: 'Columnas',
+}
+
+export const HEADER_LOGO_BACKGROUND_LABELS: Record<HeaderLogoBackground, string> = {
+  claro: 'Fondo claro',
+  oscuro: 'Fondo oscuro',
+}
+
+export const COBRANDING_SIZE_LABELS: Record<CobrandingSize, string> = {
+  s: 'Pequeño',
+  m: 'Mediano',
+  l: 'Grande',
+}

@@ -1,23 +1,25 @@
 // ============================================================================
-// Preview visual del footer (best-effort, NO pixel-perfect Braze). Usa
-// LiquidJS para evaluar de verdad el snippet + el cuerpo del content block
-// correspondiente, con un país "de mentira" seleccionable — así el usuario ve
-// el footer resuelto (textos legales, links, colores) y no un bloque de
-// código Liquid crudo.
+// Preview visual del email COMPLETO (best-effort, NO pixel-perfect Braze).
 //
-// Esto es una ruta SEPARADA de la exportación/copia (export/exporters.ts),
-// que nunca pasa por Liquid — el HTML que se copia/descarga conserva el
-// Liquid original intacto.
+// Parte del mismo HTML que se copia/descarga (template/assemble.ts) y solo le
+// hace lo que Braze haría al enviar: pega el cuerpo del content block de
+// legales referenciado y evalúa el Liquid con LiquidJS, con un país "de
+// mentira" seleccionable. Así el preview es literalmente el HTML exportado
+// resuelto — mismo ancho, mismos paddings, mismo fondo — y no una maqueta
+// aparte que puede mentir (antes se renderizaba un iframe por componente, y el
+// header salía descentrado justamente porque le faltaba el
+// `role="paddedcontainer"` de 15px del maestro).
+//
+// La exportación/copia NO pasa por acá: conserva el Liquid original intacto.
 // ============================================================================
 import { Liquid } from 'liquidjs'
 import footerGeneralRaw from '../assets/templates/footer_general.html?raw'
 import footerRtsRaw from '../assets/templates/footer_rts.html?raw'
 import footerSinAmorRaw from '../assets/templates/footer_sinamor.html?raw'
-import { renderFooterAssignLines } from '../components/footer/render'
-import type { FooterFields, TipoFooter } from '../components/footer/schema'
-import { resolveThemeVars } from '../themes/inlineTheme'
-import { resolveGlobalVars } from '../global/vars'
-import type { GlobalFields } from '../global/schema'
+import { FOOTER_CONTENT_BLOCK_BY_TIPO } from '../components/footer/render'
+import type { TipoFooter } from '../components/footer/schema'
+import type { EmailDocument } from '../model'
+import { assembleEmailHtml } from '../template/assemble'
 
 export const PREVIEW_COUNTRIES = ['AR', 'BR', 'CL', 'CO', 'CR', 'EC', 'MX', 'PE', 'UY'] as const
 export type PreviewCountry = (typeof PREVIEW_COUNTRIES)[number]
@@ -33,7 +35,6 @@ export const PREVIEW_COUNTRY_LABELS: Record<PreviewCountry, string> = {
   PE: 'Perú',
   UY: 'Uruguay',
 }
-
 
 /** Cuerpo real (documentación/referencia) de cada content block de Braze. */
 const CONTENT_BLOCK_BODY_BY_TIPO: Record<TipoFooter, string> = {
@@ -74,6 +75,18 @@ export function preprocessBrazeShorthand(source: string): string {
   return out
 }
 
+/**
+ * Pega el cuerpo del content block de legales donde el HTML exportado solo
+ * lleva la referencia opaca `{{content_blocks.${NOMBRE}}}` — es lo que hace
+ * Braze al enviar. Tiene que correr ANTES de preprocessBrazeShorthand: esa
+ * función stubea cualquier `algo.${...}` a `"#"`, así que si el orden se
+ * invirtiera el footer desaparecería del preview.
+ */
+export function inlineFooterContentBlock(html: string, tipoFooter: TipoFooter): string {
+  const reference = `{{content_blocks.\${${FOOTER_CONTENT_BLOCK_BY_TIPO[tipoFooter]}}}}`
+  return html.replace(reference, () => CONTENT_BLOCK_BODY_BY_TIPO[tipoFooter])
+}
+
 let engineSingleton: Liquid | null = null
 
 function getPreviewEngine(): Liquid {
@@ -94,67 +107,32 @@ function getPreviewEngine(): Liquid {
   return engine
 }
 
-export interface FooterPreviewResult {
+export interface EmailPreviewResult {
   html: string
   error?: string
 }
 
 /**
- * Envuelve el footer renderizado en la superficie que le da el mail real:
- * el fondo y color de texto del tema (`bg_solid_mail_general` /
- * `color_texto_mail_general` del wrapper del maestro) y, si se fijó uno, la
- * imagen de fondo (`bg_imgevento_mail_general`) con las MISMAS propiedades que
- * el `<td class="fondomobile">` del maestro. El footer va dentro de ese td, así
- * que el fondo efectivamente se ve detrás de él.
+ * El email entero, resuelto y listo para meter en un <iframe>: exactamente el
+ * HTML que se exporta, con los content blocks pegados y el Liquid evaluado.
+ * No se le agrega NADA de estilo propio de la app — el fondo, el ancho de
+ * 600px y los márgenes salen del maestro, igual que en Gmail.
  *
- * Sin esto, el preview se vería siempre sobre blanco y ni el tema ni el fondo
- * se notarían, porque los content blocks del footer no usan estas variables.
- *
- * NOTA: la simulación de cliente de correo (Claro/Oscuro) NO vive acá — se
- * aplica como filtro CSS al <iframe> desde ui/Viewport.tsx. Se intentó
- * primero metiendo el filtro dentro de este HTML (en el `<body>` o en un
- * `img`), pero un filtro CSS aplicado DENTRO del documento de un iframe no se
- * pinta en Chromium (se confirmó con capturas: el computed style lo reporta
- * aplicado, pero el render no cambia) — hay que aplicarlo al elemento
- * `<iframe>` mismo, desde el padre.
+ * NOTA: la simulación de cliente de correo (Claro/Oscuro) no vive acá — se
+ * aplica como filtro CSS al <iframe> desde ui/Viewport.tsx. Se intentó primero
+ * metiendo el filtro dentro de este HTML, pero un filtro CSS aplicado DENTRO
+ * del documento de un iframe no se pinta en Chromium (confirmado con
+ * capturas: el computed style lo reporta aplicado, pero el render no cambia).
  */
-function wrapInThemeSurface(bodyHtml: string, vars: Record<string, string>): string {
-  const bg = vars.bg_solid_mail_general || '#ffffff'
-  const fg = vars.color_texto_mail_general || '#000000'
-  const fondo = vars.bg_imgevento_mail_general
-  const fondoCss = fondo
-    ? `background-image:url(${fondo});background-size:100% auto;` +
-      'background-position:center top;background-repeat:no-repeat;'
-    : ''
-  return [
-    '<!doctype html><html><head><meta charset="utf-8"><style>',
-    'html,body{margin:0;padding:0}',
-    `body{background-color:${bg};${fondoCss}color:${fg};font-family:arial,helvetica,sans-serif}`,
-    '</style></head><body>',
-    bodyHtml,
-    '</body></html>',
-  ].join('')
-}
-
-export async function renderFooterPreview(
-  fields: FooterFields,
+export async function renderEmailPreview(
+  doc: EmailDocument,
   country: PreviewCountry,
-  global: GlobalFields,
-): Promise<FooterPreviewResult> {
-  const vars = resolveGlobalVars(global)
-  const source = [
-    ...renderFooterAssignLines(fields, global.tema),
-    CONTENT_BLOCK_BODY_BY_TIPO[fields.tipoFooter],
-  ].join('\n')
-  // Las variables de tema se resuelven antes de Liquid, igual que en el HTML
-  // exportado (themes/inlineTheme.ts) — hoy los content blocks del footer no
-  // usan ninguna, pero así el preview no miente si mañana las usan.
-  const preprocessed = preprocessBrazeShorthand(resolveThemeVars(source, vars))
-  const engine = getPreviewEngine()
-
+): Promise<EmailPreviewResult> {
   try {
-    const rendered = await engine.parseAndRender(preprocessed, { user_id: country })
-    return { html: wrapInThemeSurface(rendered, vars) }
+    const withContentBlock = inlineFooterContentBlock(assembleEmailHtml(doc), doc.footer.tipoFooter)
+    const preprocessed = preprocessBrazeShorthand(withContentBlock)
+    const html = await getPreviewEngine().parseAndRender(preprocessed, { user_id: country })
+    return { html }
   } catch (e) {
     return { html: '', error: e instanceof Error ? e.message : String(e) }
   }

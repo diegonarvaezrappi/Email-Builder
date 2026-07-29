@@ -3,6 +3,7 @@ import templateBaseRaw from '../../assets/templates/template_base.html?raw'
 import { defaultEmailDocument } from '../../registry'
 import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
+import { renderHeaderSnippet } from '../../components/header/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
 
@@ -12,6 +13,14 @@ describe('assembleEmailHtml', () => {
     const expectedSnippet = renderFooterSnippet(defaultEmailDocument.footer, defaultEmailDocument.global.tema)
 
     expect(html).not.toContain('<!-- FOOTER -->')
+    expect(html.includes(expectedSnippet)).toBe(true)
+  })
+
+  it('replaces the HEADER WRAPPER placeholder exactly once with the rendered header snippet', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    const expectedSnippet = renderHeaderSnippet(defaultEmailDocument.header, defaultEmailDocument.global.tema)
+
+    expect(html).not.toContain('HEADER WRAPPER')
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
@@ -49,12 +58,11 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme and the FOOTER marker', () => {
+  it('touches nothing besides the theme, the HEADER marker and the FOOTER marker', () => {
     const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'problack' } }
-    const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)).replace(
-      '<!-- FOOTER -->',
-      renderFooterSnippet(doc.footer, 'problack'),
-    )
+    const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
+      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, renderHeaderSnippet(doc.header, 'problack'))
+      .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'problack'))
     expect(assembleEmailHtml(doc)).toBe(expected)
   })
 })
