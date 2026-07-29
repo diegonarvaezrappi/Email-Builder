@@ -1,45 +1,11 @@
+/*
+ * La interfaz de la app (el "chrome" del builder) es SIEMPRE oscura — no hay
+ * modo claro para ella y no sigue la preferencia del sistema operativo. El
+ * switch Claro/Oscuro de la barra de Preview (ui/Viewport.tsx) es un asunto
+ * completamente distinto: simula el color-scheme del CLIENTE de correo sobre
+ * el EMAIL, no cambia nada de esto.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --bg-panel: #fafafa;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --danger: #d1293d;
-
-  /* Sintaxis de la vista de código (ui/CodeView.tsx) */
-  --code-text: #1f2328;
-  --code-gutter: #b3af9f;
-  --code-comment: #6e7781;
-  --code-tag: #116329;
-  --code-punct: #57606a;
-  --code-attr: #953800;
-  --code-string: #0a3069;
-  --code-keyword: #cf222e;
-  --code-liquid: #8250df;
-  --code-liquid-bg: rgba(130, 80, 223, 0.1);
-  --code-braze: #bf3989;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 15px/145% var(--sans);
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Toggle manual (ui/theme.ts pone data-theme en <html>) — gana siempre sobre
-   la preferencia del sistema. Sin toggle (o antes de que corra JS), la media
-   query de abajo sigue el tema del sistema operativo. */
-:root[data-theme='dark'] {
   --text: #9ca3af;
   --text-h: #f3f4f6;
   --bg: #16171d;
@@ -49,7 +15,9 @@
   --accent: #c084fc;
   --accent-bg: rgba(192, 132, 252, 0.15);
   --accent-border: rgba(192, 132, 252, 0.5);
+  --danger: #d1293d;
 
+  /* Sintaxis de la vista de código (ui/CodeView.tsx) */
   --code-text: #e6edf3;
   --code-gutter: #4b5263;
   --code-comment: #8b949e;
@@ -61,32 +29,20 @@
   --code-liquid: #d2a8ff;
   --code-liquid-bg: rgba(210, 168, 255, 0.14);
   --code-braze: #f778ba;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --bg-panel: #1b1c23;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
 
-    --code-text: #e6edf3;
-    --code-gutter: #4b5263;
-    --code-comment: #8b949e;
-    --code-tag: #7ee787;
-    --code-punct: #9aa4b2;
-    --code-attr: #ffa657;
-    --code-string: #a5d6ff;
-    --code-keyword: #ff7b72;
-    --code-liquid: #d2a8ff;
-    --code-liquid-bg: rgba(210, 168, 255, 0.14);
-    --code-braze: #f778ba;
-  }
+  font: 15px/145% var(--sans);
+  /* Solo "dark": los controles nativos del navegador (scrollbars, etc.)
+     también deben verse oscuros siempre, sin importar el SO. */
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {

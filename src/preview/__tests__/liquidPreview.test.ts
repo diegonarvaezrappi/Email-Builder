@@ -67,7 +67,7 @@ describe('renderFooterPreview', () => {
     const result = await renderFooterPreview(
       { ...defaultFooterFields, tipoFooter: 'General', legalesAdicionales: 'Promo exclusiva de prueba' },
       'CO',
-      g('beige100'),
+      g('beige100')
     )
     expect(result.html).toContain('Promo exclusiva de prueba')
   })
@@ -104,5 +104,14 @@ describe('renderFooterPreview', () => {
     const result = await renderFooterPreview(defaultFooterFields, 'CO', g('beige100'))
     expect(surfaceRule(result.html)).toContain('background-color:#FFF0DD')
     expect(surfaceRule(result.html)).not.toContain('background-image')
+  })
+
+  it('never carries the client dark-mode simulation — that lives as a CSS class on the <iframe>', async () => {
+    // La simulación de cliente Claro/Oscuro (ui/Viewport.tsx) es un filter en
+    // el <iframe> mismo, no algo que este HTML deba conocer o generar — un
+    // filter puesto DENTRO de este documento no se pinta en Chromium
+    // (verificado con capturas), así que este módulo ni lo intenta.
+    const result = await renderFooterPreview(defaultFooterFields, 'CO', g('beige100'))
+    expect(result.html).not.toContain('filter:')
   })
 })

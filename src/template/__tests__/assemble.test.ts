@@ -86,3 +86,16 @@ describe('assembleEmailHtml · fondo personalizado', () => {
     )
   })
 })
+
+it('never carries the preview-only dark-client filter — that is view-only, in preview/liquidPreview.ts', () => {
+  // El HTML exportado (lo que se copia/descarga/manda a Braze) no tiene
+  // ningún concepto de "simular cliente oscuro" — eso es puramente del
+  // preview del navegador. No debe existir una manera de que ese filtro se
+  // cuele acá, sin importar el tema o el fondo elegidos.
+  const html = assembleEmailHtml({
+    ...defaultEmailDocument,
+    global: { tema: 'problack', fondoUrl: 'https://x.test/a.png' },
+  })
+  expect(html).not.toContain('filter:')
+  expect(html).not.toContain('invert(')
+})

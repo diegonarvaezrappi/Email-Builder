@@ -14,12 +14,7 @@ import { registry, SLOT_LABELS } from '../registry'
 import { assembleEmailHtml } from '../template/assemble'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
 import { CodeView } from './CodeView'
-import {
-  PREVIEW_COUNTRIES,
-  PREVIEW_COUNTRY_LABELS,
-  renderFooterPreview,
-  type PreviewCountry,
-} from '../preview/liquidPreview'
+import { PREVIEW_COUNTRIES, PREVIEW_COUNTRY_LABELS, renderFooterPreview, type PreviewCountry } from '../preview/liquidPreview'
 
 interface ViewportProps {
   document: EmailDocument
@@ -29,9 +24,29 @@ interface ViewportProps {
 
 type Tab = 'preview' | 'code'
 
+/**
+ * Cómo se ve el email en el "cliente de correo" simulado — Claro (el mail tal
+ * cual, sin tocar) u Oscuro (como lo dejaría un cliente con dark mode
+ * activado: el repo no trae NINGÚN soporte nativo de dark mode para el email
+ * — sin `prefers-color-scheme`, sin `color-scheme`, sin los selectores que usa
+ * Gmail — así que un cliente con dark mode encendido no "respeta" nada del
+ * mail, lo auto-oscurece él mismo con su propio algoritmo, como hacen Gmail,
+ * Outlook y Apple Mail con cualquier correo sin soporte explícito).
+ *
+ * Es un ajuste de VISTA, nunca del documento: no entra al historial de
+ * undo/redo, no se persiste, y jamás toca el HTML exportado — se aplica como
+ * filtro CSS al <iframe> del preview, ver SlotBlock más abajo.
+ */
+type EmailClientScheme = 'light' | 'dark'
+
 export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
+  // Simula el color-scheme del CLIENTE de correo (Gmail/Outlook/Apple Mail con
+  // dark mode activado), no de la app. Es un ajuste de vista, no del email:
+  // arranca en 'light' cada carga y nunca toca el HTML exportado — ver
+  // preview/liquidPreview.ts.
+  const [clientScheme, setClientScheme] = useState<EmailClientScheme>('light')
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewError, setPreviewError] = useState<string | undefined>()
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
@@ -69,16 +84,38 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
           Código
         </button>
         {tab === 'preview' && (
-          <label className="country-select">
-            <span>País (solo preview)</span>
-            <select value={country} onChange={(e) => setCountry(e.target.value as PreviewCountry)}>
-              {PREVIEW_COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {PREVIEW_COUNTRY_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <>
+            <label className="country-select">
+              <span>País (solo preview)</span>
+              <select value={country} onChange={(e) => setCountry(e.target.value as PreviewCountry)}>
+                {PREVIEW_COUNTRIES.map((c) => (
+                  <option key={c} value={c}>
+                    {PREVIEW_COUNTRY_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="client-scheme" role="group" aria-label="Simular cliente de correo (solo preview)">
+              <span>Cliente (solo preview)</span>
+              <button
+                type="button"
+                className={clientScheme === 'light' ? 'active' : ''}
+                aria-pressed={clientScheme === 'light'}
+                onClick={() => setClientScheme('light')}
+              >
+                ☀️ Claro
+              </button>
+              <button
+                type="button"
+                className={clientScheme === 'dark' ? 'active' : ''}
+                aria-pressed={clientScheme === 'dark'}
+                onClick={() => setClientScheme('dark')}
+              >
+                🌙 Oscuro
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -97,6 +134,7 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
                   html={previewHtml}
                   error={previewError}
                   selected={selected === slot}
+                  clientScheme={clientScheme}
                   onSelect={() => onSelect(slot)}
                 />
               ),
@@ -125,6 +163,7 @@ interface SlotBlockProps {
   html: string
   error?: string
   selected: boolean
+  clientScheme: EmailClientScheme
   onSelect: () => void
 }
 
@@ -133,8 +172,17 @@ interface SlotBlockProps {
  * no se filtre a la app ni al revés) con una capa transparente encima que
  * captura el click: dentro del iframe no corre JS, así que no puede escuchar
  * eventos por sí mismo.
+ *
+ * La simulación de cliente oscuro es un `filter: invert() hue-rotate()` en
+ * el <iframe> MISMO (no en su contenido interno): se probó ponerlo dentro del
+ * srcDoc y Chromium simplemente no lo pinta, aunque el computed style lo
+ * reporte aplicado — es un límite real del navegador con filtros dentro de un
+ * documento de iframe, verificado con capturas. La consecuencia es que las
+ * imágenes/logos también se invierten (no hay forma de cancelarlo solo en
+ * ellas desde acá): es una aproximación, no una réplica exacta de cómo Gmail
+ * distingue fotos del resto.
  */
-function SlotBlock({ label, html, error, selected, onSelect }: SlotBlockProps) {
+function SlotBlock({ label, html, error, selected, clientScheme, onSelect }: SlotBlockProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [height, setHeight] = useState(240)
 
@@ -159,7 +207,15 @@ function SlotBlock({ label, html, error, selected, onSelect }: SlotBlockProps) {
   return (
     <div className={`slot-block${selected ? ' selected' : ''}`}>
       <span className="slot-badge">{label}</span>
-      <iframe ref={iframeRef} title={`${label} preview`} srcDoc={html} sandbox="allow-same-origin" onLoad={measure} style={{ height }} />
+      <iframe
+        ref={iframeRef}
+        title={`${label} preview`}
+        srcDoc={html}
+        sandbox="allow-same-origin"
+        onLoad={measure}
+        className={clientScheme === 'dark' ? 'client-dark-sim' : undefined}
+        style={{ height }}
+      />
       <div
         className="slot-hit"
         role="button"

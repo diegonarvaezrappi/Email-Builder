@@ -34,6 +34,7 @@ export const PREVIEW_COUNTRY_LABELS: Record<PreviewCountry, string> = {
   UY: 'Uruguay',
 }
 
+
 /** Cuerpo real (documentación/referencia) de cada content block de Braze. */
 const CONTENT_BLOCK_BODY_BY_TIPO: Record<TipoFooter, string> = {
   General: footerGeneralRaw,
@@ -108,6 +109,14 @@ export interface FooterPreviewResult {
  *
  * Sin esto, el preview se vería siempre sobre blanco y ni el tema ni el fondo
  * se notarían, porque los content blocks del footer no usan estas variables.
+ *
+ * NOTA: la simulación de cliente de correo (Claro/Oscuro) NO vive acá — se
+ * aplica como filtro CSS al <iframe> desde ui/Viewport.tsx. Se intentó
+ * primero metiendo el filtro dentro de este HTML (en el `<body>` o en un
+ * `img`), pero un filtro CSS aplicado DENTRO del documento de un iframe no se
+ * pinta en Chromium (se confirmó con capturas: el computed style lo reporta
+ * aplicado, pero el render no cambia) — hay que aplicarlo al elemento
+ * `<iframe>` mismo, desde el padre.
  */
 function wrapInThemeSurface(bodyHtml: string, vars: Record<string, string>): string {
   const bg = vars.bg_solid_mail_general || '#ffffff'

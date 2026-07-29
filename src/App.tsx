@@ -6,7 +6,6 @@ import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
 import { ToolbarGlobals } from './ui/ToolbarGlobals'
-import { applyTheme, getEffectiveTheme, type Theme } from './ui/theme'
 
 function App() {
   const doc = useBuilder((s) => s.document)
@@ -15,17 +14,10 @@ function App() {
   const setSlotFields = useBuilder((s) => s.setSlotFields)
   const setGlobalFields = useBuilder((s) => s.setGlobalFields)
   const { canUndo, canRedo, undo, redo } = useTemporal()
-  const [theme, setTheme] = useState<Theme>(() => getEffectiveTheme())
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<SlotName | null>(null)
-
-  const toggleTheme = () => {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
-    applyTheme(next)
-    setTheme(next)
-  }
 
   const saveStatusLabel =
     saveStatus === 'saving'
@@ -50,9 +42,6 @@ function App() {
         </button>
         <button type="button" onClick={redo} disabled={!canRedo}>
           Rehacer
-        </button>
-        <button type="button" onClick={toggleTheme} aria-label="Cambiar tema claro/oscuro de la app">
-          {theme === 'dark' ? '☀️ Claro' : '🌙 Oscuro'}
         </button>
       </header>
 
