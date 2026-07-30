@@ -118,11 +118,9 @@ export interface EmailPreviewResult {
  * No se le agrega NADA de estilo propio de la app — el fondo, el ancho de
  * 600px y los márgenes salen del maestro, igual que en Gmail.
  *
- * NOTA: la simulación de cliente de correo (Claro/Oscuro) no vive acá — se
- * aplica como filtro CSS al <iframe> desde ui/Viewport.tsx. Se intentó primero
- * metiendo el filtro dentro de este HTML, pero un filtro CSS aplicado DENTRO
- * del documento de un iframe no se pinta en Chromium (confirmado con
- * capturas: el computed style lo reporta aplicado, pero el render no cambia).
+ * NOTA: la simulación de cliente de correo (Claro/Oscuro) no vive acá — la
+ * inyecta ui/Viewport.tsx como un <style> en el DOM del iframe. Este HTML es
+ * el del mail y nada más, así que se puede comparar contra el exportado.
  */
 export async function renderEmailPreview(
   doc: EmailDocument,

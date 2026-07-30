@@ -136,11 +136,10 @@ describe('renderEmailPreview', () => {
     expect(result.html).toContain(`background-image: url(${url})`)
   })
 
-  it('never carries the client dark-mode simulation — that lives as a CSS class on the <iframe>', async () => {
-    // La simulación de cliente Claro/Oscuro (ui/Viewport.tsx) es un filter en
-    // el <iframe> mismo, no algo que este HTML deba conocer o generar — un
-    // filter puesto DENTRO de este documento no se pinta en Chromium
-    // (verificado con capturas), así que este módulo ni lo intenta.
+  it('never carries the client dark-mode simulation — that is injected into the iframe DOM at runtime', async () => {
+    // La simulación de cliente Claro/Oscuro la agrega ui/Viewport.tsx como un
+    // <style> en el DOM del iframe, no este módulo: lo que sale de acá es el
+    // HTML del mail y nada más.
     const result = await renderEmailPreview(d(), 'CO')
     expect(result.html).not.toContain('filter:')
     expect(result.html).not.toContain('invert(')

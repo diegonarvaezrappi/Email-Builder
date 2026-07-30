@@ -390,15 +390,9 @@
   background: #fff;
 }
 
-/* Simulación de "cliente con dark mode": el filtro va en el <iframe> mismo,
-   no en su contenido — un filter CSS puesto DENTRO del documento del iframe
-   no se pinta en Chromium (verificado). invert+hue-rotate es la aproximación
-   estándar de cómo Gmail/Outlook auto-oscurecen un correo sin soporte nativo
-   de dark mode; como se aplica a todo el iframe, las imágenes también se
-   invierten (no hay forma de cancelarlo solo en ellas desde afuera). */
-.email-frame iframe.client-dark-sim {
-  filter: invert(1) hue-rotate(180deg);
-}
+/* La simulación de "cliente con dark mode" NO vive acá: se inyecta como un
+   <style> dentro del documento del iframe (ver DARK_SIM_CSS en ui/Viewport.tsx),
+   que es la única forma de invertir el mail pero dejar las imágenes a color. */
 
 /* Capa clickeable por slot, posicionada sobre el iframe según lo que se midió
    dentro del documento del mail. Va acá y no dentro del iframe para no tocar
