@@ -394,11 +394,41 @@
    <style> dentro del documento del iframe (ver DARK_SIM_CSS en ui/Viewport.tsx),
    que es la única forma de invertir el mail pero dejar las imágenes a color. */
 
-/* Capa clickeable por slot, posicionada sobre el iframe según lo que se midió
-   dentro del documento del mail. Va acá y no dentro del iframe para no tocar
-   ni un byte del HTML del mail (que debe quedar igual al exportado). */
+/* Capa siempre presente entre el iframe y los overlays de slot: un <iframe>
+   es un documento aparte y puede "tragarse" los eventos nativos de drag
+   cuando el cursor pasa directo sobre él sin nada delante — con esta capa el
+   drop para restaurar un slot arrastrado desde LibraryPanel llega de forma
+   confiable en cualquier punto del canvas. Transparente y sin alto propio
+   (se le fija el mismo alto que al iframe desde Viewport.tsx). */
+.canvas-drop-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* dragOver se trackea en .email-frame (ver ui/Viewport.tsx) porque ahí viven
+   los handlers de drag, no en canvas-drop-layer. */
+.email-frame.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* Overlay clickeable por slot, posicionado sobre el iframe según lo que se
+   midió dentro del documento del mail. Va acá y no dentro del iframe para no
+   tocar ni un byte del HTML del mail (que debe quedar igual al exportado).
+   Es un <div> (no un <button>) porque adentro conviven dos botones —
+   seleccionar y, para los slots eliminables, eliminar — y anidar <button>
+   dentro de <button> es HTML inválido. */
 .slot-hit {
   position: absolute;
+}
+
+.slot-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   padding: 0;
   background: transparent;
   border: 2px solid transparent;
@@ -407,16 +437,16 @@
   font: inherit;
 }
 
-.slot-hit:hover {
+.slot-hit:hover .slot-select {
   border-color: var(--accent-border);
 }
 
-.slot-hit.selected {
+.slot-hit.selected .slot-select {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
-.slot-hit:focus-visible {
+.slot-select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -439,6 +469,41 @@
 
 .slot-hit:hover .slot-badge,
 .slot-hit.selected .slot-badge {
+  opacity: 1;
+}
+
+/* Botón de eliminar — solo en slots con SlotDef.removable (hoy, Cierre). */
+.slot-delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-bottom-left-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  background: var(--danger);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.slot-hit:hover .slot-delete,
+.slot-hit.selected .slot-delete {
+  opacity: 1;
+}
+
+.slot-delete:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
   opacity: 1;
 }
 

@@ -64,8 +64,8 @@ function App() {
       </header>
 
       <div className="app-body">
-        <LibraryPanel selected={selected} onSelect={setSelected} />
-        <Viewport document={doc} selected={selected} onSelect={setSelected} />
+        <LibraryPanel document={doc} selected={selected} onSelect={setSelected} />
+        <Viewport document={doc} selected={selected} onSelect={setSelected} onChangeSlot={setSlotFields} />
         <InspectorPanel document={doc} selected={selected} onChange={setSlotFields} />
       </div>
     </div>

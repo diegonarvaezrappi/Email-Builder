@@ -7,13 +7,16 @@ import { FooterPropertiesPanel } from './components/footer/PropertiesPanel'
 import { defaultHeaderFields, headerSchema, type HeaderFields } from './components/header/schema'
 import { renderHeaderSnippet } from './components/header/render'
 import { HeaderPropertiesPanel } from './components/header/PropertiesPanel'
+import { defaultCierreFields, cierreSchema, type CierreFields } from './components/cierre/schema'
+import { renderCierreSnippet } from './components/cierre/render'
+import { CierrePropertiesPanel } from './components/cierre/PropertiesPanel'
 import { defaultGlobalFields } from './global/schema'
 
 /**
  * Definición de un slot registrable. `render` recibe el documento completo
  * (no solo sus propios campos) porque los slots pueden estar acoplados entre
- * sí — ej.: si Footer.tipoFooter = 'RTS', el futuro slot Cierre debe
- * eliminarse por completo (ver Referencias/instrucciones.md línea 426).
+ * sí — ej.: si Footer.tipoFooter = 'RTS', Cierre se elimina por completo (ver
+ * Referencias/instrucciones.md línea 426, y components/cierre/render.ts).
  *
  * `schema` se tipa con Input=any a propósito: los schemas de cada slot usan
  * `.default(...)` en varios campos, por lo que su tipo de entrada (antes de
@@ -27,6 +30,13 @@ export interface SlotDef<TFields> {
   defaultFields: TFields
   render: (fields: TFields, doc: EmailDocument) => string
   PropertiesPanel: ComponentType<{ value: TFields; onChange: (next: TFields) => void }>
+  /**
+   * Si es true, el Viewport muestra un botón para eliminar el slot del email
+   * y el LibraryPanel permite arrastrarlo de vuelta cuando quedó fuera. El
+   * schema de TFields debe incluir un campo `removed: boolean` — ver
+   * components/cierre/schema.ts.
+   */
+  removable?: boolean
 }
 
 const footerSlotDef: SlotDef<FooterFields> = {
@@ -47,6 +57,16 @@ const headerSlotDef: SlotDef<HeaderFields> = {
   PropertiesPanel: HeaderPropertiesPanel,
 }
 
+const cierreSlotDef: SlotDef<CierreFields> = {
+  slot: 'CIERRE',
+  docKey: 'cierre',
+  schema: cierreSchema,
+  defaultFields: defaultCierreFields,
+  render: (fields, doc) => renderCierreSnippet(fields, doc),
+  PropertiesPanel: CierrePropertiesPanel,
+  removable: true,
+}
+
 /** Label del slot en la librería de componentes (panel izquierdo). */
 export const SLOT_LABELS: Record<SlotName, string> = {
   HEADER: 'Header',
@@ -59,16 +79,18 @@ export const SLOT_LABELS: Record<SlotName, string> = {
 /**
  * Mapa de slots registrados — NO una unión discriminada (a diferencia de
  * inapps-builder), porque un email tiene todos los slots a la vez. Los
- * marcadores sin entrada aquí (HEADER/BANNER/CONTENIDOS/CIERRE por ahora)
- * quedan intactos en el HTML ensamblado hasta que se implementen.
+ * marcadores sin entrada aquí (BANNER/CONTENIDOS por ahora) quedan intactos
+ * en el HTML ensamblado hasta que se implementen.
  */
 export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
   HEADER: headerSlotDef,
   FOOTER: footerSlotDef,
+  CIERRE: cierreSlotDef,
 }
 
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
   header: defaultHeaderFields,
   footer: defaultFooterFields,
+  cierre: defaultCierreFields,
 }

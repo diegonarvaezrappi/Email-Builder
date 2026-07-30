@@ -1,5 +1,5 @@
 import templateBaseRaw from '../assets/templates/template_base.html?raw'
-import { SLOT_ORDER, type EmailDocument } from '../model'
+import { SLOT_ORDER, type EmailDocument, type SlotName } from '../model'
 import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
@@ -13,6 +13,17 @@ import { resolveGlobalVars } from '../global/vars'
  * scripts/sync-master.mjs, que valida esta misma forma antes de sincronizar.
  */
 const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/
+
+/**
+ * Slots cuyo marcador real no es `<!-- ${slot} -->` literal. El maestro
+ * (estructura_general.html) usa el plural "CIERRES" para el slot Cierre —
+ * inconsistencia real del repo, no un typo de acá. Debe quedar sincronizado
+ * con SLOT_MARKERS de scripts/sync-master.mjs, que valida esta misma forma
+ * antes de sincronizar.
+ */
+const SLOT_MARKER_TEXT: Partial<Record<SlotName, string>> = {
+  CIERRE: 'CIERRES',
+}
 
 /**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
@@ -43,7 +54,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       continue
     }
 
-    const marker = `<!-- ${slot} -->`
+    const marker = `<!-- ${SLOT_MARKER_TEXT[slot] ?? slot} -->`
     if (!html.includes(marker)) {
       throw new Error(`No se encontró el marcador ${marker} en template_base.html`)
     }

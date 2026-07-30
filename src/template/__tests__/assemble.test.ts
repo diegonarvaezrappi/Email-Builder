@@ -4,6 +4,7 @@ import { defaultEmailDocument } from '../../registry'
 import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
 import { renderHeaderSnippet } from '../../components/header/render'
+import { renderCierreSnippet } from '../../components/cierre/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
 
@@ -24,16 +25,23 @@ describe('assembleEmailHtml', () => {
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('leaves the other slots (not yet implemented) untouched', () => {
+  it('replaces the CIERRES marker (plural in the master, singular slot name) with the rendered cierre snippet', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    const expectedSnippet = renderCierreSnippet(defaultEmailDocument.cierre, defaultEmailDocument)
+
+    expect(html).not.toContain('<!-- CIERRES -->')
+    expect(html.includes(expectedSnippet)).toBe(true)
+  })
+
+  it('leaves BANNER/CONTENIDOS (not yet implemented) untouched', () => {
     // Desde la reestructuración a estructura_general.html estos ya no son
-    // marcadores simples `<!-- X -->` (ese trato quedó solo para FOOTER, el
-    // único implementado) sino comentarios de instrucciones en prosa — ver
-    // la nota grande en scripts/sync-master.mjs.
+    // marcadores simples `<!-- X -->` sino comentarios de instrucciones en
+    // prosa — ver la nota grande en scripts/sync-master.mjs. HEADER, FOOTER y
+    // CIERRE sí están implementados y se prueban aparte.
     const html = assembleEmailHtml(defaultEmailDocument)
     for (const marker of [
       '<!-- BANNER : por defecto el template debe tener un banner vertical, con tags  -->',
       '<!-- WRAPPER DE CONTENIDOS:',
-      '<!-- CIERRES -->',
     ]) {
       expect(html).toContain(marker)
     }
@@ -66,11 +74,15 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme, the HEADER marker and the FOOTER marker', () => {
-    const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'problack' } }
+  it('touches nothing besides the theme, the HEADER marker, the CIERRE marker and the FOOTER marker', () => {
+    // tema 'problack' fuerza también el auto-ocultado de Cierre (regla #1 de
+    // USO-DE-CADA-PARTE.md §9) — se prueba con 'beige100' para poder afirmar
+    // que el marcador SÍ se reemplaza (por algo no vacío) en este test.
+    const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'beige100' } }
     const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
-      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, renderHeaderSnippet(doc.header, 'problack'))
-      .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'problack'))
+      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, renderHeaderSnippet(doc.header, 'beige100'))
+      .replace('<!-- CIERRES -->', renderCierreSnippet(doc.cierre, doc))
+      .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'beige100'))
     expect(assembleEmailHtml(doc)).toBe(expected)
   })
 })

@@ -17,17 +17,21 @@
 //    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
 //    agrega un tema nuevo la app lo levanta sin tocar código.
 // 4. VALIDA el contrato antes de escribir nada:
-//    - El marcador `<!-- FOOTER -->` (el único slot simple ya implementado)
-//      debe aparecer EXACTAMENTE una vez en el maestro. BANNER/CONTENIDOS/
-//      CIERRE quedaron fuera de este chequeo en la reestructuración a
-//      estructura_general.html: el repo los reemplazó por comentarios de
-//      instrucciones en prosa (ya no `<!-- BANNER -->` sino
-//      `<!-- BANNER : por defecto...  -->`, y CONTENIDOS ni siquiera quedó
-//      como un comentario propio) — mismo criterio que ya se usaba con HEADER
-//      antes de implementarlo: sin componente real, no hay un marcador
-//      estable que validar, y cuando se implementen habrá que diseñar su
-//      propio matcher contra el texto real del momento (ver
-//      HEADER_WRAPPER_PLACEHOLDER_RE más abajo para el precedente).
+//    - Los marcadores `<!-- FOOTER -->` y `<!-- CIERRES -->` (los slots
+//      simples ya implementados) deben aparecer EXACTAMENTE una vez cada uno
+//      en el maestro. Ojo: el de Cierre es PLURAL en el maestro
+//      ("CIERRES", no "CIERRE") — inconsistencia real del repo, no un typo de
+//      acá; debe quedar sincronizado con SLOT_MARKER_TEXT de
+//      src/template/assemble.ts. BANNER/CONTENIDOS quedaron fuera de este
+//      chequeo en la reestructuración a estructura_general.html: el repo los
+//      reemplazó por comentarios de instrucciones en prosa (ya no
+//      `<!-- BANNER -->` sino `<!-- BANNER : por defecto...  -->`, y
+//      CONTENIDOS ni siquiera quedó como un comentario propio) — mismo
+//      criterio que ya se usaba con HEADER y CIERRE antes de implementarlos:
+//      sin componente real, no hay un marcador estable que validar, y cuando
+//      se implementen habrá que diseñar su propio matcher contra el texto
+//      real del momento (ver HEADER_WRAPPER_PLACEHOLDER_RE más abajo para el
+//      precedente).
 //    - El placeholder de HEADER es distinto (vive como el comentario
 //      multilínea "HEADER WRAPPER … CIERRE HEADER WRAPPER", no un
 //      `<!-- HEADER -->` de una sola línea) y se valida aparte, con el mismo
@@ -68,8 +72,8 @@
 // 03- → 02- en un mismo día), y hardcodear el número rompía el sync en cada
 // renumeración. Ver resolveNumberedDir(). Lo mismo pasa un nivel más adentro,
 // con las subcarpetas de NN-components/ (footer/ → 06_footer/, headers/ →
-// 01_headers/, etc., todas con el separador '_' en vez de '-') — ver
-// resolveNumberedSubdir().
+// 01_headers/, closing/ → 05_closing/, etc., todas con el separador '_' en
+// vez de '-') — ver resolveNumberedSubdir().
 //
 // Uso: node scripts/sync-master.mjs   (corre solo con `npm run dev/build`)
 // ============================================================================
@@ -153,19 +157,29 @@ const COMPONENTS_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_D
 
 const FOOTER_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'footer')
 const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'headers')
+const CIERRE_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'closing')
 
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
 const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
 const HEADERS_DIR = HEADERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, HEADERS_SUBDIR_NAME)
+const CIERRE_DIR = CIERRE_SUBDIR_NAME && path.join(COMPONENTS_DIR, CIERRE_SUBDIR_NAME)
 
-/** Solo FOOTER: ver la nota de arriba sobre por qué BANNER/CONTENIDOS/CIERRE quedan afuera. */
-const SLOT_MARKERS = ['FOOTER']
+/**
+ * FOOTER y CIERRE: ver la nota de arriba sobre por qué BANNER/CONTENIDOS
+ * quedan afuera. `text` es el texto real del marcador en el maestro — el de
+ * CIERRE es plural ("CIERRES"), no el nombre del slot.
+ */
+const SLOT_MARKERS = [
+  { slot: 'FOOTER', text: 'FOOTER' },
+  { slot: 'CIERRE', text: 'CIERRES' },
+]
 
 const TEMPLATE_BASE_NAME = 'estructura_general.html'
 /** Ruta relativa al repo, solo para los mensajes. */
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
 const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
+const CIERRE_FILE = 'cierre.html'
 
 /** Debe quedar sincronizado con HEADER_BRAND_VALUES de src/components/header/schema.ts. */
 const HEADER_BRANDS = [
@@ -214,11 +228,13 @@ if (!templateBasePath) {
   fail(`No se encontró ${TEMPLATE_BASE_SOURCE} en ${MASTER_DIR}`)
 } else {
   templateBaseHtml = fs.readFileSync(templateBasePath, 'utf8')
-  for (const marker of SLOT_MARKERS) {
-    const re = new RegExp(`<!--\\s*${marker}\\s*-->`, 'g')
+  for (const { slot, text } of SLOT_MARKERS) {
+    const re = new RegExp(`<!--\\s*${text}\\s*-->`, 'g')
     const matches = templateBaseHtml.match(re) ?? []
     if (matches.length !== 1) {
-      fail(`El marcador <!-- ${marker} --> aparece ${matches.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`)
+      fail(
+        `El marcador <!-- ${text} --> (slot ${slot}) aparece ${matches.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+      )
     }
   }
 
@@ -291,6 +307,17 @@ if (FOOTER_DIR) {
   }
 }
 
+// --- NN-components/NN_closing/cierre.html -----------------------------------------
+let cierreFileContent = ''
+if (CIERRE_DIR) {
+  const fp = path.join(CIERRE_DIR, CIERRE_FILE)
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/${CIERRE_FILE} en ${MASTER_DIR}`)
+  } else {
+    cierreFileContent = fs.readFileSync(fp, 'utf8')
+  }
+}
+
 // --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
@@ -346,6 +373,9 @@ fs.writeFileSync(path.join(ASSETS_DIR, TEMPLATE_BASE_FILE), assembledTemplateBas
 for (const [name, content] of Object.entries(footerFileContents)) {
   fs.writeFileSync(path.join(ASSETS_DIR, name), content, 'utf8')
 }
+if (cierreFileContent) {
+  fs.writeFileSync(path.join(ASSETS_DIR, CIERRE_FILE), cierreFileContent, 'utf8')
+}
 // Suelto además de inyectado: src/themes/themes.ts parsea los temas de acá.
 fs.writeFileSync(path.join(ASSETS_DIR, 'head-meta-tags.html'), headMetaHtml, 'utf8')
 
@@ -363,7 +393,7 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcador${SLOT_MARKERS.length === 1 ? '' : 'es'} + tema + HEADER WRAPPER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/`,
 )
 console.log(
   `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,

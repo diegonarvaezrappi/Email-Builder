@@ -35,6 +35,8 @@ interface ViewportProps {
   document: EmailDocument
   selected: SlotName | null
   onSelect: (slot: SlotName) => void
+  /** Escribe los campos de un slot por su docKey — igual que InspectorPanel.onChange, reutilizado acá para eliminar/restaurar. */
+  onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -115,16 +117,19 @@ type PreviewDevice = 'desktop' | 'mobile'
 const MOBILE_WIDTH = 375
 
 /** Cómo se ubica cada slot implementado dentro del documento del mail. */
-const SLOT_LOCATORS: Record<'HEADER' | 'FOOTER', string> = {
+const SLOT_LOCATORS: Record<'HEADER' | 'FOOTER' | 'CIERRE', string> = {
   // El div que envuelve la tabla del header — HEADER1..HEADER4 según la marca
   // (ver 01-foundations/global-styles/global-styles.html).
   HEADER: '[id^="HEADER"]',
   // El footer no trae id ni role propios: es el hermano que sigue al
   // contenedor con padding donde viven header/banner/contenidos/cierre.
   FOOTER: 'table[role="paddedcontainer"]',
+  // El cierre no trae wrapper propio tampoco (ver 05_closing/cierre.html):
+  // se ubica por el único atributo estable que trae la imagen de firma.
+  CIERRE: 'img[alt="RappiFirma"]',
 }
 
-export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
+export function Viewport({ document: doc, selected, onSelect, onChangeSlot }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
   const [device, setDevice] = useState<PreviewDevice>('desktop')
@@ -157,6 +162,22 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
     } finally {
       setTimeout(() => setCopyStatus('idle'), 2000)
     }
+  }
+
+  // Eliminar/restaurar reutilizan setSlotFields (acá como onChangeSlot): no
+  // es una acción nueva del store, solo escribe `removed` en el campo del
+  // slot — mismo mecanismo que ya usa InspectorPanel para cualquier otro
+  // cambio, así que entra al historial de undo/redo igual que el resto.
+  const handleRemove = (slot: SlotName) => {
+    const def = registry[slot]
+    if (!def) return
+    onChangeSlot(def.docKey, { ...doc[def.docKey], removed: true })
+  }
+
+  const handleRestore = (slot: SlotName) => {
+    const def = registry[slot]
+    if (!def) return
+    onChangeSlot(def.docKey, { ...doc[def.docKey], removed: false })
   }
 
   return (
@@ -236,6 +257,8 @@ export function Viewport({ document: doc, selected, onSelect }: ViewportProps) {
             clientScheme={clientScheme}
             selected={selected}
             onSelect={onSelect}
+            onRemove={handleRemove}
+            onRestore={handleRestore}
           />
         )
       ) : (
@@ -261,7 +284,16 @@ interface EmailFrameProps {
   clientScheme: EmailClientScheme
   selected: SlotName | null
   onSelect: (slot: SlotName) => void
+  onRemove: (slot: SlotName) => void
+  onRestore: (slot: SlotName) => void
 }
+
+/**
+ * dataTransfer key usado para arrastrar un slot desde LibraryPanel y soltarlo
+ * en el Viewport para restaurarlo. Debe quedar sincronizado con
+ * ui/LibraryPanel.tsx.
+ */
+const SLOT_DRAG_TYPE = 'application/x-email-slot'
 
 /** Dónde cayó un slot dentro del documento del iframe. */
 interface SlotRect {
@@ -273,7 +305,7 @@ interface SlotRect {
 }
 
 /** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
-const SELECTABLE_SLOTS = ['HEADER', 'FOOTER'] as const
+const SELECTABLE_SLOTS = ['HEADER', 'FOOTER', 'CIERRE'] as const
 
 /**
  * Mide dónde quedó cada slot implementado dentro del documento ya renderizado.
@@ -302,6 +334,16 @@ function measureSlots(root: Document): SlotRect[] {
       const height = Math.max(body.bottom - top, 0)
       if (height === 0) continue
       rects.push({ slot, top, left: body.left, width: body.width, height })
+    } else if (slot === 'CIERRE') {
+      // Tampoco tiene wrapper propio: se ubica por la imagen de firma y se
+      // mide la tabla que la contiene (si no se encuentra, se usa la imagen
+      // sola). No aparece nada acá cuando renderCierreSnippet devolvió '' —
+      // eliminado a mano, tema Pro/ProBlack o Footer RTS.
+      const img = root.querySelector(SLOT_LOCATORS.CIERRE)
+      if (!img) continue
+      const el = img.closest('table') ?? img
+      const r = el.getBoundingClientRect()
+      rects.push({ slot, top: r.top, left: r.left, width: r.width, height: r.height })
     }
   }
   return rects
@@ -312,10 +354,11 @@ function measureSlots(root: Document): SlotRect[] {
  * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
  * desde acá su alto real y la posición de cada slot.
  */
-function EmailFrame({ html, device, clientScheme, selected, onSelect }: EmailFrameProps) {
+function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, onRestore }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [height, setHeight] = useState(600)
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
+  const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
     const root = iframeRef.current?.contentDocument
@@ -343,7 +386,30 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect }: EmailFra
 
   return (
     <div className="viewport-canvas">
-      <div className="email-frame" style={device === 'mobile' ? { width: MOBILE_WIDTH } : undefined}>
+      <div
+        className={`email-frame${dragOver ? ' drag-over' : ''}`}
+        style={device === 'mobile' ? { width: MOBILE_WIDTH } : undefined}
+        // Los handlers van en este ancestro común (no en canvas-drop-layer
+        // directamente) para que también reciban, por bubbling normal del
+        // DOM, los eventos que caen sobre un overlay .slot-hit (ej. el del
+        // FOOTER, que puede cubrir gran parte del canvas) — si vivieran solo
+        // en canvas-drop-layer, un slot-hit por encima los taparía porque es
+        // un hermano posterior en el DOM, no un descendiente.
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes(SLOT_DRAG_TYPE)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          const slot = e.dataTransfer.getData(SLOT_DRAG_TYPE)
+          setDragOver(false)
+          if (!slot) return
+          e.preventDefault()
+          onRestore(slot as SlotName)
+        }}
+      >
         <iframe
           ref={iframeRef}
           title="Preview del email"
@@ -352,18 +418,41 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect }: EmailFra
           onLoad={syncFrame}
           style={{ height }}
         />
+        {/*
+          Capa siempre presente entre el iframe y los overlays de slot: un
+          <iframe> es un documento aparte y puede "tragarse" los eventos
+          nativos de drag cuando el cursor pasa directo sobre él sin nada
+          delante — con esta capa el cursor nunca toca el iframe, así que el
+          drop para restaurar un slot llega de forma confiable sin importar
+          dónde se suelte dentro del canvas (los handlers en sí viven en
+          .email-frame, ver arriba).
+        */}
+        <div className="canvas-drop-layer" style={{ height }} />
         {slotRects.map(({ slot, top, left, width, height: h }) => (
-          <button
-            key={slot}
-            type="button"
-            className={`slot-hit${selected === slot ? ' selected' : ''}`}
-            aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
-            aria-pressed={selected === slot}
-            onClick={() => onSelect(slot)}
-            style={{ top, left, width, height: h }}
-          >
-            <span className="slot-badge">{SLOT_LABELS[slot]}</span>
-          </button>
+          <div key={slot} className={`slot-hit${selected === slot ? ' selected' : ''}`} style={{ top, left, width, height: h }}>
+            <button
+              type="button"
+              className="slot-select"
+              aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
+              aria-pressed={selected === slot}
+              onClick={() => onSelect(slot)}
+            >
+              <span className="slot-badge">{SLOT_LABELS[slot]}</span>
+            </button>
+            {registry[slot]?.removable && (
+              <button
+                type="button"
+                className="slot-delete"
+                aria-label={`Eliminar ${SLOT_LABELS[slot]}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemove(slot)
+                }}
+              >
+                ×
+              </button>
+            )}
+          </div>
         ))}
       </div>
     </div>
