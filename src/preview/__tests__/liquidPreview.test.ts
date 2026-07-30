@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../registry'
-import type { EmailDocument } from '../../model'
+import type { CtaBlock, EmailDocument } from '../../model'
 import type { TipoFooter } from '../../components/footer/schema'
-import { inlineFooterContentBlock, preprocessBrazeShorthand, renderEmailPreview } from '../liquidPreview'
+import { CTA_CONTENT_BLOCK_NAME } from '../../components/cta/render'
+import {
+  inlineCtaContentBlock,
+  inlineFooterContentBlock,
+  preprocessBrazeShorthand,
+  renderEmailPreview,
+} from '../liquidPreview'
 
 /** El documento por defecto con el tema / footer / header que pida el test. */
 const d = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultEmailDocument, ...over })
 const withTema = (tema: string, fondoUrl = '') => d({ global: { ...defaultEmailDocument.global, tema, fondoUrl } })
 const withFooter = (tipoFooter: TipoFooter, over: Partial<EmailDocument['footer']> = {}) =>
   d({ footer: { ...defaultEmailDocument.footer, tipoFooter, ...over } })
+
+const ctaBlock = (id: string, text: string): CtaBlock => ({ id, type: 'CTA', fields: { text, deeplink: '#', align: 'center' } })
 
 describe('preprocessBrazeShorthand', () => {
   it('converts a bare ${x} inside a tag expression into a plain variable', () => {
@@ -49,6 +57,33 @@ describe('inlineFooterContentBlock', () => {
     const reference = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
     expect(preprocessBrazeShorthand(reference)).toBe('{{"#"}}')
     expect(inlineFooterContentBlock(reference, 'General').length).toBeGreaterThan(1000)
+  })
+})
+
+describe('inlineCtaContentBlock', () => {
+  const reference = `{{content_blocks.\${${CTA_CONTENT_BLOCK_NAME}}}}`
+
+  it('swaps the opaque content block reference for its real body', () => {
+    const out = inlineCtaContentBlock(`antes ${reference} después`)
+    expect(out).not.toContain('content_blocks')
+    expect(out).toContain('antes ')
+    expect(out).toContain(' después')
+    expect(out).toContain('Botón CTA')
+  })
+
+  it('replaces ALL occurrences, not just the first — a mail can have 0 a N CTAs', () => {
+    const out = inlineCtaContentBlock(`uno: ${reference} dos: ${reference} tres: ${reference}`)
+    expect(out).not.toContain('content_blocks')
+    expect(out.split('Botón CTA').length - 1).toBeGreaterThanOrEqual(3)
+  })
+
+  it('is immune to preprocessBrazeShorthand stubbing either way — unlike Footer, "CTA-template" has a hyphen', () => {
+    // Las regexes de preprocessBrazeShorthand usan \w* (sin guion), así que
+    // nunca matchean `${CTA-template}` — la referencia queda intacta la toque
+    // antes o después de esa función (a diferencia de Footer, cuyo nombre de
+    // content block SÍ calza y se stubea a "#" si el orden se invirtiera).
+    expect(preprocessBrazeShorthand(reference)).toBe(reference)
+    expect(inlineCtaContentBlock(reference).length).toBeGreaterThan(1000)
   })
 })
 
@@ -134,6 +169,17 @@ describe('renderEmailPreview', () => {
     const result = await renderEmailPreview(withTema('beige100', url), 'CO')
     expect(result.error).toBeUndefined()
     expect(result.html).toContain(`background-image: url(${url})`)
+  })
+
+  it('resolves multiple CTA instances in the same preview, each with its own text', async () => {
+    const result = await renderEmailPreview(
+      d({ contenidos: [ctaBlock('a', 'Primer CTA'), ctaBlock('b', 'Segundo CTA')] }),
+      'CO',
+    )
+    expect(result.error).toBeUndefined()
+    expect(result.html).toContain('Primer CTA')
+    expect(result.html).toContain('Segundo CTA')
+    expect(result.html).not.toMatch(/\{%|\{\{/)
   })
 
   it('never carries the client dark-mode simulation — that is injected into the iframe DOM at runtime', async () => {

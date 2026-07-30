@@ -22,20 +22,19 @@
 //      en el maestro. Ojo: el de Cierre es PLURAL en el maestro
 //      ("CIERRES", no "CIERRE") — inconsistencia real del repo, no un typo de
 //      acá; debe quedar sincronizado con SLOT_MARKER_TEXT de
-//      src/template/assemble.ts. BANNER/CONTENIDOS quedaron fuera de este
-//      chequeo en la reestructuración a estructura_general.html: el repo los
-//      reemplazó por comentarios de instrucciones en prosa (ya no
-//      `<!-- BANNER -->` sino `<!-- BANNER : por defecto...  -->`, y
-//      CONTENIDOS ni siquiera quedó como un comentario propio) — mismo
-//      criterio que ya se usaba con HEADER y CIERRE antes de implementarlos:
-//      sin componente real, no hay un marcador estable que validar, y cuando
-//      se implementen habrá que diseñar su propio matcher contra el texto
-//      real del momento (ver HEADER_WRAPPER_PLACEHOLDER_RE más abajo para el
-//      precedente).
-//    - El placeholder de HEADER es distinto (vive como el comentario
-//      multilínea "HEADER WRAPPER … CIERRE HEADER WRAPPER", no un
-//      `<!-- HEADER -->` de una sola línea) y se valida aparte, con el mismo
-//      regex que usa src/template/assemble.ts para reemplazarlo.
+//      src/template/assemble.ts. BANNER queda fuera de este chequeo: el repo
+//      lo reemplazó por un comentario de instrucciones en prosa
+//      (`<!-- BANNER : por defecto...  -->`) en la reestructuración a
+//      estructura_general.html — sin componente real, no hay un marcador
+//      estable que validar, y cuando se implemente habrá que diseñar su
+//      propio matcher contra el texto real del momento (ver
+//      HEADER_WRAPPER_PLACEHOLDER_RE/CONTENIDOS_WRAPPER_PLACEHOLDER_RE más
+//      abajo para el precedente).
+//    - Los placeholders de HEADER y CONTENIDOS son distintos (viven como
+//      comentarios multilínea — "HEADER WRAPPER … CIERRE HEADER WRAPPER" y
+//      "WRAPPER DE CONTENIDOS: …", no un `<!-- X -->` de una sola línea) y se
+//      validan aparte, con el mismo regex que usa src/template/assemble.ts
+//      para reemplazarlos.
 //    - Los 2 placeholders de NN-foundations deben aparecer AL MENOS una vez
 //      cada uno (no exactamente una: estructura_general.html duplicó por
 //      accidente el de global-styles.html — aparece una vez, correcto, en el
@@ -158,11 +157,13 @@ const COMPONENTS_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_D
 const FOOTER_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'footer')
 const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'headers')
 const CIERRE_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'closing')
+const CTAS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'ctas')
 
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
 const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
 const HEADERS_DIR = HEADERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, HEADERS_SUBDIR_NAME)
 const CIERRE_DIR = CIERRE_SUBDIR_NAME && path.join(COMPONENTS_DIR, CIERRE_SUBDIR_NAME)
+const CTAS_DIR = CTAS_SUBDIR_NAME && path.join(COMPONENTS_DIR, CTAS_SUBDIR_NAME)
 
 /**
  * FOOTER y CIERRE: ver la nota de arriba sobre por qué BANNER/CONTENIDOS
@@ -180,6 +181,17 @@ const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPL
 const TEMPLATE_BASE_FILE = 'template_base.html'
 const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
 const CIERRE_FILE = 'cierre.html'
+/**
+ * Solo cta-template.html: es el content block real que src/preview/liquidPreview.ts
+ * infla donde aparezca `{{content_blocks.${CTA-template}}}`. cta-llamado.html
+ * (el patrón de instanciación) no se sincroniza — nadie lo importa, la app
+ * escribe su propio renderCtaSnippet inspirado en su forma, igual que ya pasa
+ * con footer.html (sincronizado pero sin uso en runtime).
+ */
+const CTA_FILE = 'cta-template.html'
+
+/** Debe quedar sincronizado con WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE de src/template/assemble.ts. */
+const CONTENIDOS_WRAPPER_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/g
 
 /** Debe quedar sincronizado con HEADER_BRAND_VALUES de src/components/header/schema.ts. */
 const HEADER_BRANDS = [
@@ -251,6 +263,13 @@ if (!templateBasePath) {
       `El placeholder "HEADER WRAPPER … CIERRE HEADER WRAPPER" aparece ${headerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
     )
   }
+
+  const contenidosPlaceholders = templateBaseHtml.match(CONTENIDOS_WRAPPER_PLACEHOLDER_RE) ?? []
+  if (contenidosPlaceholders.length !== 1) {
+    fail(
+      `El placeholder "WRAPPER DE CONTENIDOS" aparece ${contenidosPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+    )
+  }
 }
 
 // --- NN-foundations/global-styles: leer + validar placeholders -----------------
@@ -318,6 +337,17 @@ if (CIERRE_DIR) {
   }
 }
 
+// --- NN-components/NN_ctas/cta-template.html ---------------------------------------
+let ctaTemplateContent = ''
+if (CTAS_DIR) {
+  const fp = path.join(CTAS_DIR, CTA_FILE)
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/${CTA_FILE} en ${MASTER_DIR}`)
+  } else {
+    ctaTemplateContent = fs.readFileSync(fp, 'utf8')
+  }
+}
+
 // --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
@@ -376,6 +406,9 @@ for (const [name, content] of Object.entries(footerFileContents)) {
 if (cierreFileContent) {
   fs.writeFileSync(path.join(ASSETS_DIR, CIERRE_FILE), cierreFileContent, 'utf8')
 }
+if (ctaTemplateContent) {
+  fs.writeFileSync(path.join(ASSETS_DIR, CTA_FILE), ctaTemplateContent, 'utf8')
+}
 // Suelto además de inyectado: src/themes/themes.ts parsea los temas de acá.
 fs.writeFileSync(path.join(ASSETS_DIR, 'head-meta-tags.html'), headMetaHtml, 'utf8')
 
@@ -393,7 +426,7 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
 )
 console.log(
   `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,

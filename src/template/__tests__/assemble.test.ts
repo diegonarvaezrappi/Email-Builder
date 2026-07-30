@@ -5,8 +5,16 @@ import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
 import { renderHeaderSnippet } from '../../components/header/render'
 import { renderCierreSnippet } from '../../components/cierre/render'
+import { renderContenidosSnippet } from '../../components/contenidos/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
+import type { CtaBlock } from '../../model'
+
+const ctaBlock = (id: string, text: string): CtaBlock => ({
+  id,
+  type: 'CTA',
+  fields: { text, deeplink: '#', align: 'center' },
+})
 
 describe('assembleEmailHtml', () => {
   it('replaces the FOOTER marker exactly once with the rendered footer snippet', () => {
@@ -33,18 +41,32 @@ describe('assembleEmailHtml', () => {
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('leaves BANNER/CONTENIDOS (not yet implemented) untouched', () => {
-    // Desde la reestructuración a estructura_general.html estos ya no son
-    // marcadores simples `<!-- X -->` sino comentarios de instrucciones en
-    // prosa — ver la nota grande en scripts/sync-master.mjs. HEADER, FOOTER y
-    // CIERRE sí están implementados y se prueban aparte.
+  it('leaves BANNER (not yet implemented) untouched', () => {
+    // Desde la reestructuración a estructura_general.html no es un marcador
+    // simple `<!-- X -->` sino un comentario de instrucciones en prosa — ver
+    // la nota grande en scripts/sync-master.mjs. HEADER, FOOTER, CIERRE y
+    // CONTENIDOS sí están implementados y se prueban aparte.
     const html = assembleEmailHtml(defaultEmailDocument)
-    for (const marker of [
-      '<!-- BANNER : por defecto el template debe tener un banner vertical, con tags  -->',
-      '<!-- WRAPPER DE CONTENIDOS:',
-    ]) {
-      expect(html).toContain(marker)
-    }
+    expect(html).toContain('<!-- BANNER : por defecto el template debe tener un banner vertical, con tags  -->')
+  })
+
+  it('replaces the WRAPPER DE CONTENIDOS placeholder with the rendered CTA blocks, joined by a single separator', () => {
+    const doc = { ...defaultEmailDocument, contenidos: [ctaBlock('a', 'Uno'), ctaBlock('b', 'Dos')] }
+    const html = assembleEmailHtml(doc)
+    const expectedSnippet = renderContenidosSnippet(doc.contenidos, doc)
+
+    expect(html).not.toContain('<!-- WRAPPER DE CONTENIDOS:')
+    expect(html.includes(expectedSnippet)).toBe(true)
+    // exactamente 1 separador entre los 2 CTA, ninguno colgando al final
+    const afterFirst = html.slice(html.indexOf('BLOCK:CTA:a'))
+    expect(afterFirst.split('<div class="separador"></div>').length - 1).toBeGreaterThanOrEqual(1)
+    expect(html.trimEnd().endsWith('<div class="separador"></div>')).toBe(false)
+  })
+
+  it('leaves no trace of the WRAPPER DE CONTENIDOS marker when there are no CTAs', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    expect(html).not.toContain('WRAPPER DE CONTENIDOS')
+    expect(html).not.toContain('BLOCK:CTA:')
   })
 
   it('bakes the selected theme in, leaving no theme Liquid in the output', () => {
@@ -74,13 +96,18 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme, the HEADER marker, the CIERRE marker and the FOOTER marker', () => {
+  it('touches nothing besides the theme, the HEADER/CONTENIDOS/CIERRE/FOOTER markers', () => {
     // tema 'problack' fuerza también el auto-ocultado de Cierre (regla #1 de
     // USO-DE-CADA-PARTE.md §9) — se prueba con 'beige100' para poder afirmar
     // que el marcador SÍ se reemplaza (por algo no vacío) en este test.
-    const doc = { ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema: 'beige100' } }
+    const doc = {
+      ...defaultEmailDocument,
+      global: { ...defaultEmailDocument.global, tema: 'beige100' },
+      contenidos: [ctaBlock('a', 'Uno')],
+    }
     const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
       .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, renderHeaderSnippet(doc.header, 'beige100'))
+      .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, renderContenidosSnippet(doc.contenidos, doc))
       .replace('<!-- CIERRES -->', renderCierreSnippet(doc.cierre, doc))
       .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'beige100'))
     expect(assembleEmailHtml(doc)).toBe(expected)
@@ -122,7 +149,7 @@ it('never carries the preview-only dark-client filter — that is view-only, in 
   // cuele acá, sin importar el tema o el fondo elegidos.
   const html = assembleEmailHtml({
     ...defaultEmailDocument,
-    global: { tema: 'problack', fondoUrl: 'https://x.test/a.png' },
+    global: { ...defaultEmailDocument.global, tema: 'problack', fondoUrl: 'https://x.test/a.png' },
   })
   expect(html).not.toContain('filter:')
   expect(html).not.toContain('invert(')

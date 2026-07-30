@@ -238,6 +238,30 @@
   border: 1px solid var(--border);
 }
 
+/* --- Grupo "Contenidos": no es un slot singleton, es un contenedor libre de
+   bloques (hoy solo CTA) — se muestra como etiqueta + lista anidada de tipos
+   de bloque, cada uno solo origen de arrastre (sin click-to-select). */
+.lib-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lib-group-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  padding: 4px 10px 0;
+}
+
+.lib-list-nested {
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+  margin-left: 10px;
+}
+
 /* --- Panel derecho vacío ------------------------------------------------ */
 .panel-inspector.empty {
   display: flex;
@@ -288,6 +312,15 @@
 .field-checkbox span {
   font-weight: normal;
   color: var(--text-h);
+}
+
+/* Contador/pista informativa bajo un input (ej. "24/35" en el texto del CTA)
+   — no es la etiqueta del campo, así que necesita más especificidad que
+   `.field span` para no heredar su negrita. */
+.field .field-hint {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--text);
 }
 
 /* --- Barra de Preview/Código -------------------------------------------- */
@@ -505,6 +538,53 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   opacity: 1;
+}
+
+/* Botón de duplicar — solo en bloques de CONTENIDOS (hoy, CTA). Mismo
+   tratamiento que .slot-delete, a su izquierda (20px = el ancho de ese botón)
+   para que no se superpongan. */
+.slot-duplicate {
+  position: absolute;
+  top: 0;
+  right: 20px;
+  z-index: 1;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.slot-hit:hover .slot-duplicate,
+.slot-hit.selected .slot-duplicate {
+  opacity: 1;
+}
+
+.slot-duplicate:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+/* Los bloques de CONTENIDOS (a diferencia de los slots singleton) se pueden
+   arrastrar para reordenar — el cursor de "agarrar" se pone en el botón de
+   selección, que es lo que realmente cubre el área visible del overlay. */
+.block-hit .slot-select {
+  cursor: grab;
+}
+
+.block-hit .slot-select:active {
+  cursor: grabbing;
 }
 
 .preview-error {

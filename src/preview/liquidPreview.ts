@@ -16,8 +16,10 @@ import { Liquid } from 'liquidjs'
 import footerGeneralRaw from '../assets/templates/footer_general.html?raw'
 import footerRtsRaw from '../assets/templates/footer_rts.html?raw'
 import footerSinAmorRaw from '../assets/templates/footer_sinamor.html?raw'
+import ctaTemplateRaw from '../assets/templates/cta-template.html?raw'
 import { FOOTER_CONTENT_BLOCK_BY_TIPO } from '../components/footer/render'
 import type { TipoFooter } from '../components/footer/schema'
+import { CTA_CONTENT_BLOCK_NAME } from '../components/cta/render'
 import type { EmailDocument } from '../model'
 import { assembleEmailHtml } from '../template/assemble'
 
@@ -76,6 +78,18 @@ export function preprocessBrazeShorthand(source: string): string {
 }
 
 /**
+ * Reemplaza TODAS las apariciones de una referencia opaca a content block por
+ * su cuerpo real. Función como reemplazo (no un string) para que `$`-patterns
+ * del cuerpo real ($&, $$, etc.) nunca se interpreten como sintaxis especial
+ * de String.replaceAll. `replaceAll` (no `replace`) porque un mismo content
+ * block puede aparecer más de una vez — Footer siempre aparece 1 sola vez,
+ * pero CTA puede aparecer 0 a N (una por instancia en doc.contenidos).
+ */
+function inlineAllContentBlockOccurrences(html: string, reference: string, body: string): string {
+  return html.replaceAll(reference, () => body)
+}
+
+/**
  * Pega el cuerpo del content block de legales donde el HTML exportado solo
  * lleva la referencia opaca `{{content_blocks.${NOMBRE}}}` — es lo que hace
  * Braze al enviar. Tiene que correr ANTES de preprocessBrazeShorthand: esa
@@ -84,7 +98,24 @@ export function preprocessBrazeShorthand(source: string): string {
  */
 export function inlineFooterContentBlock(html: string, tipoFooter: TipoFooter): string {
   const reference = `{{content_blocks.\${${FOOTER_CONTENT_BLOCK_BY_TIPO[tipoFooter]}}}}`
-  return html.replace(reference, () => CONTENT_BLOCK_BODY_BY_TIPO[tipoFooter])
+  return inlineAllContentBlockOccurrences(html, reference, CONTENT_BLOCK_BODY_BY_TIPO[tipoFooter])
+}
+
+/**
+ * Igual que inlineFooterContentBlock, pero para el content block de CTA — acá
+ * SÍ importa el `replaceAll`: puede haber 0 a N instancias de CTA en el mail.
+ *
+ * A diferencia de Footer, acá el orden respecto a preprocessBrazeShorthand no
+ * es estrictamente obligatorio: `CTA-template` tiene un guion, y las regexes
+ * de esa función (que usan `\w*`, sin guion) nunca matchean `${CTA-template}`
+ * — así que preprocessBrazeShorthand la deja intacta la toque antes o
+ * después. Se llama en el mismo orden que Footer de todos modos, por
+ * consistencia (y porque un futuro content block sin guion en el nombre sí
+ * tendría el mismo riesgo de stub silencioso que Footer).
+ */
+export function inlineCtaContentBlock(html: string): string {
+  const reference = `{{content_blocks.\${${CTA_CONTENT_BLOCK_NAME}}}}`
+  return inlineAllContentBlockOccurrences(html, reference, ctaTemplateRaw)
 }
 
 let engineSingleton: Liquid | null = null
@@ -127,8 +158,9 @@ export async function renderEmailPreview(
   country: PreviewCountry,
 ): Promise<EmailPreviewResult> {
   try {
-    const withContentBlock = inlineFooterContentBlock(assembleEmailHtml(doc), doc.footer.tipoFooter)
-    const preprocessed = preprocessBrazeShorthand(withContentBlock)
+    let withContentBlocks = inlineFooterContentBlock(assembleEmailHtml(doc), doc.footer.tipoFooter)
+    withContentBlocks = inlineCtaContentBlock(withContentBlocks)
+    const preprocessed = preprocessBrazeShorthand(withContentBlocks)
     const html = await getPreviewEngine().parseAndRender(preprocessed, { user_id: country })
     return { html }
   } catch (e) {

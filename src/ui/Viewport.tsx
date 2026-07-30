@@ -15,15 +15,25 @@
 // `role="paddedcontainer"`— y se dibujan capas clickeables encima, del lado de
 // la app. Medir requiere `allow-same-origin`; los scripts siguen bloqueados.
 //
+// Los bloques de CONTENIDOS (hoy solo CTA) se miden aparte: no tienen ningún
+// atributo propio que los distinga entre sí (el contenido real viene de un
+// content block sincronizado, intocable) — se ubican caminando los
+// comentarios `<!-- BLOCK:tipo:id -->` que la app misma agrega alrededor de
+// cada instancia, ver measureContentBlocks() y template/contentBlocks.ts.
+//
 // La pestaña "Código" muestra el HTML ensamblado (con el Liquid intacto), que
 // es lo que se copia/descarga — nunca pasa por LiquidJS.
 // ============================================================================
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EmailDocument, SlotName } from '../model'
+import type { ContentBlockType, EmailDocument, SlotName } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
+import { getContentBlockDef } from '../contentBlockRegistry'
 import { assembleEmailHtml } from '../template/assemble'
+import { BLOCK_CLOSE_RE, BLOCK_OPEN_RE } from '../template/contentBlocks'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
 import { CodeView } from './CodeView'
+import { isBlockSelected, isSlotSelected, selectBlock, selectSlot, type Selection } from './selection'
+import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, CONTENT_BLOCK_REORDER_DRAG_TYPE } from './dragTypes'
 import {
   PREVIEW_COUNTRIES,
   PREVIEW_COUNTRY_LABELS,
@@ -33,10 +43,14 @@ import {
 
 interface ViewportProps {
   document: EmailDocument
-  selected: SlotName | null
-  onSelect: (slot: SlotName) => void
-  /** Escribe los campos de un slot por su docKey — igual que InspectorPanel.onChange, reutilizado acá para eliminar/restaurar. */
+  selected: Selection | null
+  onSelect: (next: Selection) => void
+  /** Escribe los campos de un slot por su docKey — igual que InspectorPanel.onChange, reutilizado acá para eliminar/restaurar singletons. */
   onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
+  onInsertBlock: (type: ContentBlockType, atIndex: number) => void
+  onDuplicateBlock: (id: string) => void
+  onReorderBlock: (id: string, toIndex: number) => void
+  onRemoveBlock: (id: string) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -129,7 +143,16 @@ const SLOT_LOCATORS: Record<'HEADER' | 'FOOTER' | 'CIERRE', string> = {
   CIERRE: 'img[alt="RappiFirma"]',
 }
 
-export function Viewport({ document: doc, selected, onSelect, onChangeSlot }: ViewportProps) {
+export function Viewport({
+  document: doc,
+  selected,
+  onSelect,
+  onChangeSlot,
+  onInsertBlock,
+  onDuplicateBlock,
+  onReorderBlock,
+  onRemoveBlock,
+}: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
   const [device, setDevice] = useState<PreviewDevice>('desktop')
@@ -259,6 +282,11 @@ export function Viewport({ document: doc, selected, onSelect, onChangeSlot }: Vi
             onSelect={onSelect}
             onRemove={handleRemove}
             onRestore={handleRestore}
+            contenidos={doc.contenidos}
+            onInsertBlock={onInsertBlock}
+            onDuplicateBlock={onDuplicateBlock}
+            onReorderBlock={onReorderBlock}
+            onRemoveBlock={onRemoveBlock}
           />
         )
       ) : (
@@ -282,22 +310,30 @@ interface EmailFrameProps {
   html: string
   device: PreviewDevice
   clientScheme: EmailClientScheme
-  selected: SlotName | null
-  onSelect: (slot: SlotName) => void
+  selected: Selection | null
+  onSelect: (next: Selection) => void
   onRemove: (slot: SlotName) => void
   onRestore: (slot: SlotName) => void
+  contenidos: EmailDocument['contenidos']
+  onInsertBlock: (type: ContentBlockType, atIndex: number) => void
+  onDuplicateBlock: (id: string) => void
+  onReorderBlock: (id: string, toIndex: number) => void
+  onRemoveBlock: (id: string) => void
 }
-
-/**
- * dataTransfer key usado para arrastrar un slot desde LibraryPanel y soltarlo
- * en el Viewport para restaurarlo. Debe quedar sincronizado con
- * ui/LibraryPanel.tsx.
- */
-const SLOT_DRAG_TYPE = 'application/x-email-slot'
 
 /** Dónde cayó un slot dentro del documento del iframe. */
 interface SlotRect {
   slot: SlotName
+  top: number
+  left: number
+  width: number
+  height: number
+}
+
+/** Dónde cayó una instancia de bloque de contenido (ej. un CTA) dentro del documento del iframe. */
+interface ContentBlockRect {
+  id: string
+  type: string
   top: number
   left: number
   width: number
@@ -350,14 +386,106 @@ function measureSlots(root: Document): SlotRect[] {
 }
 
 /**
+ * Mide dónde quedó cada instancia de bloque de contenido (hoy solo CTA),
+ * caminando los comentarios `<!-- BLOCK:tipo:id -->` / `<!-- /BLOCK:tipo:id -->`
+ * que la app agrega alrededor de cada una (ver template/contentBlocks.ts) y
+ * acumulando el rect unión de todo lo que hay en medio. No asume nada sobre
+ * la forma interna del contenido real (puede ser un solo <a> con tablas
+ * anidadas, como el CTA, o algo más complejo en un futuro tipo de bloque):
+ * un min/max acumulado sobre TODOS los elementos entre los dos comentarios
+ * (no solo los de primer nivel) es correcto sin importar cuántos haya ni qué
+ * tan anidados estén.
+ */
+function measureContentBlocks(root: Document): ContentBlockRect[] {
+  if (!root.body) return []
+  const rects: ContentBlockRect[] = []
+  const walker = root.createTreeWalker(root.body, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT)
+
+  let current: { type: string; id: string; top: number; left: number; right: number; bottom: number } | null = null
+  let node: Node | null = walker.nextNode()
+
+  while (node) {
+    if (node.nodeType === Node.COMMENT_NODE) {
+      const data = (node as Comment).data
+      const open = data.match(BLOCK_OPEN_RE)
+      const close = data.match(BLOCK_CLOSE_RE)
+      if (open) {
+        current = { type: open[1], id: open[2], top: Infinity, left: Infinity, right: -Infinity, bottom: -Infinity }
+      } else if (close && current && current.type === close[1] && current.id === close[2]) {
+        if (current.right > current.left) {
+          rects.push({
+            id: current.id,
+            type: current.type,
+            top: current.top,
+            left: current.left,
+            width: current.right - current.left,
+            height: current.bottom - current.top,
+          })
+        }
+        current = null
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE && current) {
+      const r = (node as Element).getBoundingClientRect()
+      if (r.width > 0 || r.height > 0) {
+        current.top = Math.min(current.top, r.top)
+        current.left = Math.min(current.left, r.left)
+        current.right = Math.max(current.right, r.right)
+        current.bottom = Math.max(current.bottom, r.bottom)
+      }
+    }
+    node = walker.nextNode()
+  }
+  return rects
+}
+
+/** Y del drop, en el mismo espacio de coordenadas que los rects medidos (el interno del iframe, no el del documento padre). */
+function dropYInFrameSpace(e: React.DragEvent, frameEl: HTMLElement): number {
+  return e.clientY - frameEl.getBoundingClientRect().top
+}
+
+/**
+ * Resuelve el índice de destino comparando la Y del drop contra el punto
+ * medio vertical de cada bloque medido (en su orden ACTUAL, antes de sacar
+ * nada) — el primero cuyo punto medio quede debajo del cursor es donde se
+ * inserta; si ninguno, va al final. Sirve tanto para insertar un bloque nuevo
+ * como para reordenar uno existente: el ajuste por el propio bloque
+ * arrastrado (que corre el índice si se mueve hacia adelante) vive en
+ * store/store.ts (reorderContentBlock), no acá.
+ */
+function resolveDropIndex(order: string[], rectsById: Map<string, ContentBlockRect>, dropY: number): number {
+  for (let i = 0; i < order.length; i++) {
+    const rect = rectsById.get(order[i])
+    if (!rect) continue
+    const midY = rect.top + rect.height / 2
+    if (dropY < midY) return i
+  }
+  return order.length
+}
+
+/**
  * El email completo en un iframe. Va con `allow-same-origin` (sin
  * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
  * desde acá su alto real y la posición de cada slot.
  */
-function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, onRestore }: EmailFrameProps) {
+function EmailFrame({
+  html,
+  device,
+  clientScheme,
+  selected,
+  onSelect,
+  onRemove,
+  onRestore,
+  contenidos,
+  onInsertBlock,
+  onDuplicateBlock,
+  onReorderBlock,
+  onRemoveBlock,
+}: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const frameElRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(600)
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
+  const [blockRects, setBlockRects] = useState<ContentBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
@@ -366,6 +494,7 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, 
     applyClientScheme(root, clientScheme)
     setHeight(Math.max(root.body.scrollHeight, 200))
     setSlotRects(measureSlots(root))
+    setBlockRects(measureContentBlocks(root))
   }, [clientScheme])
 
   // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
@@ -384,9 +513,17 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, 
     }
   }, [html, device, syncFrame])
 
+  const resolveIndexForDrop = (e: React.DragEvent): number => {
+    const order = contenidos.map((b) => b.id)
+    const rectsById = new Map(blockRects.map((r) => [r.id, r]))
+    const dropY = frameElRef.current ? dropYInFrameSpace(e, frameElRef.current) : 0
+    return resolveDropIndex(order, rectsById, dropY)
+  }
+
   return (
     <div className="viewport-canvas">
       <div
+        ref={frameElRef}
         className={`email-frame${dragOver ? ' drag-over' : ''}`}
         style={device === 'mobile' ? { width: MOBILE_WIDTH } : undefined}
         // Los handlers van en este ancestro común (no en canvas-drop-layer
@@ -394,20 +531,44 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, 
         // DOM, los eventos que caen sobre un overlay .slot-hit (ej. el del
         // FOOTER, que puede cubrir gran parte del canvas) — si vivieran solo
         // en canvas-drop-layer, un slot-hit por encima los taparía porque es
-        // un hermano posterior en el DOM, no un descendiente.
+        // un hermano posterior en el DOM, no un descendiente. Los 3 gestos de
+        // drag (restaurar singleton / insertar bloque nuevo / reordenar) se
+        // despachan acá según qué dataTransfer type venga presente.
         onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes(SLOT_DRAG_TYPE)) return
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'copy'
-          setDragOver(true)
+          const types = e.dataTransfer.types
+          if (
+            types.includes(SLOT_DRAG_TYPE) ||
+            types.includes(CONTENT_BLOCK_DRAG_TYPE) ||
+            types.includes(CONTENT_BLOCK_REORDER_DRAG_TYPE)
+          ) {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = types.includes(CONTENT_BLOCK_REORDER_DRAG_TYPE) ? 'move' : 'copy'
+            setDragOver(true)
+          }
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
-          const slot = e.dataTransfer.getData(SLOT_DRAG_TYPE)
           setDragOver(false)
-          if (!slot) return
-          e.preventDefault()
-          onRestore(slot as SlotName)
+
+          const slot = e.dataTransfer.getData(SLOT_DRAG_TYPE)
+          if (slot) {
+            e.preventDefault()
+            onRestore(slot as SlotName)
+            return
+          }
+
+          const newType = e.dataTransfer.getData(CONTENT_BLOCK_DRAG_TYPE)
+          if (newType) {
+            e.preventDefault()
+            onInsertBlock(newType as ContentBlockType, resolveIndexForDrop(e))
+            return
+          }
+
+          const reorderId = e.dataTransfer.getData(CONTENT_BLOCK_REORDER_DRAG_TYPE)
+          if (reorderId) {
+            e.preventDefault()
+            onReorderBlock(reorderId, resolveIndexForDrop(e))
+          }
         }}
       >
         <iframe
@@ -423,19 +584,22 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, 
           <iframe> es un documento aparte y puede "tragarse" los eventos
           nativos de drag cuando el cursor pasa directo sobre él sin nada
           delante — con esta capa el cursor nunca toca el iframe, así que el
-          drop para restaurar un slot llega de forma confiable sin importar
-          dónde se suelte dentro del canvas (los handlers en sí viven en
-          .email-frame, ver arriba).
+          drop llega de forma confiable sin importar dónde se suelte dentro
+          del canvas (los handlers en sí viven en .email-frame, ver arriba).
         */}
         <div className="canvas-drop-layer" style={{ height }} />
         {slotRects.map(({ slot, top, left, width, height: h }) => (
-          <div key={slot} className={`slot-hit${selected === slot ? ' selected' : ''}`} style={{ top, left, width, height: h }}>
+          <div
+            key={slot}
+            className={`slot-hit${isSlotSelected(selected, slot) ? ' selected' : ''}`}
+            style={{ top, left, width, height: h }}
+          >
             <button
               type="button"
               className="slot-select"
               aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
-              aria-pressed={selected === slot}
-              onClick={() => onSelect(slot)}
+              aria-pressed={isSlotSelected(selected, slot)}
+              onClick={() => onSelect(selectSlot(slot))}
             >
               <span className="slot-badge">{SLOT_LABELS[slot]}</span>
             </button>
@@ -452,6 +616,50 @@ function EmailFrame({ html, device, clientScheme, selected, onSelect, onRemove, 
                 ×
               </button>
             )}
+          </div>
+        ))}
+        {blockRects.map(({ id, type, top, left, width, height: h }) => (
+          <div
+            key={id}
+            className={`slot-hit block-hit${isBlockSelected(selected, id) ? ' selected' : ''}`}
+            style={{ top, left, width, height: h }}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(CONTENT_BLOCK_REORDER_DRAG_TYPE, id)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+          >
+            <button
+              type="button"
+              className="slot-select"
+              aria-label={`Seleccionar ${getContentBlockDef(type)?.label ?? type}`}
+              aria-pressed={isBlockSelected(selected, id)}
+              onClick={() => onSelect(selectBlock(id))}
+            >
+              <span className="slot-badge">{getContentBlockDef(type)?.label ?? type}</span>
+            </button>
+            <button
+              type="button"
+              className="slot-duplicate"
+              aria-label="Duplicar"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicateBlock(id)
+              }}
+            >
+              ⧉
+            </button>
+            <button
+              type="button"
+              className="slot-delete"
+              aria-label="Eliminar"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemoveBlock(id)
+              }}
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>

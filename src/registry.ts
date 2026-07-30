@@ -1,6 +1,7 @@
 import type { ZodType, ZodTypeDef } from 'zod'
 import type { ComponentType } from 'react'
-import type { EmailDocument, SlotName } from './model'
+import type { ContentBlock, EmailDocument, SlotName } from './model'
+import { contentBlockSchema } from './model'
 import { defaultFooterFields, footerSchema, type FooterFields } from './components/footer/schema'
 import { renderFooterSnippet } from './components/footer/render'
 import { FooterPropertiesPanel } from './components/footer/PropertiesPanel'
@@ -10,7 +11,9 @@ import { HeaderPropertiesPanel } from './components/header/PropertiesPanel'
 import { defaultCierreFields, cierreSchema, type CierreFields } from './components/cierre/schema'
 import { renderCierreSnippet } from './components/cierre/render'
 import { CierrePropertiesPanel } from './components/cierre/PropertiesPanel'
+import { renderContenidosSnippet } from './components/contenidos/render'
 import { defaultGlobalFields } from './global/schema'
+import { z } from 'zod'
 
 /**
  * Definición de un slot registrable. `render` recibe el documento completo
@@ -29,7 +32,12 @@ export interface SlotDef<TFields> {
   schema: ZodType<TFields, ZodTypeDef, any>
   defaultFields: TFields
   render: (fields: TFields, doc: EmailDocument) => string
-  PropertiesPanel: ComponentType<{ value: TFields; onChange: (next: TFields) => void }>
+  /**
+   * Ausente en CONTENIDOS: lo editable vive por-instancia (ver
+   * contentBlockRegistry.ts), no hay un panel de "todo el array a la vez".
+   * InspectorPanel resuelve CONTENIDOS antes de llegar a este campo.
+   */
+  PropertiesPanel?: ComponentType<{ value: TFields; onChange: (next: TFields) => void }>
   /**
    * Si es true, el Viewport muestra un botón para eliminar el slot del email
    * y el LibraryPanel permite arrastrarlo de vuelta cuando quedó fuera. El
@@ -67,6 +75,15 @@ const cierreSlotDef: SlotDef<CierreFields> = {
   removable: true,
 }
 
+const contenidosSlotDef: SlotDef<ContentBlock[]> = {
+  slot: 'CONTENIDOS',
+  docKey: 'contenidos',
+  schema: z.array(contentBlockSchema),
+  defaultFields: [],
+  render: renderContenidosSnippet,
+  // Sin PropertiesPanel: ver la nota de la interfaz SlotDef.
+}
+
 /** Label del slot en la librería de componentes (panel izquierdo). */
 export const SLOT_LABELS: Record<SlotName, string> = {
   HEADER: 'Header',
@@ -79,13 +96,14 @@ export const SLOT_LABELS: Record<SlotName, string> = {
 /**
  * Mapa de slots registrados — NO una unión discriminada (a diferencia de
  * inapps-builder), porque un email tiene todos los slots a la vez. Los
- * marcadores sin entrada aquí (BANNER/CONTENIDOS por ahora) quedan intactos
- * en el HTML ensamblado hasta que se implementen.
+ * marcadores sin entrada aquí (BANNER por ahora) quedan intactos en el HTML
+ * ensamblado hasta que se implementen.
  */
 export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
   HEADER: headerSlotDef,
   FOOTER: footerSlotDef,
   CIERRE: cierreSlotDef,
+  CONTENIDOS: contenidosSlotDef,
 }
 
 export const defaultEmailDocument: EmailDocument = {
@@ -93,4 +111,5 @@ export const defaultEmailDocument: EmailDocument = {
   header: defaultHeaderFields,
   footer: defaultFooterFields,
   cierre: defaultCierreFields,
+  contenidos: [],
 }

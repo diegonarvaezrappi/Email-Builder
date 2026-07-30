@@ -15,6 +15,15 @@ import { resolveGlobalVars } from '../global/vars'
 const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/
 
 /**
+ * CONTENIDOS tampoco trae un marcador de una sola línea: vive como el
+ * comentario multilínea "WRAPPER DE CONTENIDOS: ..." que enumera los 9 tipos
+ * de bloque posibles. No-codiciosa, mismo estilo que HEADER_WRAPPER_PLACEHOLDER_RE.
+ * Debe quedar sincronizado con CONTENIDOS_WRAPPER_PLACEHOLDER_RE de
+ * scripts/sync-master.mjs.
+ */
+const WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/
+
+/**
  * Slots cuyo marcador real no es `<!-- ${slot} -->` literal. El maestro
  * (estructura_general.html) usa el plural "CIERRES" para el slot Cierre —
  * inconsistencia real del repo, no un typo de acá. Debe quedar sincronizado
@@ -51,6 +60,14 @@ export function assembleEmailHtml(doc: EmailDocument): string {
         throw new Error('No se encontró el placeholder "HEADER WRAPPER" en template_base.html')
       }
       html = html.replace(HEADER_WRAPPER_PLACEHOLDER_RE, rendered)
+      continue
+    }
+
+    if (slot === 'CONTENIDOS') {
+      if (!WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE.test(html)) {
+        throw new Error('No se encontró el placeholder "WRAPPER DE CONTENIDOS" en template_base.html')
+      }
+      html = html.replace(WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE, rendered)
       continue
     }
 
