@@ -17,21 +17,46 @@
 //    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
 //    agrega un tema nuevo la app lo levanta sin tocar código.
 // 4. VALIDA el contrato antes de escribir nada:
-//    - Los 4 marcadores de slot ya implementables como componente
-//      (BANNER, CONTENIDOS, CIERRE, FOOTER) deben aparecer EXACTAMENTE una
-//      vez en el maestro.
+//    - El marcador `<!-- FOOTER -->` (el único slot simple ya implementado)
+//      debe aparecer EXACTAMENTE una vez en el maestro. BANNER/CONTENIDOS/
+//      CIERRE quedaron fuera de este chequeo en la reestructuración a
+//      estructura_general.html: el repo los reemplazó por comentarios de
+//      instrucciones en prosa (ya no `<!-- BANNER -->` sino
+//      `<!-- BANNER : por defecto...  -->`, y CONTENIDOS ni siquiera quedó
+//      como un comentario propio) — mismo criterio que ya se usaba con HEADER
+//      antes de implementarlo: sin componente real, no hay un marcador
+//      estable que validar, y cuando se implementen habrá que diseñar su
+//      propio matcher contra el texto real del momento (ver
+//      HEADER_WRAPPER_PLACEHOLDER_RE más abajo para el precedente).
 //    - El placeholder de HEADER es distinto (vive como el comentario
 //      multilínea "HEADER WRAPPER … CIERRE HEADER WRAPPER", no un
 //      `<!-- HEADER -->` de una sola línea) y se valida aparte, con el mismo
 //      regex que usa src/template/assemble.ts para reemplazarlo.
-//    - Los 2 placeholders de NN-foundations deben aparecer EXACTAMENTE una
-//      vez cada uno.
+//    - Los 2 placeholders de NN-foundations deben aparecer AL MENOS una vez
+//      cada uno (no exactamente una: estructura_general.html duplicó por
+//      accidente el de global-styles.html — aparece una vez, correcto, en el
+//      <head>, y una segunda vez suelto dentro del <td> del header wrapper.
+//      String.replace() sin flag global solo toca la primera —la del
+//      <head>—, así que la segunda queda como comentario HTML inerte en el
+//      export: ruido cosmético, no una rotura funcional. Como es un typo del
+//      repo y no podemos tocarlo, se tolera en vez de bloquear el sync).
 //    - El `{% assign tema_general_mail_general = '...' %}` del maestro debe
 //      aparecer EXACTAMENTE una vez (template/assemble.ts lo reescribe con el
 //      tema elegido).
-//    - head-meta-tags.html debe declarar al menos un tema, y CADA tema debe
-//      definir su `color_footer_mail_general` (de ahí sale el font_style_look
-//      del footer).
+//    - head-meta-tags.html debe declarar al menos un tema. Antes también se
+//      exigía que cada tema definiera `color_footer_mail_general` (de ahí
+//      salía el font_style_look del footer), pero el repo lo borró de las 11
+//      ramas en la reestructuración de headers/banners a moléculas (sin
+//      reemplazo, y sin que ningún doc lo mencione — parece un accidente de
+//      edición, no un cambio de diseño: 02-components/README.md,
+//      GUIA-DE-TEMAS.md, COMO-ARMAR-UN-MAIL.md y CHANGELOG.md siguen
+//      describiéndolo como el mecanismo vigente). Bloquear el sync por esto
+//      dejaría a la app sin poder levantar NINGÚN cambio del repo (incluida
+//      esta misma reestructuración) hasta que se corrija upstream, así que
+//      se avisa por consola pero no se aborta — themes.ts trae su propio
+//      fallback (por grupo de tema: 'pro' en Pro/ProBlack, 'negro' en el
+//      resto) que reproduce el valor documentado mientras la variable no
+//      vuelva a existir en el repo.
 //    Si algo falla → aborta SIN escribir nada, y la app conserva la última
 //    copia buena de los assets.
 //
@@ -41,7 +66,10 @@
 // Las carpetas se resuelven por NOMBRE, ignorando el prefijo numérico: el repo
 // renumera seguido (los ejemplos fueron 08- → 07- → 06- y los componentes
 // 03- → 02- en un mismo día), y hardcodear el número rompía el sync en cada
-// renumeración. Ver resolveNumberedDir().
+// renumeración. Ver resolveNumberedDir(). Lo mismo pasa un nivel más adentro,
+// con las subcarpetas de NN-components/ (footer/ → 06_footer/, headers/ →
+// 01_headers/, etc., todas con el separador '_' en vez de '-') — ver
+// resolveNumberedSubdir().
 //
 // Uso: node scripts/sync-master.mjs   (corre solo con `npm run dev/build`)
 // ============================================================================
@@ -89,17 +117,51 @@ function resolveNumberedDir(suffix) {
   return matches[0]
 }
 
+/**
+ * Como resolveNumberedDir, pero para una subcarpeta `NN_<suffix>` (separador
+ * '_', no '-') dentro de una carpeta padre ya resuelta — ej.
+ * '02-components/06_footer'. Mismo criterio: si hay 0 o más de 1, falla en
+ * vez de adivinar.
+ */
+function resolveNumberedSubdir(parentDir, parentLabel, suffix) {
+  if (!parentDir) return null
+  let entries = []
+  try {
+    entries = fs.readdirSync(parentDir, { withFileTypes: true })
+  } catch (e) {
+    fail(`No se pudo leer ${parentDir}: ${e.message}`)
+    return null
+  }
+  const re = new RegExp(`^\\d+_${suffix}$`)
+  const matches = entries.filter((e) => e.isDirectory() && re.test(e.name)).map((e) => e.name)
+
+  if (matches.length === 0) {
+    fail(`No se encontró ninguna carpeta NN_${suffix}/ dentro de ${parentLabel}/`)
+    return null
+  }
+  if (matches.length > 1) {
+    fail(`Hay ${matches.length} carpetas NN_${suffix}/ (${matches.join(', ')}) dentro de ${parentLabel}/ — ambiguo, se esperaba 1`)
+    return null
+  }
+  return matches[0]
+}
+
 const FOUNDATIONS_DIR_NAME = resolveNumberedDir('foundations')
 const COMPONENTS_DIR_NAME = resolveNumberedDir('components')
 const EXAMPLES_DIR_NAME = resolveNumberedDir('examples')
+const COMPONENTS_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_DIR_NAME)
+
+const FOOTER_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'footer')
+const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'headers')
 
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
-const FOOTER_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_DIR_NAME, 'footer')
-const HEADERS_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_DIR_NAME, 'headers')
+const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
+const HEADERS_DIR = HEADERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, HEADERS_SUBDIR_NAME)
 
-const SLOT_MARKERS = ['BANNER', 'CONTENIDOS', 'CIERRE', 'FOOTER']
+/** Solo FOOTER: ver la nota de arriba sobre por qué BANNER/CONTENIDOS/CIERRE quedan afuera. */
+const SLOT_MARKERS = ['FOOTER']
 
-const TEMPLATE_BASE_NAME = 'test_claude_1_original.html'
+const TEMPLATE_BASE_NAME = 'estructura_general.html'
 /** Ruta relativa al repo, solo para los mensajes. */
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
@@ -186,19 +248,22 @@ if (templateBaseHtml && FOUNDATIONS_DIR) {
     }
     foundationsFileContents[file] = fs.readFileSync(fp, 'utf8')
 
+    // "Al menos 1", no "exactamente 1" — ver la nota grande del encabezado
+    // sobre el placeholder de global-styles.html duplicado por accidente.
     const count = templateBaseHtml.split(placeholder).length - 1
-    if (count !== 1) {
-      fail(`El placeholder de ${file} aparece ${count} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`)
+    if (count < 1) {
+      fail(`El placeholder de ${file} no aparece en ${TEMPLATE_BASE_SOURCE} (se esperaba al menos 1)`)
     }
   }
 }
 
-// --- head-meta-tags.html: validar que los temas estén completos ------------------
-// Cada rama del {% if tema_general_mail_general == '...' %} debe asignar su
-// color_footer_mail_general; si falta en alguna, el footer de ese tema saldría
-// sin estilo y es mejor enterarse acá que en producción.
+// --- head-meta-tags.html: validar que declare temas -----------------------------
+// Ya NO se exige que cada tema defina `color_footer_mail_general` — el repo lo
+// quitó de las 11 ramas sin reemplazo (ver la nota grande del encabezado).
+// Solo se avisa, sin abortar; themes.ts compensa con su propio fallback.
 const headMetaHtml = foundationsFileContents['head-meta-tags.html']
 let themeCount = 0
+const themesMissingColorFooter = []
 if (headMetaHtml) {
   const branches = [...headMetaHtml.matchAll(THEME_BRANCH_RE)]
   themeCount = branches.length
@@ -208,25 +273,25 @@ if (headMetaHtml) {
   for (const [i, branch] of branches.entries()) {
     const chunk = headMetaHtml.slice(branch.index, branches[i + 1]?.index ?? headMetaHtml.length)
     if (!COLOR_FOOTER_RE.test(chunk)) {
-      fail(`El tema '${branch[1]}' no define color_footer_mail_general en head-meta-tags.html`)
+      themesMissingColorFooter.push(branch[1])
     }
   }
 }
 
-// --- NN-components/footer/*.html -------------------------------------------------
+// --- NN-components/NN_footer/*.html -----------------------------------------------
 const footerFileContents = {}
 if (FOOTER_DIR) {
   for (const name of FOOTER_FILES) {
     const fp = path.join(FOOTER_DIR, name)
     if (!fs.existsSync(fp)) {
-      fail(`No se encontró ${COMPONENTS_DIR_NAME}/footer/${name} en ${MASTER_DIR}`)
+      fail(`No se encontró ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/${name} en ${MASTER_DIR}`)
       continue
     }
     footerFileContents[name] = fs.readFileSync(fp, 'utf8')
   }
 }
 
-// --- NN-components/headers/** ----------------------------------------------------
+// --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
 const headerBrandFileContents = {}
@@ -237,7 +302,7 @@ if (HEADERS_DIR) {
     for (const name of HEADER_VARIANT_FILES) {
       const fp = path.join(HEADERS_DIR, brand, name)
       if (!fs.existsSync(fp)) {
-        fail(`No se encontró ${COMPONENTS_DIR_NAME}/headers/${brand}/${name} en ${MASTER_DIR}`)
+        fail(`No se encontró ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/${brand}/${name} en ${MASTER_DIR}`)
         continue
       }
       brandFiles[name] = fs.readFileSync(fp, 'utf8')
@@ -247,13 +312,13 @@ if (HEADERS_DIR) {
 
   const wrapperPath = path.join(HEADERS_DIR, HEADER_WRAPPER_FILE)
   if (!fs.existsSync(wrapperPath)) {
-    fail(`No se encontró ${COMPONENTS_DIR_NAME}/headers/${HEADER_WRAPPER_FILE} en ${MASTER_DIR}`)
+    fail(`No se encontró ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/${HEADER_WRAPPER_FILE} en ${MASTER_DIR}`)
   } else {
     headerWrapperContent = fs.readFileSync(wrapperPath, 'utf8')
     const markerCount = headerWrapperContent.split(HEADER_WRAPPER_MARKER).length - 1
     if (markerCount !== 1) {
       fail(
-        `El marcador ${HEADER_WRAPPER_MARKER} aparece ${markerCount} veces en ${COMPONENTS_DIR_NAME}/headers/${HEADER_WRAPPER_FILE} (se esperaba 1)`,
+        `El marcador ${HEADER_WRAPPER_MARKER} aparece ${markerCount} veces en ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/${HEADER_WRAPPER_FILE} (se esperaba 1)`,
       )
     }
   }
@@ -298,10 +363,20 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/footer/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcador${SLOT_MARKERS.length === 1 ? '' : 'es'} + tema + HEADER WRAPPER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/`,
 )
 console.log(
-  `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/headers/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,
+  `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,
 )
-console.log(`${GREEN}✓${RESET} ${themeCount} temas con color_footer_mail_general OK`)
+if (themesMissingColorFooter.length === themeCount) {
+  console.warn(
+    `${DIM}⚠ Ningún tema define color_footer_mail_general en head-meta-tags.html — usando el fallback por grupo de themes.ts (ver nota en el encabezado de este script).${RESET}`,
+  )
+} else if (themesMissingColorFooter.length > 0) {
+  console.warn(
+    `${DIM}⚠ ${themesMissingColorFooter.length}/${themeCount} temas sin color_footer_mail_general (${themesMissingColorFooter.join(', ')}) — usando el fallback de themes.ts para esos.${RESET}`,
+  )
+} else {
+  console.log(`${GREEN}✓${RESET} ${themeCount} temas con color_footer_mail_general OK`)
+}
 console.log(`${GREEN}✓ sync-master OK${RESET}`)

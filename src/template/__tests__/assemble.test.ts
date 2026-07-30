@@ -24,9 +24,17 @@ describe('assembleEmailHtml', () => {
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('leaves the other slot markers (not yet implemented) untouched', () => {
+  it('leaves the other slots (not yet implemented) untouched', () => {
+    // Desde la reestructuración a estructura_general.html estos ya no son
+    // marcadores simples `<!-- X -->` (ese trato quedó solo para FOOTER, el
+    // único implementado) sino comentarios de instrucciones en prosa — ver
+    // la nota grande en scripts/sync-master.mjs.
     const html = assembleEmailHtml(defaultEmailDocument)
-    for (const marker of ['<!-- BANNER -->', '<!-- CONTENIDOS -->', '<!-- CIERRE -->']) {
+    for (const marker of [
+      '<!-- BANNER : por defecto el template debe tener un banner vertical, con tags  -->',
+      '<!-- WRAPPER DE CONTENIDOS:',
+      '<!-- CIERRES -->',
+    ]) {
       expect(html).toContain(marker)
     }
   })

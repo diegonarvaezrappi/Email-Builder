@@ -55,11 +55,11 @@ describe('THEMES (parsed from the real repo file)', () => {
     ])
   })
 
-  it('maps only Pro/ProBlack to the pro footer style', () => {
-    expect(THEMES.filter((t) => t.vars.color_footer_mail_general === 'pro').map((t) => t.slug)).toEqual([
-      'pro',
-      'problack',
-    ])
+  it('no longer defines color_footer_mail_general on any theme — the repo dropped it without replacement', () => {
+    // Canario: si el repo lo vuelve a agregar, este test empieza a fallar y
+    // hay que actualizarlo — en ese momento colorFooterForTheme volverá a usar
+    // el valor real en vez de su fallback por grupo (ver ese describe abajo).
+    expect(THEMES.filter((t) => t.vars.color_footer_mail_general !== undefined)).toEqual([])
   })
 
   it('gives every theme the surface variables the master template consumes', () => {
@@ -86,9 +86,14 @@ describe('themeVars', () => {
 })
 
 describe('colorFooterForTheme', () => {
-  it('resolves a known theme and falls back to negro for an unknown one', () => {
+  it('falls back by theme group now that no theme defines the real variable', () => {
+    expect(colorFooterForTheme('pro')).toBe('pro')
     expect(colorFooterForTheme('problack')).toBe('pro')
     expect(colorFooterForTheme('verde100')).toBe('negro')
+    expect(colorFooterForTheme('darkturbo')).toBe('negro')
+  })
+
+  it('falls back to negro for an unknown theme', () => {
     expect(colorFooterForTheme('no-existe')).toBe('negro')
   })
 })

@@ -40,7 +40,7 @@ describe('resolveGlobalVars', () => {
   it('starts from the theme variables', () => {
     expect(resolveGlobalVars(globals({ tema: 'beige100' }))).toMatchObject({
       bg_solid_mail_general: '#FFF0DD',
-      color_footer_mail_general: 'negro',
+      color_texto_mail_general: '#2B2316',
     })
   })
 
@@ -56,6 +56,6 @@ describe('resolveGlobalVars', () => {
   it('does not let the background leak into other theme variables', () => {
     const vars = resolveGlobalVars(globals({ tema: 'pro', fondoUrl: 'https://x.test/a.png' }))
     expect(vars.bg_solid_mail_general).toBe('#2A2B2B')
-    expect(vars.color_footer_mail_general).toBe('pro')
+    expect(vars.color_texto_mail_general).toBe('#EEEEEE')
   })
 })

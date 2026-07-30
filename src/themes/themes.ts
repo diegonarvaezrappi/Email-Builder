@@ -61,12 +61,34 @@ export function themeVars(slug: string): Record<string, string> {
 }
 
 /**
- * `font_style_look` que le corresponde al footer según el tema. Si el tema no
- * existe (ej. un documento viejo en localStorage apuntando a un tema que David
- * borró), cae a 'negro', el valor por defecto de los content blocks.
+ * Los 2 temas "premium" — Pro y ProBlack. Vive acá (y no solo en THEME_GROUPS,
+ * más abajo) porque colorFooterForTheme también lo necesita como fallback.
+ */
+const PREMIUM_THEME_SLUGS = ['pro', 'problack']
+
+/**
+ * `font_style_look` que le corresponde al footer según el tema.
+ *
+ * Si el tema no existe (ej. un documento viejo en localStorage apuntando a un
+ * tema que David borró) o si el tema existe pero no define
+ * `color_footer_mail_general`, cae al fallback por grupo: 'pro' en Pro/
+ * ProBlack, 'negro' en el resto.
+ *
+ * Ese segundo caso pasa AHORA MISMO con los 11 temas reales del repo: en la
+ * reestructuración de headers/banners a moléculas, `color_footer_mail_general`
+ * se borró de las 11 ramas de head-meta-tags.html sin reemplazo (parece un
+ * accidente de edición — 02-components/README.md, GUIA-DE-TEMAS.md,
+ * COMO-ARMAR-UN-MAIL.md y CHANGELOG.md siguen describiéndolo como el
+ * mecanismo vigente, y ninguno se actualizó). scripts/sync-master.mjs avisa
+ * por consola en vez de abortar el sync — así que el fallback de acá reproduce
+ * el mismo valor documentado (pro en Pro/ProBlack) para que el estilo del
+ * footer no se rompa mientras la variable no vuelva a existir en el repo. El
+ * día que vuelva, este fallback deja de usarse solo (siempre se prefiere el
+ * valor real del tema).
  */
 export function colorFooterForTheme(slug: string): string {
-  return THEMES.find((t) => t.slug === slug)?.vars.color_footer_mail_general ?? 'negro'
+  const value = THEMES.find((t) => t.slug === slug)?.vars.color_footer_mail_general
+  return value ?? (PREMIUM_THEME_SLUGS.includes(slug) ? 'pro' : 'negro')
 }
 
 // --- Presentación (solo UI) ---------------------------------------------------
@@ -91,7 +113,7 @@ const THEME_LABELS: Record<string, string> = {
 const THEME_GROUPS: { label: string; slugs: string[] }[] = [
   { label: 'Pastel', slugs: ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100'] },
   { label: 'Oscuros / invertidos', slugs: ['darkneon', 'darkturbo', 'darkneutro'] },
-  { label: 'Premium', slugs: ['pro', 'problack'] },
+  { label: 'Premium', slugs: PREMIUM_THEME_SLUGS },
 ]
 
 export function themeLabel(slug: string): string {
