@@ -6,6 +6,7 @@ import { renderFooterSnippet } from '../../components/footer/render'
 import { renderHeaderSnippet } from '../../components/header/render'
 import { renderCierreSnippet } from '../../components/cierre/render'
 import { renderContenidosSnippet } from '../../components/contenidos/render'
+import { renderBannerSnippet, stripBannerFieldAssigns } from '../../components/banner/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
 import type { CtaBlock } from '../../model'
@@ -41,13 +42,22 @@ describe('assembleEmailHtml', () => {
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('leaves BANNER (not yet implemented) untouched', () => {
-    // Desde la reestructuración a estructura_general.html no es un marcador
-    // simple `<!-- X -->` sino un comentario de instrucciones en prosa — ver
-    // la nota grande en scripts/sync-master.mjs. HEADER, FOOTER, CIERRE y
-    // CONTENIDOS sí están implementados y se prueban aparte.
+  it('replaces the BANNER placeholder (a prose comment, not a simple <!-- X -->) with the rendered banner snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    expect(html).toContain('<!-- BANNER : por defecto el template debe tener un banner vertical, con tags  -->')
+    const expectedSnippet = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
+
+    expect(html).not.toMatch(/<!--\s*BANNER\s*:/)
+    expect(html.includes(expectedSnippet)).toBe(true)
+    // El documento por defecto trae banner vertical + 1 tag (instrucción
+    // explícita del maestro: "por defecto ... un banner vertical, con tags").
+    expect(html).toContain('BANNER_VERTICAL')
+    expect(html).toContain('BITEM:TAGS:')
+  })
+
+  it('leaves the other 2 mentions of the word BANNER in the master untouched (the placeholder regex must not over-match)', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    // "INICIO SECCION BANNER" no seguido de ":" — no es el placeholder.
+    expect(html).toContain('INICIO SECCION BANNER')
   })
 
   it('replaces the WRAPPER DE CONTENIDOS placeholder with the rendered CTA blocks, joined by a single separator', () => {
@@ -96,7 +106,7 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme, the HEADER/CONTENIDOS/CIERRE/FOOTER markers', () => {
+  it('touches nothing besides the theme, the HEADER/BANNER/CONTENIDOS/CIERRE/FOOTER markers', () => {
     // tema 'problack' fuerza también el auto-ocultado de Cierre (regla #1 de
     // USO-DE-CADA-PARTE.md §9) — se prueba con 'beige100' para poder afirmar
     // que el marcador SÍ se reemplaza (por algo no vacío) en este test.
@@ -105,12 +115,31 @@ describe('assembleEmailHtml', () => {
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
       contenidos: [ctaBlock('a', 'Uno')],
     }
-    const expected = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
-      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, renderHeaderSnippet(doc.header, 'beige100'))
-      .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, renderContenidosSnippet(doc.contenidos, doc))
-      .replace('<!-- CIERRES -->', renderCierreSnippet(doc.cierre, doc))
-      .replace('<!-- FOOTER -->', renderFooterSnippet(doc.footer, 'beige100'))
+    const expected = stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)))
+      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, () => renderHeaderSnippet(doc.header, 'beige100'))
+      .replace(/<!--\s*BANNER\s*:[\s\S]*?-->/, () => renderBannerSnippet(doc.banner, doc))
+      .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, () => renderContenidosSnippet(doc.contenidos, doc))
+      .replace('<!-- CIERRES -->', () => renderCierreSnippet(doc.cierre, doc))
+      .replace('<!-- FOOTER -->', () => renderFooterSnippet(doc.footer, 'beige100'))
     expect(assembleEmailHtml(doc)).toBe(expected)
+  })
+
+  it('strips the 5 example `banner_copy_*/banner_img_*` assigns the master leaves live (uncommented) before the doctype', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    expect(html).not.toContain('banner_copy_modulo_promo')
+    expect(html).not.toContain('banner_copy_modulo_creditos')
+    expect(html).not.toContain('banner_copy_modulo_textoxl')
+    expect(html).not.toContain('banner_copy_modulo_textom')
+    expect(html).not.toContain('banner_img_modulo_auto_ancho')
+    expect(html).not.toContain('EJEMPLO DE DEFINICION DE CAMPOS PARA BANNER')
+  })
+
+  it('regression: a "$" in free text (ej. legalesAdicionales) never corrupts the export via String.replace special patterns', () => {
+    const doc = {
+      ...defaultEmailDocument,
+      footer: { ...defaultEmailDocument.footer, legalesAdicionales: 'Promo de $& pesos' },
+    }
+    expect(assembleEmailHtml(doc)).toContain('Promo de $& pesos')
   })
 })
 

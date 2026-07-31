@@ -3,6 +3,7 @@ import { SLOT_ORDER, type EmailDocument, type SlotName } from '../model'
 import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
+import { stripBannerFieldAssigns } from '../components/banner/render'
 
 /**
  * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
@@ -24,6 +25,18 @@ const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADE
 const WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/
 
 /**
+ * BANNER sí es un marcador de una sola línea, pero con texto libre tras
+ * "BANNER :" que el repo reescribe seguido ("por defecto el template debe
+ * tener un banner vertical, con tags" al momento de escribir esto) — se
+ * matchea el PREFIJO, no la frase completa. El maestro tiene otras 2
+ * apariciones de la palabra BANNER ("EJEMPLO DE DEFINICION DE CAMPOS PARA
+ * BANNER", "INICIO SECCION BANNER") que este regex excluye porque ninguna va
+ * pegada a `<!--` seguida de `:` (verificado). Debe quedar sincronizado con
+ * BANNER_PLACEHOLDER_RE de scripts/sync-master.mjs.
+ */
+const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/
+
+/**
  * Slots cuyo marcador real no es `<!-- ${slot} -->` literal. El maestro
  * (estructura_general.html) usa el plural "CIERRES" para el slot Cierre —
  * inconsistencia real del repo, no un typo de acá. Debe quedar sincronizado
@@ -42,11 +55,22 @@ const SLOT_MARKER_TEXT: Partial<Record<SlotName, string>> = {
  *
  * Reemplazo literal (no DOMParser) a propósito: preserva el Liquid+HTML del
  * template maestro byte a byte — ver decisión de arquitectura en el plan.
+ *
+ * Los 4 `replace` usan SIEMPRE la forma función (`() => rendered`), nunca un
+ * string de reemplazo directo: `String.replace` con un string interpreta
+ * `$&`/`$$`/`` $` ``/`$'` como patrones especiales, y `rendered` puede traer
+ * texto libre de usuario con un `$` real (ej. el default de Banner/PROMO es
+ * literalmente '$14.000', o un usuario podría escribir "$&" en un campo de
+ * texto libre como el de Footer) — mismo motivo ya documentado en
+ * inlineAllContentBlockOccurrences (preview/liquidPreview.ts).
  */
 export function assembleEmailHtml(doc: EmailDocument): string {
   // El tema no se deja como Liquid: sus variables salen con el valor puesto y
   // las 11 ramas condicionales se borran, así el HTML para Braze va limpio.
-  let html = inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))
+  // stripBannerFieldAssigns limpia además los 5 `{% assign banner_copy_*/
+  // banner_img_* %}` de ejemplo que el maestro trae vivos (no comentados)
+  // antes del doctype — ver la nota en components/banner/render.ts.
+  let html = stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)))
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
@@ -59,7 +83,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       if (!HEADER_WRAPPER_PLACEHOLDER_RE.test(html)) {
         throw new Error('No se encontró el placeholder "HEADER WRAPPER" en template_base.html')
       }
-      html = html.replace(HEADER_WRAPPER_PLACEHOLDER_RE, rendered)
+      html = html.replace(HEADER_WRAPPER_PLACEHOLDER_RE, () => rendered)
       continue
     }
 
@@ -67,7 +91,15 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       if (!WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE.test(html)) {
         throw new Error('No se encontró el placeholder "WRAPPER DE CONTENIDOS" en template_base.html')
       }
-      html = html.replace(WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE, rendered)
+      html = html.replace(WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE, () => rendered)
+      continue
+    }
+
+    if (slot === 'BANNER') {
+      if (!BANNER_PLACEHOLDER_RE.test(html)) {
+        throw new Error('No se encontró el placeholder "<!-- BANNER : …" en template_base.html')
+      }
+      html = html.replace(BANNER_PLACEHOLDER_RE, () => rendered)
       continue
     }
 
@@ -75,7 +107,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     if (!html.includes(marker)) {
       throw new Error(`No se encontró el marcador ${marker} en template_base.html`)
     }
-    html = html.replace(marker, rendered)
+    html = html.replace(marker, () => rendered)
   }
 
   return html

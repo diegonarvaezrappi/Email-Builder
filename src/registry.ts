@@ -11,6 +11,9 @@ import { HeaderPropertiesPanel } from './components/header/PropertiesPanel'
 import { defaultCierreFields, cierreSchema, type CierreFields } from './components/cierre/schema'
 import { renderCierreSnippet } from './components/cierre/render'
 import { CierrePropertiesPanel } from './components/cierre/PropertiesPanel'
+import { defaultBannerFields, bannerSchema, type BannerFields } from './components/banner/schema'
+import { renderBannerSnippet } from './components/banner/render'
+import { BannerPropertiesPanel } from './components/banner/PropertiesPanel'
 import { renderContenidosSnippet } from './components/contenidos/render'
 import { defaultGlobalFields } from './global/schema'
 import { z } from 'zod'
@@ -75,6 +78,16 @@ const cierreSlotDef: SlotDef<CierreFields> = {
   removable: true,
 }
 
+const bannerSlotDef: SlotDef<BannerFields> = {
+  slot: 'BANNER',
+  docKey: 'banner',
+  schema: bannerSchema,
+  defaultFields: defaultBannerFields,
+  render: (fields, doc) => renderBannerSnippet(fields, doc),
+  PropertiesPanel: BannerPropertiesPanel,
+  removable: true,
+}
+
 const contenidosSlotDef: SlotDef<ContentBlock[]> = {
   slot: 'CONTENIDOS',
   docKey: 'contenidos',
@@ -95,12 +108,13 @@ export const SLOT_LABELS: Record<SlotName, string> = {
 
 /**
  * Mapa de slots registrados — NO una unión discriminada (a diferencia de
- * inapps-builder), porque un email tiene todos los slots a la vez. Los
- * marcadores sin entrada aquí (BANNER por ahora) quedan intactos en el HTML
- * ensamblado hasta que se implementen.
+ * inapps-builder), porque un email tiene todos los slots a la vez. Los 5
+ * slots del maestro (HEADER, BANNER, CONTENIDOS, CIERRE, FOOTER) están todos
+ * implementados.
  */
 export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
   HEADER: headerSlotDef,
+  BANNER: bannerSlotDef,
   FOOTER: footerSlotDef,
   CIERRE: cierreSlotDef,
   CONTENIDOS: contenidosSlotDef,
@@ -109,6 +123,7 @@ export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
   header: defaultHeaderFields,
+  banner: defaultBannerFields,
   footer: defaultFooterFields,
   cierre: defaultCierreFields,
   contenidos: [],

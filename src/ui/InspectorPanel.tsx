@@ -7,11 +7,18 @@
 // de todo el array"), lo editable vive por-instancia — se resuelve acá antes
 // de tocar `registry`, buscando el bloque por `selected.blockId` y su
 // PropertiesPanel en contentBlockRegistry.
+//
+// BANNER es un híbrido: si `selected.bannerItemId` viene presente, se resuelve
+// igual que un bloque de CONTENIDOS (buscando la pieza en doc.banner.items y
+// su PropertiesPanel en bannerItemRegistry) ANTES de llegar a `registry`; si
+// no viene, es el propio slot BANNER (tipo + link), que sí tiene su
+// PropertiesPanel normal en el registry, como Header/Footer/Cierre.
 // ============================================================================
 import type { EmailDocument } from '../model'
 import type { GlobalFields } from '../global/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry } from '../contentBlockRegistry'
+import { getBannerItemDef } from '../bannerItemRegistry'
 import type { Selection } from './selection'
 
 interface InspectorPanelProps {
@@ -19,6 +26,7 @@ interface InspectorPanelProps {
   selected: Selection | null
   onChange: (docKey: keyof EmailDocument, fields: unknown) => void
   onChangeBlock: (blockId: string, fields: unknown) => void
+  onChangeBannerItem: (bannerItemId: string, fields: unknown) => void
   onChangeGlobal: (fields: GlobalFields) => void
 }
 
@@ -30,7 +38,14 @@ function EmptyHint({ text }: { text: string }) {
   )
 }
 
-export function InspectorPanel({ document: doc, selected, onChange, onChangeBlock, onChangeGlobal }: InspectorPanelProps) {
+export function InspectorPanel({
+  document: doc,
+  selected,
+  onChange,
+  onChangeBlock,
+  onChangeBannerItem,
+  onChangeGlobal,
+}: InspectorPanelProps) {
   if (!selected) {
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
   }
@@ -50,6 +65,28 @@ export function InspectorPanel({ document: doc, selected, onChange, onChangeBloc
         <def.PropertiesPanel
           value={block.fields}
           onChange={(next) => onChangeBlock(block.id, next)}
+          doc={doc}
+          onChangeGlobal={onChangeGlobal}
+        />
+      </aside>
+    )
+  }
+
+  if (selected.slot === 'BANNER' && selected.bannerItemId) {
+    const item = doc.banner.items.find((it) => it.id === selected.bannerItemId)
+    if (!item) {
+      return <EmptyHint text="Selecciona una pieza del Banner para ver sus opciones." />
+    }
+    const def = getBannerItemDef(item.type)
+    if (!def) {
+      return <EmptyHint text="Tipo de pieza no soportado." />
+    }
+    return (
+      <aside className="panel-inspector">
+        <h2>{def.label}</h2>
+        <def.PropertiesPanel
+          value={item.fields}
+          onChange={(next) => onChangeBannerItem(item.id, next)}
           doc={doc}
           onChangeGlobal={onChangeGlobal}
         />

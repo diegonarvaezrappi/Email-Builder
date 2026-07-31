@@ -26,14 +26,33 @@
 // ============================================================================
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ContentBlockType, EmailDocument, SlotName } from '../model'
+import type { BannerItemType } from '../components/banner/items/schemas'
+import type { BannerType } from '../components/banner/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
+import { getBannerItemDef } from '../bannerItemRegistry'
 import { assembleEmailHtml } from '../template/assemble'
-import { BLOCK_CLOSE_RE, BLOCK_OPEN_RE } from '../template/contentBlocks'
+import { BLOCK_CLOSE_RE, BLOCK_OPEN_RE, BANNER_ITEM_CLOSE_RE, BANNER_ITEM_OPEN_RE } from '../template/contentBlocks'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
 import { CodeView } from './CodeView'
-import { isBlockSelected, isSlotSelected, selectBlock, selectSlot, type Selection } from './selection'
-import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, CONTENT_BLOCK_REORDER_DRAG_TYPE } from './dragTypes'
+import {
+  isBannerItemSelected,
+  isBlockSelected,
+  isSlotSelected,
+  selectBannerItem,
+  selectBlock,
+  selectSlot,
+  type Selection,
+} from './selection'
+import {
+  SLOT_DRAG_TYPE,
+  CONTENT_BLOCK_DRAG_TYPE,
+  CONTENT_BLOCK_REORDER_DRAG_TYPE,
+  BANNER_TYPE_DRAG_TYPE,
+  BANNER_ITEM_DRAG_TYPE,
+  BANNER_ITEM_REORDER_DRAG_TYPE,
+} from './dragTypes'
+import { dropXInFrameSpace, dropYInFrameSpace, resolveDropIndex, resolveDropIndexReadingOrder, type DropRect } from './dropIndex'
 import {
   PREVIEW_COUNTRIES,
   PREVIEW_COUNTRY_LABELS,
@@ -51,6 +70,10 @@ interface ViewportProps {
   onDuplicateBlock: (id: string) => void
   onReorderBlock: (id: string, toIndex: number) => void
   onRemoveBlock: (id: string) => void
+  onInsertBannerItem: (type: BannerItemType, atIndex: number) => void
+  onDuplicateBannerItem: (id: string) => void
+  onReorderBannerItem: (id: string, toIndex: number) => void
+  onRemoveBannerItem: (id: string) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -131,10 +154,14 @@ type PreviewDevice = 'desktop' | 'mobile'
 const MOBILE_WIDTH = 375
 
 /** Cómo se ubica cada slot implementado dentro del documento del mail. */
-const SLOT_LOCATORS: Record<'HEADER' | 'FOOTER' | 'CIERRE', string> = {
+const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER' | 'CIERRE', string> = {
   // El div que envuelve la tabla del header — HEADER1..HEADER4 según la marca
   // (ver 01-foundations/global-styles/global-styles.html).
   HEADER: '[id^="HEADER"]',
+  // Los 2 archivos de banner traen id propio en su <table> exterior
+  // (BANNER_HORIZONTAL / BANNER_VERTICAL), del que además dependen los
+  // `@media` de global-styles.html — es el localizador más estable del mail.
+  BANNER: 'table[id^="BANNER_"]',
   // El footer no trae id ni role propios: es el hermano que sigue al
   // contenedor con padding donde viven header/banner/contenidos/cierre.
   FOOTER: 'table[role="paddedcontainer"]',
@@ -152,6 +179,10 @@ export function Viewport({
   onDuplicateBlock,
   onReorderBlock,
   onRemoveBlock,
+  onInsertBannerItem,
+  onDuplicateBannerItem,
+  onReorderBannerItem,
+  onRemoveBannerItem,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
@@ -201,6 +232,14 @@ export function Viewport({
     const def = registry[slot]
     if (!def) return
     onChangeSlot(def.docKey, { ...doc[def.docKey], removed: false })
+  }
+
+  // Elegir un TIPO de banner desde la librería restaura el slot (si estaba
+  // eliminado) y fija su tipo en el mismo gesto — distinto de handleRestore
+  // (que solo prende `removed`) porque acá el payload trae, además, CUÁL de
+  // los 2 tipos eligió el usuario.
+  const handleSetBannerType = (type: BannerType) => {
+    onChangeSlot('banner', { ...doc.banner, bannerType: type, removed: false })
   }
 
   return (
@@ -282,11 +321,17 @@ export function Viewport({
             onSelect={onSelect}
             onRemove={handleRemove}
             onRestore={handleRestore}
+            onSetBannerType={handleSetBannerType}
             contenidos={doc.contenidos}
             onInsertBlock={onInsertBlock}
             onDuplicateBlock={onDuplicateBlock}
             onReorderBlock={onReorderBlock}
             onRemoveBlock={onRemoveBlock}
+            bannerItems={doc.banner.items}
+            onInsertBannerItem={onInsertBannerItem}
+            onDuplicateBannerItem={onDuplicateBannerItem}
+            onReorderBannerItem={onReorderBannerItem}
+            onRemoveBannerItem={onRemoveBannerItem}
           />
         )
       ) : (
@@ -314,11 +359,17 @@ interface EmailFrameProps {
   onSelect: (next: Selection) => void
   onRemove: (slot: SlotName) => void
   onRestore: (slot: SlotName) => void
+  onSetBannerType: (type: BannerType) => void
   contenidos: EmailDocument['contenidos']
   onInsertBlock: (type: ContentBlockType, atIndex: number) => void
   onDuplicateBlock: (id: string) => void
   onReorderBlock: (id: string, toIndex: number) => void
   onRemoveBlock: (id: string) => void
+  bannerItems: EmailDocument['banner']['items']
+  onInsertBannerItem: (type: BannerItemType, atIndex: number) => void
+  onDuplicateBannerItem: (id: string) => void
+  onReorderBannerItem: (id: string, toIndex: number) => void
+  onRemoveBannerItem: (id: string) => void
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -330,18 +381,15 @@ interface SlotRect {
   height: number
 }
 
-/** Dónde cayó una instancia de bloque de contenido (ej. un CTA) dentro del documento del iframe. */
-interface ContentBlockRect {
+/** Dónde cayó una instancia repetible (bloque de CONTENIDOS o pieza de Banner)
+ *  dentro del documento del iframe. */
+interface MarkedBlockRect extends DropRect {
   id: string
   type: string
-  top: number
-  left: number
-  width: number
-  height: number
 }
 
 /** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
-const SELECTABLE_SLOTS = ['HEADER', 'FOOTER', 'CIERRE'] as const
+const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER', 'CIERRE'] as const
 
 /**
  * Mide dónde quedó cada slot implementado dentro del documento ya renderizado.
@@ -356,8 +404,8 @@ function measureSlots(root: Document): SlotRect[] {
   for (const slot of SELECTABLE_SLOTS) {
     if (!registry[slot]) continue
 
-    if (slot === 'HEADER') {
-      const el = root.querySelector(SLOT_LOCATORS.HEADER)
+    if (slot === 'HEADER' || slot === 'BANNER') {
+      const el = root.querySelector(SLOT_LOCATORS[slot])
       if (!el) continue
       const r = el.getBoundingClientRect()
       rects.push({ slot, top: r.top, left: r.left, width: r.width, height: r.height })
@@ -386,19 +434,22 @@ function measureSlots(root: Document): SlotRect[] {
 }
 
 /**
- * Mide dónde quedó cada instancia de bloque de contenido (hoy solo CTA),
- * caminando los comentarios `<!-- BLOCK:tipo:id -->` / `<!-- /BLOCK:tipo:id -->`
- * que la app agrega alrededor de cada una (ver template/contentBlocks.ts) y
+ * Mide dónde quedó cada instancia repetible (un bloque de CONTENIDOS, hoy
+ * solo CTA, o una pieza de Banner), caminando el par de comentarios que la
+ * app agrega alrededor de cada una (ver template/contentBlocks.ts) y
  * acumulando el rect unión de todo lo que hay en medio. No asume nada sobre
  * la forma interna del contenido real (puede ser un solo <a> con tablas
- * anidadas, como el CTA, o algo más complejo en un futuro tipo de bloque):
- * un min/max acumulado sobre TODOS los elementos entre los dos comentarios
- * (no solo los de primer nivel) es correcto sin importar cuántos haya ni qué
- * tan anidados estén.
+ * anidadas, como el CTA, o algo más complejo): un min/max acumulado sobre
+ * TODOS los elementos entre los dos comentarios (no solo los de primer nivel)
+ * es correcto sin importar cuántos haya ni qué tan anidados estén.
+ *
+ * Genérica sobre qué par de regex caminar: measureContentBlocks/measureBannerItems
+ * (más abajo) la instancian con BLOCK_* / BANNER_ITEM_* respectivamente — los 2
+ * sistemas de marcadores nunca se cruzan entre sí (ver template/contentBlocks.ts).
  */
-function measureContentBlocks(root: Document): ContentBlockRect[] {
+function measureMarkedBlocks(root: Document, openRe: RegExp, closeRe: RegExp): MarkedBlockRect[] {
   if (!root.body) return []
-  const rects: ContentBlockRect[] = []
+  const rects: MarkedBlockRect[] = []
   const walker = root.createTreeWalker(root.body, NodeFilter.SHOW_COMMENT | NodeFilter.SHOW_ELEMENT)
 
   let current: { type: string; id: string; top: number; left: number; right: number; bottom: number } | null = null
@@ -407,8 +458,8 @@ function measureContentBlocks(root: Document): ContentBlockRect[] {
   while (node) {
     if (node.nodeType === Node.COMMENT_NODE) {
       const data = (node as Comment).data
-      const open = data.match(BLOCK_OPEN_RE)
-      const close = data.match(BLOCK_CLOSE_RE)
+      const open = data.match(openRe)
+      const close = data.match(closeRe)
       if (open) {
         current = { type: open[1], id: open[2], top: Infinity, left: Infinity, right: -Infinity, bottom: -Infinity }
       } else if (close && current && current.type === close[1] && current.id === close[2]) {
@@ -438,29 +489,9 @@ function measureContentBlocks(root: Document): ContentBlockRect[] {
   return rects
 }
 
-/** Y del drop, en el mismo espacio de coordenadas que los rects medidos (el interno del iframe, no el del documento padre). */
-function dropYInFrameSpace(e: React.DragEvent, frameEl: HTMLElement): number {
-  return e.clientY - frameEl.getBoundingClientRect().top
-}
-
-/**
- * Resuelve el índice de destino comparando la Y del drop contra el punto
- * medio vertical de cada bloque medido (en su orden ACTUAL, antes de sacar
- * nada) — el primero cuyo punto medio quede debajo del cursor es donde se
- * inserta; si ninguno, va al final. Sirve tanto para insertar un bloque nuevo
- * como para reordenar uno existente: el ajuste por el propio bloque
- * arrastrado (que corre el índice si se mueve hacia adelante) vive en
- * store/store.ts (reorderContentBlock), no acá.
- */
-function resolveDropIndex(order: string[], rectsById: Map<string, ContentBlockRect>, dropY: number): number {
-  for (let i = 0; i < order.length; i++) {
-    const rect = rectsById.get(order[i])
-    if (!rect) continue
-    const midY = rect.top + rect.height / 2
-    if (dropY < midY) return i
-  }
-  return order.length
-}
+const measureContentBlocks = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, BLOCK_OPEN_RE, BLOCK_CLOSE_RE)
+const measureBannerItems = (root: Document): MarkedBlockRect[] =>
+  measureMarkedBlocks(root, BANNER_ITEM_OPEN_RE, BANNER_ITEM_CLOSE_RE)
 
 /**
  * El email completo en un iframe. Va con `allow-same-origin` (sin
@@ -475,17 +506,24 @@ function EmailFrame({
   onSelect,
   onRemove,
   onRestore,
+  onSetBannerType,
   contenidos,
   onInsertBlock,
   onDuplicateBlock,
   onReorderBlock,
   onRemoveBlock,
+  bannerItems,
+  onInsertBannerItem,
+  onDuplicateBannerItem,
+  onReorderBannerItem,
+  onRemoveBannerItem,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(600)
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
-  const [blockRects, setBlockRects] = useState<ContentBlockRect[]>([])
+  const [blockRects, setBlockRects] = useState<MarkedBlockRect[]>([])
+  const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
@@ -495,6 +533,7 @@ function EmailFrame({
     setHeight(Math.max(root.body.scrollHeight, 200))
     setSlotRects(measureSlots(root))
     setBlockRects(measureContentBlocks(root))
+    setBannerItemRects(measureBannerItems(root))
   }, [clientScheme])
 
   // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
@@ -520,6 +559,21 @@ function EmailFrame({
     return resolveDropIndex(order, rectsById, dropY)
   }
 
+  // Índice de destino para piezas de banner: usa la variante "en orden de
+  // lectura" (Y, salvo que el cursor caiga en la misma banda vertical de un
+  // item, en cuyo caso decide por X) porque el banner horizontal apila 2
+  // columnas lado a lado (moléculas + imagen) que comparten banda Y — un
+  // resolveDropIndex puramente vertical sería ambiguo ahí. Para una pila a
+  // todo el ancho (banner vertical) el resultado es equivalente.
+  const resolveIndexForBannerDrop = (e: React.DragEvent): number => {
+    const order = bannerItems.map((it) => it.id)
+    const rectsById = new Map(bannerItemRects.map((r) => [r.id, r]))
+    if (!frameElRef.current) return order.length
+    const dropX = dropXInFrameSpace(e, frameElRef.current)
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    return resolveDropIndexReadingOrder(order, rectsById, dropX, dropY)
+  }
+
   return (
     <div className="viewport-canvas">
       <div
@@ -536,13 +590,17 @@ function EmailFrame({
         // despachan acá según qué dataTransfer type venga presente.
         onDragOver={(e) => {
           const types = e.dataTransfer.types
-          if (
-            types.includes(SLOT_DRAG_TYPE) ||
-            types.includes(CONTENT_BLOCK_DRAG_TYPE) ||
-            types.includes(CONTENT_BLOCK_REORDER_DRAG_TYPE)
-          ) {
+          const reorderTypes = [CONTENT_BLOCK_REORDER_DRAG_TYPE, BANNER_ITEM_REORDER_DRAG_TYPE]
+          const allTypes = [
+            SLOT_DRAG_TYPE,
+            CONTENT_BLOCK_DRAG_TYPE,
+            BANNER_TYPE_DRAG_TYPE,
+            BANNER_ITEM_DRAG_TYPE,
+            ...reorderTypes,
+          ]
+          if (allTypes.some((t) => types.includes(t))) {
             e.preventDefault()
-            e.dataTransfer.dropEffect = types.includes(CONTENT_BLOCK_REORDER_DRAG_TYPE) ? 'move' : 'copy'
+            e.dataTransfer.dropEffect = reorderTypes.some((t) => types.includes(t)) ? 'move' : 'copy'
             setDragOver(true)
           }
         }}
@@ -557,6 +615,13 @@ function EmailFrame({
             return
           }
 
+          const bannerType = e.dataTransfer.getData(BANNER_TYPE_DRAG_TYPE)
+          if (bannerType) {
+            e.preventDefault()
+            onSetBannerType(bannerType as BannerType)
+            return
+          }
+
           const newType = e.dataTransfer.getData(CONTENT_BLOCK_DRAG_TYPE)
           if (newType) {
             e.preventDefault()
@@ -568,6 +633,20 @@ function EmailFrame({
           if (reorderId) {
             e.preventDefault()
             onReorderBlock(reorderId, resolveIndexForDrop(e))
+            return
+          }
+
+          const newBannerItemType = e.dataTransfer.getData(BANNER_ITEM_DRAG_TYPE)
+          if (newBannerItemType) {
+            e.preventDefault()
+            onInsertBannerItem(newBannerItemType as BannerItemType, resolveIndexForBannerDrop(e))
+            return
+          }
+
+          const reorderBannerItemId = e.dataTransfer.getData(BANNER_ITEM_REORDER_DRAG_TYPE)
+          if (reorderBannerItemId) {
+            e.preventDefault()
+            onReorderBannerItem(reorderBannerItemId, resolveIndexForBannerDrop(e))
           }
         }}
       >
@@ -662,6 +741,89 @@ function EmailFrame({
             </button>
           </div>
         ))}
+        {/* Piezas de banner — se pintan DESPUÉS de slotRects para quedar
+            arriba del overlay del propio slot BANNER, que geométricamente las
+            contiene (si vivieran antes, el overlay del slot taparía el click). */}
+        {bannerItemRects.map(({ id, type, top, left, width, height: h }) => (
+          <div
+            key={id}
+            className={`slot-hit block-hit${isBannerItemSelected(selected, id) ? ' selected' : ''}`}
+            style={{ top, left, width, height: h }}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(BANNER_ITEM_REORDER_DRAG_TYPE, id)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+          >
+            <button
+              type="button"
+              className="slot-select"
+              aria-label={`Seleccionar ${getBannerItemDef(type)?.label ?? type}`}
+              aria-pressed={isBannerItemSelected(selected, id)}
+              onClick={() => onSelect(selectBannerItem(id))}
+            >
+              <span className="slot-badge">{getBannerItemDef(type)?.label ?? type}</span>
+            </button>
+            <button
+              type="button"
+              className="slot-duplicate"
+              aria-label="Duplicar"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicateBannerItem(id)
+              }}
+            >
+              ⧉
+            </button>
+            <button
+              type="button"
+              className="slot-delete"
+              aria-label="Eliminar"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemoveBannerItem(id)
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {/* BANNER es el único slot removable que puede tener piezas propias
+            (bannerItemRects) exactamente encima de su badge/botón de
+            eliminar — sin esta copia redibujada AL FINAL (encima de todo),
+            esos controles quedarían inalcanzables en cuanto el banner
+            tuviera una pieza cubriéndolos (el caso por defecto: banner
+            vertical con 1 tag ocupa casi todo el rect del slot). El
+            contenedor tiene pointer-events:none para dejar pasar los clicks
+            del medio a las piezas de abajo; solo estos 2 controles, ya
+            angostos, se reactivan explícitamente (ver .slot-hit-controls en App.css). */}
+        {slotRects
+          .filter((r) => r.slot === 'BANNER' && registry.BANNER?.removable)
+          .map(({ slot, top, left, width, height: h }) => (
+            <div
+              key={`${slot}-controls`}
+              className={`slot-hit-controls${isSlotSelected(selected, slot) ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+            >
+              <button
+                type="button"
+                className="slot-badge slot-badge-button"
+                aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
+                aria-pressed={isSlotSelected(selected, slot)}
+                onClick={() => onSelect(selectSlot(slot))}
+              >
+                {SLOT_LABELS[slot]}
+              </button>
+              <button
+                type="button"
+                className="slot-delete"
+                aria-label={`Eliminar ${SLOT_LABELS[slot]}`}
+                onClick={() => onRemove(slot)}
+              >
+                ×
+              </button>
+            </div>
+          ))}
       </div>
     </div>
   )

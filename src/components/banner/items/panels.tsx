@@ -1,0 +1,249 @@
+import type { ChangeEvent } from 'react'
+import type { EmailDocument } from '../../../model'
+import { CTA_STYLE_LABELS, CTA_STYLE_VALUES } from '../../../global/schema'
+import type { GlobalFields } from '../../../global/schema'
+import type {
+  CreditosFields,
+  CtaInternoFields,
+  ImgAutomaticaModuloFields,
+  ImgAutomaticaMoleculaFields,
+  ImgFijaFields,
+  PromoFields,
+  TagsFields,
+  TextoComplementarioFields,
+  TextoMFields,
+  TextoXlFields,
+} from './schemas'
+
+/** Props uniformes para todo `BannerItemDef.PropertiesPanel` — mismo shape
+ *  que `ContentBlockDef.PropertiesPanel` (CTA de CONTENIDOS): `doc`/`onChangeGlobal`
+ *  existen porque CTA_INTERNO necesita leer/escribir doc.global.ctaStyle, y
+ *  IMG_FIJA necesita saber doc.banner.bannerType (el campo `logoLink` solo
+ *  aplica en vertical). Los demás tipos simplemente no los usan. */
+interface BannerItemPanelProps<TFields> {
+  value: TFields
+  onChange: (next: TFields) => void
+  doc: EmailDocument
+  onChangeGlobal: (next: GlobalFields) => void
+}
+
+export function PromoPropertiesPanel({ value, onChange }: BannerItemPanelProps<PromoFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Monto de la promo</span>
+        <input type="text" value={value.promoText} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ promoText: e.target.value })} />
+        <span className="field-hint">El tamaño de letra se ajusta solo según el largo del texto.</span>
+      </label>
+    </div>
+  )
+}
+
+export function CreditosPropertiesPanel({ value, onChange }: BannerItemPanelProps<CreditosFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Créditos</span>
+        <input
+          type="text"
+          value={value.creditosText}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ creditosText: e.target.value })}
+        />
+        <span className="field-hint">Acompaña siempre a la leyenda fija "DE REINTEGRO".</span>
+      </label>
+    </div>
+  )
+}
+
+export function TextoXlPropertiesPanel({ value, onChange }: BannerItemPanelProps<TextoXlFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto XL</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+export function TextoMPropertiesPanel({ value, onChange }: BannerItemPanelProps<TextoMFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto M</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+export function TextoComplementarioPropertiesPanel({ value, onChange }: BannerItemPanelProps<TextoComplementarioFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto complementario</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+export function ImgAutomaticaMoleculaPropertiesPanel({ value, onChange }: BannerItemPanelProps<ImgAutomaticaMoleculaFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>URL de la imagen</span>
+        <input
+          type="text"
+          value={value.imageUrl}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Ancho (%)</span>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          value={value.widthPercent}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, widthPercent: Number(e.target.value) })}
+        />
+      </label>
+    </div>
+  )
+}
+
+export function ImgAutomaticaModuloPropertiesPanel({ value, onChange }: BannerItemPanelProps<ImgAutomaticaModuloFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>URL de la imagen</span>
+        <input
+          type="text"
+          value={value.imageUrl}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Ancho (%)</span>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          value={value.widthPercent}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, widthPercent: Number(e.target.value) })}
+        />
+      </label>
+    </div>
+  )
+}
+
+export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<ImgFijaFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Imagen de fondo</span>
+        <input
+          type="text"
+          value={value.heroImageUrl}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, heroImageUrl: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Logo</span>
+        <input
+          type="text"
+          value={value.logoImageUrl}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, logoImageUrl: e.target.value })}
+        />
+      </label>
+      {doc.banner.bannerType === 'vertical' && (
+        <label className="field">
+          <span>Enlace del logo</span>
+          <input
+            type="text"
+            placeholder="https://..."
+            value={value.logoLink}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, logoLink: e.target.value })}
+          />
+        </label>
+      )}
+    </div>
+  )
+}
+
+export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<TagsFields>) {
+  const setTag = (index: number, text: string) => {
+    onChange({ tags: value.tags.map((t, i) => (i === index ? text : t)) })
+  }
+  const addTag = () => {
+    if (value.tags.length >= 3) return
+    onChange({ tags: [...value.tags, 'tag'] })
+  }
+  const removeTag = (index: number) => {
+    if (value.tags.length <= 1) return
+    onChange({ tags: value.tags.filter((_, i) => i !== index) })
+  }
+
+  return (
+    <div className="properties-panel">
+      {value.tags.map((tag, index) => (
+        <label className="field" key={index}>
+          <span>Tag {index + 1}</span>
+          <div className="field-row">
+            <input type="text" value={tag} onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, e.target.value)} />
+            {value.tags.length > 1 && (
+              <button type="button" onClick={() => removeTag(index)} aria-label={`Eliminar tag ${index + 1}`}>
+                ×
+              </button>
+            )}
+          </div>
+        </label>
+      ))}
+      {value.tags.length < 3 && (
+        <button type="button" onClick={addTag}>
+          + Agregar tag
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function CtaInternoPropertiesPanel({ value, onChange, doc, onChangeGlobal }: BannerItemPanelProps<CtaInternoFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto del botón</span>
+        <input
+          type="text"
+          maxLength={60}
+          value={value.text}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, text: e.target.value })}
+        />
+        <span className="field-hint">{value.text.length}/35 (se trunca automáticamente)</span>
+      </label>
+      <label className="field">
+        <span>Enlace</span>
+        <input
+          type="text"
+          placeholder="https://..."
+          value={value.deeplink}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, deeplink: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Estilo del botón (aplica a TODOS los CTA del mail)</span>
+        <select
+          value={doc.global.ctaStyle}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChangeGlobal({ ...doc.global, ctaStyle: e.target.value as GlobalFields['ctaStyle'] })}
+        >
+          {CTA_STYLE_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {CTA_STYLE_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}

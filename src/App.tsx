@@ -20,6 +20,11 @@ function App() {
   const reorderContentBlock = useBuilder((s) => s.reorderContentBlock)
   const removeContentBlock = useBuilder((s) => s.removeContentBlock)
   const updateContentBlockFields = useBuilder((s) => s.updateContentBlockFields)
+  const insertBannerItem = useBuilder((s) => s.insertBannerItem)
+  const duplicateBannerItem = useBuilder((s) => s.duplicateBannerItem)
+  const reorderBannerItem = useBuilder((s) => s.reorderBannerItem)
+  const removeBannerItem = useBuilder((s) => s.removeBannerItem)
+  const updateBannerItemFields = useBuilder((s) => s.updateBannerItemFields)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
@@ -91,12 +96,17 @@ function App() {
           onDuplicateBlock={duplicateContentBlock}
           onReorderBlock={reorderContentBlock}
           onRemoveBlock={removeContentBlock}
+          onInsertBannerItem={insertBannerItem}
+          onDuplicateBannerItem={duplicateBannerItem}
+          onReorderBannerItem={reorderBannerItem}
+          onRemoveBannerItem={removeBannerItem}
         />
         <InspectorPanel
           document={doc}
           selected={selected}
           onChange={setSlotFields}
           onChangeBlock={updateContentBlockFields}
+          onChangeBannerItem={updateBannerItemFields}
           onChangeGlobal={setGlobalFields}
         />
       </div>

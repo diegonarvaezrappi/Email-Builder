@@ -19,3 +19,16 @@ export function wrapWithBlockMarkers(type: string, id: string, innerHtml: string
 
 export const BLOCK_OPEN_RE = /^\s*BLOCK:([^:]+):(.+?)\s*$/
 export const BLOCK_CLOSE_RE = /^\s*\/BLOCK:([^:]+):(.+?)\s*$/
+
+/**
+ * Mismo mecanismo que wrapWithBlockMarkers, prefijo DISTINTO ("BITEM", no
+ * "BLOCK") a propósito: una pieza de banner y un bloque de CONTENIDOS nunca
+ * deben confundirse entre sí en ui/Viewport.tsx (selección/duplicado/reorden
+ * de uno no debe disparar el del otro) — ver measureMarkedBlocks.
+ */
+export function wrapWithBannerItemMarkers(type: string, id: string, innerHtml: string): string {
+  return `<!-- BITEM:${type}:${id} -->\n${innerHtml}\n<!-- /BITEM:${type}:${id} -->`
+}
+
+export const BANNER_ITEM_OPEN_RE = /^\s*BITEM:([^:]+):(.+?)\s*$/
+export const BANNER_ITEM_CLOSE_RE = /^\s*\/BITEM:([^:]+):(.+?)\s*$/

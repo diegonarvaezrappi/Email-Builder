@@ -182,6 +182,23 @@ describe('renderEmailPreview', () => {
     expect(result.html).not.toMatch(/\{%|\{\{/)
   })
 
+  it('resolves a banner CTA_INTERNO alongside a free-standing CONTENIDOS CTA — no changes needed here, both share the same CTA-template content block', async () => {
+    const result = await renderEmailPreview(
+      d({
+        banner: {
+          ...defaultEmailDocument.banner,
+          items: [{ id: 'banner-cta', type: 'CTA_INTERNO', fields: { text: 'CTA del banner', deeplink: '#' } }],
+        },
+        contenidos: [ctaBlock('a', 'CTA libre')],
+      }),
+      'CO',
+    )
+    expect(result.error).toBeUndefined()
+    expect(result.html).toContain('CTA del banner')
+    expect(result.html).toContain('CTA libre')
+    expect(result.html).not.toMatch(/\{%|\{\{/)
+  })
+
   it('never carries the client dark-mode simulation — that is injected into the iframe DOM at runtime', async () => {
     // La simulación de cliente Claro/Oscuro la agrega ui/Viewport.tsx como un
     // <style> en el DOM del iframe, no este módulo: lo que sale de acá es el

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useBuilder } from '../store'
 import { defaultEmailDocument } from '../../registry'
 import { defaultCtaFields } from '../../components/cta/schema'
-import type { CtaBlock } from '../../model'
+import { defaultTagsFields } from '../../components/banner/items/schemas'
+import type { BannerItem, CtaBlock } from '../../model'
 
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
@@ -18,8 +19,31 @@ function ids(): string[] {
   return useBuilder.getState().document.contenidos.map((b) => b.id)
 }
 
+const tagsItem = (id: string): BannerItem => ({ id, type: 'TAGS', fields: defaultTagsFields })
+const imgFijaItem = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_FIJA',
+  fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' },
+})
+const imgAutomaticaModuloItem = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_AUTOMATICA_MODULO',
+  fields: { imageUrl: '', widthPercent: 80 },
+})
+
+function setBannerItems(items: BannerItem[]) {
+  useBuilder.setState({
+    document: { ...defaultEmailDocument, banner: { ...defaultEmailDocument.banner, items } },
+  })
+}
+
+function bannerIds(): string[] {
+  return useBuilder.getState().document.banner.items.map((it) => it.id)
+}
+
 beforeEach(() => {
   setContenidos([])
+  setBannerItems([])
 })
 
 describe('insertContentBlock', () => {
@@ -134,5 +158,158 @@ describe('updateContentBlockFields', () => {
     const contenidos = useBuilder.getState().document.contenidos
     expect(contenidos[0].fields).toEqual({ text: 'editado', deeplink: '#', align: 'left' })
     expect(contenidos[1].fields.text).toBe('dos')
+  })
+})
+
+describe('insertBannerItem', () => {
+  it('inserts a new TAGS item with its default fields', () => {
+    useBuilder.getState().insertBannerItem('TAGS', 0)
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(1)
+    expect(items[0].type).toBe('TAGS')
+    expect(items[0].fields).toEqual(defaultTagsFields)
+  })
+
+  it('inserts at the start (index 0)', () => {
+    setBannerItems([tagsItem('a'), tagsItem('b')])
+    useBuilder.getState().insertBannerItem('TAGS', 0)
+    expect(bannerIds().slice(1)).toEqual(['a', 'b'])
+    expect(bannerIds()[0]).not.toBe('a')
+  })
+
+  it('inserts at the end (index >= length)', () => {
+    setBannerItems([tagsItem('a'), tagsItem('b')])
+    useBuilder.getState().insertBannerItem('TAGS', 99)
+    expect(bannerIds().slice(0, 2)).toEqual(['a', 'b'])
+    expect(bannerIds()).toHaveLength(3)
+  })
+
+  it('does nothing for an unregistered item type', () => {
+    // @ts-expect-error tipo inválido a propósito
+    useBuilder.getState().insertBannerItem('NOPE', 0)
+    expect(useBuilder.getState().document.banner.items).toHaveLength(0)
+  })
+
+  // Exclusividad de módulo de imagen (la única regla dura del maestro que se
+  // conserva en código — ver components/banner/exclusivity.ts).
+  it('inserting IMG_FIJA over an existing IMG_AUTOMATICA_MODULO removes the automática one', () => {
+    setBannerItems([imgAutomaticaModuloItem('a')])
+    useBuilder.getState().insertBannerItem('IMG_FIJA', 1)
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(1)
+    expect(items[0].type).toBe('IMG_FIJA')
+  })
+
+  it('inserting IMG_AUTOMATICA_MODULO over an existing IMG_FIJA removes the fija one', () => {
+    setBannerItems([imgFijaItem('a')])
+    useBuilder.getState().insertBannerItem('IMG_AUTOMATICA_MODULO', 1)
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(1)
+    expect(items[0].type).toBe('IMG_AUTOMATICA_MODULO')
+  })
+
+  it('inserting a non-image-module type (ej. PROMO) never touches an existing image module', () => {
+    setBannerItems([imgFijaItem('a')])
+    useBuilder.getState().insertBannerItem('PROMO', 1)
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(2)
+    expect(items.map((it) => it.type)).toEqual(['IMG_FIJA', 'PROMO'])
+  })
+
+  it('IMG_AUTOMATICA_MOLECULA (a distinct type) coexists with IMG_FIJA — the exclusivity rule does not apply to it', () => {
+    setBannerItems([imgFijaItem('a')])
+    useBuilder.getState().insertBannerItem('IMG_AUTOMATICA_MOLECULA', 1)
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(2)
+    expect(items.map((it) => it.type)).toEqual(['IMG_FIJA', 'IMG_AUTOMATICA_MOLECULA'])
+  })
+})
+
+describe('duplicateBannerItem', () => {
+  it('inserts a copy immediately after the original, with a different id but the same fields', () => {
+    setBannerItems([tagsItem('a'), tagsItem('b')])
+    useBuilder.getState().duplicateBannerItem('a')
+    const items = useBuilder.getState().document.banner.items
+    expect(items.map((it) => it.id)[0]).toBe('a')
+    expect(items[1].id).not.toBe('a')
+    expect(items[1].fields).toEqual(items[0].fields)
+    expect(items[2].id).toBe('b')
+  })
+
+  it('does nothing for an id that does not exist', () => {
+    setBannerItems([tagsItem('a')])
+    useBuilder.getState().duplicateBannerItem('does-not-exist')
+    expect(useBuilder.getState().document.banner.items).toHaveLength(1)
+  })
+
+  it('duplicating an image-module item (subject to exclusivity) still nets exactly 1 image module, replacing the original', () => {
+    setBannerItems([tagsItem('before'), imgFijaItem('a'), tagsItem('after')])
+    useBuilder.getState().duplicateBannerItem('a')
+    const items = useBuilder.getState().document.banner.items
+    expect(items).toHaveLength(3)
+    expect(items.map((it) => it.type)).toEqual(['TAGS', 'IMG_FIJA', 'TAGS'])
+    expect(items[1].id).not.toBe('a') // el original fue reemplazado por su copia
+    expect(items[0].id).toBe('before')
+    expect(items[2].id).toBe('after')
+  })
+})
+
+describe('reorderBannerItem', () => {
+  // [A,B,C,D] — los 4 casos: mover adelante, mover atrás, extremos.
+  it('moves an item forward (A to the position of D)', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B'), tagsItem('C'), tagsItem('D')])
+    useBuilder.getState().reorderBannerItem('A', 3)
+    expect(bannerIds()).toEqual(['B', 'C', 'A', 'D'])
+  })
+
+  it('moves an item backward (D to the position of A)', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B'), tagsItem('C'), tagsItem('D')])
+    useBuilder.getState().reorderBannerItem('D', 0)
+    expect(bannerIds()).toEqual(['D', 'A', 'B', 'C'])
+  })
+
+  it('moves an item to the very end', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B'), tagsItem('C'), tagsItem('D')])
+    useBuilder.getState().reorderBannerItem('A', 4)
+    expect(bannerIds()).toEqual(['B', 'C', 'D', 'A'])
+  })
+
+  it('moves a middle item backward past two others', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B'), tagsItem('C'), tagsItem('D')])
+    useBuilder.getState().reorderBannerItem('C', 0)
+    expect(bannerIds()).toEqual(['C', 'A', 'B', 'D'])
+  })
+
+  it('is a no-op when dropped back onto its own current position', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B'), tagsItem('C')])
+    useBuilder.getState().reorderBannerItem('B', 1)
+    expect(bannerIds()).toEqual(['A', 'B', 'C'])
+  })
+
+  it('does nothing for an id that does not exist', () => {
+    setBannerItems([tagsItem('A'), tagsItem('B')])
+    useBuilder.getState().reorderBannerItem('does-not-exist', 0)
+    expect(bannerIds()).toEqual(['A', 'B'])
+  })
+})
+
+describe('removeBannerItem', () => {
+  it('removes only the targeted item', () => {
+    setBannerItems([tagsItem('a'), tagsItem('b'), tagsItem('c')])
+    useBuilder.getState().removeBannerItem('b')
+    expect(bannerIds()).toEqual(['a', 'c'])
+  })
+})
+
+describe('updateBannerItemFields', () => {
+  it('updates only the targeted item, leaving the others untouched', () => {
+    setBannerItems([
+      { id: 'a', type: 'PROMO', fields: { promoText: 'uno' } },
+      { id: 'b', type: 'PROMO', fields: { promoText: 'dos' } },
+    ])
+    useBuilder.getState().updateBannerItemFields('a', { promoText: 'editado' })
+    const items = useBuilder.getState().document.banner.items
+    expect(items[0].fields).toEqual({ promoText: 'editado' })
+    expect(items[1].fields).toEqual({ promoText: 'dos' })
   })
 })

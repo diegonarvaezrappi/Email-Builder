@@ -16,25 +16,38 @@
 //    `color_footer_mail_general` de cada uno — ver src/themes/themes.ts. Así
 //    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
 //    agrega un tema nuevo la app lo levanta sin tocar código.
+// 3b. Copia NN-components/banners/big-banner-{horizontal,vertical}.html + 16
+//    de los 20 archivos de banners/banner_moleculas/ → src/assets/templates/banners/,
+//    preservando la subcarpeta — ver src/components/banner/shell.ts (que
+//    parsea los 2 shells) y src/components/banner/items/render.ts (que carga
+//    las 16 piezas vía import.meta.glob). Los 4 archivos excluidos a
+//    propósito (2 duplicados byte a byte, 2 que son solo un content-block de
+//    CTA) están documentados junto a BANNER_MOLECULA_FILES más abajo.
 // 4. VALIDA el contrato antes de escribir nada:
 //    - Los marcadores `<!-- FOOTER -->` y `<!-- CIERRES -->` (los slots
 //      simples ya implementados) deben aparecer EXACTAMENTE una vez cada uno
 //      en el maestro. Ojo: el de Cierre es PLURAL en el maestro
 //      ("CIERRES", no "CIERRE") — inconsistencia real del repo, no un typo de
 //      acá; debe quedar sincronizado con SLOT_MARKER_TEXT de
-//      src/template/assemble.ts. BANNER queda fuera de este chequeo: el repo
-//      lo reemplazó por un comentario de instrucciones en prosa
-//      (`<!-- BANNER : por defecto...  -->`) en la reestructuración a
-//      estructura_general.html — sin componente real, no hay un marcador
-//      estable que validar, y cuando se implemente habrá que diseñar su
-//      propio matcher contra el texto real del momento (ver
-//      HEADER_WRAPPER_PLACEHOLDER_RE/CONTENIDOS_WRAPPER_PLACEHOLDER_RE más
-//      abajo para el precedente).
-//    - Los placeholders de HEADER y CONTENIDOS son distintos (viven como
-//      comentarios multilínea — "HEADER WRAPPER … CIERRE HEADER WRAPPER" y
-//      "WRAPPER DE CONTENIDOS: …", no un `<!-- X -->` de una sola línea) y se
-//      validan aparte, con el mismo regex que usa src/template/assemble.ts
-//      para reemplazarlos.
+//      src/template/assemble.ts.
+//    - Los placeholders de HEADER, CONTENIDOS y BANNER son distintos (HEADER y
+//      CONTENIDOS viven como comentarios multilínea — "HEADER WRAPPER …
+//      CIERRE HEADER WRAPPER" y "WRAPPER DE CONTENIDOS: …"; BANNER es una
+//      sola línea pero con texto libre tras "BANNER :" que el repo reescribe
+//      seguido, así que se matchea el prefijo, no la frase completa — ver
+//      BANNER_PLACEHOLDER_RE) y se validan aparte, con el mismo regex que usa
+//      src/template/assemble.ts para reemplazarlos.
+//    - Los 2 archivos de banner (`big-banner-*.html`) deben traer el ancla
+//      "MODULO MOLECULAS" exactamente 1 vez y el token de relleno manual
+//      "AQUIELLINKDELBANNER" exactamente 2 veces (href + originalsrc) —
+//      src/components/banner/shell.ts depende de esas anclas para extraer el
+//      punto de inserción de las piezas del banner sin tocar el archivo real.
+//      `modulo_tags_{horizontal,vertical}.html` deben traer exactamente 3
+//      pills de tag (el archivo real trae 3 hardcodeadas; la app las vuelve
+//      1-3 editables). Los 2 `molecula_cta_interno_*` (no sincronizados, ver
+//      arriba) se validan igual: si el repo les cambia el `cta_alineado`
+//      fijo, el hardcode de items/render.ts (CTA_INTERNO) queda desactualizado
+//      en silencio si no se aborta acá.
 //    - Los 2 placeholders de NN-foundations deben aparecer AL MENOS una vez
 //      cada uno (no exactamente una: estructura_general.html duplicó por
 //      accidente el de global-styles.html — aparece una vez, correcto, en el
@@ -158,17 +171,24 @@ const FOOTER_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_
 const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'headers')
 const CIERRE_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'closing')
 const CTAS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'ctas')
+const BANNERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'banners')
 
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
 const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
 const HEADERS_DIR = HEADERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, HEADERS_SUBDIR_NAME)
 const CIERRE_DIR = CIERRE_SUBDIR_NAME && path.join(COMPONENTS_DIR, CIERRE_SUBDIR_NAME)
 const CTAS_DIR = CTAS_SUBDIR_NAME && path.join(COMPONENTS_DIR, CTAS_SUBDIR_NAME)
+const BANNERS_DIR = BANNERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, BANNERS_SUBDIR_NAME)
+/** `banner_moleculas/` no lleva prefijo numérico (no es un NN_algo) — nombre fijo. */
+const BANNER_MOLECULAS_DIR_NAME = 'banner_moleculas'
+const BANNER_MOLECULAS_DIR = BANNERS_DIR && path.join(BANNERS_DIR, BANNER_MOLECULAS_DIR_NAME)
 
 /**
- * FOOTER y CIERRE: ver la nota de arriba sobre por qué BANNER/CONTENIDOS
- * quedan afuera. `text` es el texto real del marcador en el maestro — el de
- * CIERRE es plural ("CIERRES"), no el nombre del slot.
+ * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
+ * afuera. `text` es el texto real del marcador en el maestro — el de CIERRE
+ * es plural ("CIERRES"), no el nombre del slot. BANNER se valida aparte, más
+ * abajo (BANNER_PLACEHOLDER_RE) — su marcador es un comentario de instrucción
+ * en prosa, no un `<!-- BANNER -->` de una sola palabra.
  */
 const SLOT_MARKERS = [
   { slot: 'FOOTER', text: 'FOOTER' },
@@ -192,6 +212,72 @@ const CTA_FILE = 'cta-template.html'
 
 /** Debe quedar sincronizado con WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE de src/template/assemble.ts. */
 const CONTENIDOS_WRAPPER_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/g
+
+/** Debe quedar sincronizado con BANNER_PLACEHOLDER_RE de src/template/assemble.ts.
+ *  Prefijo, no la frase completa: el texto tras "BANNER :" cambia seguido en
+ *  el repo. Exigir que "BANNER" vaya pegado a `<!--` y seguido de `:` excluye
+ *  las otras 2 apariciones de la palabra en el maestro ("EJEMPLO DE DEFINICION
+ *  DE CAMPOS PARA BANNER", "INICIO SECCION BANNER") — verificado. */
+const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/g
+
+const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
+
+/**
+ * Las 16 piezas que la app importa de banner_moleculas/ (20 archivos reales).
+ * Quedan FUERA a propósito 4 de los 20:
+ *  - molecula_texto_M_horizontal.html / _vertical.html: duplicados byte a
+ *    byte de molecula_textom_*, marcados como "posible duplicado sin
+ *    resolver" en 05-docs/INDICE-DE-COMPONENTES.md. Sincronizar los 2 pares
+ *    invitaría a usar el equivocado.
+ *  - molecula_cta_interno_horizontal.html / _vertical.html: son solo los
+ *    {% assign %} + la referencia al content block CTA-template, exactamente
+ *    lo que emite src/components/cta/render.ts. No se copian (mismo criterio
+ *    que cta-llamado.html) pero SÍ se validan más abajo.
+ */
+const BANNER_MOLECULA_FILES = [
+  'molecula_promo_horizontal.html',
+  'molecula_promo_vertical.html',
+  'molecula_creditos_horizontal.html',
+  'molecula_creditos_vertical.html',
+  'molecula_textoxl_horizontal.html',
+  'molecula_textoxl_vertical.html',
+  'molecula_textom_horizontal.html',
+  'molecula_textom_vertical.html',
+  'modulo_texto_complementario.html',
+  'molecula_img_automatica_horizontal.html',
+  'molecula_img_automatica_vertical.html',
+  'modulo_img_altofijo_horizontal.html',
+  'modulo_img_altofijo_vertical.html',
+  'modulo_img_automatica_horizontal.html',
+  'modulo_tags_horizontal.html',
+  'modulo_tags_vertical.html',
+]
+
+/** No se copian, solo se validan: si el maestro cambia el cta_alineado fijo
+ *  de estos 2 archivos, el hardcode de components/banner/items/render.ts
+ *  queda desactualizado en silencio si no se aborta acá. */
+const CTA_INTERNO_FIXED_ALIGN = {
+  'molecula_cta_interno_horizontal.html': "{% assign cta_alineado = 'left' %}",
+  'molecula_cta_interno_vertical.html': "{% assign cta_alineado = 'center' %}",
+}
+
+/** Archivos de banner_moleculas/ que existen pero no se sincronizan ni se
+ *  validan por nombre fijo (duplicados o content-block puro, ver arriba). */
+const BANNER_MOLECULA_KNOWN_EXTRA_FILES = [
+  'molecula_texto_M_horizontal.html',
+  'molecula_texto_M_vertical.html',
+  ...Object.keys(CTA_INTERNO_FIXED_ALIGN),
+]
+
+/** Ancla que src/components/banner/shell.ts necesita en cada big-banner —
+ *  aparece exactamente 1 vez en cada archivo (verificado). */
+const BANNER_MOLECULAS_ANCHOR = '<!-- MODULO MOLECULAS'
+/** Token de relleno manual (no es Liquid) que aparece 2 veces por archivo
+ *  (href + originalsrc), igual convención que AQUIELLINK# del CTA. */
+const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
+/** Discriminador de un pill de tag — se cuenta como texto simple (no con el
+ *  regex real de la app) para que este script no dependa de src/. */
+const TAG_PILL_DISCRIMINATOR = '> tag 1 </h4>'
 
 /** Debe quedar sincronizado con HEADER_BRAND_VALUES de src/components/header/schema.ts. */
 const HEADER_BRANDS = [
@@ -268,6 +354,13 @@ if (!templateBasePath) {
   if (contenidosPlaceholders.length !== 1) {
     fail(
       `El placeholder "WRAPPER DE CONTENIDOS" aparece ${contenidosPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+    )
+  }
+
+  const bannerPlaceholders = templateBaseHtml.match(BANNER_PLACEHOLDER_RE) ?? []
+  if (bannerPlaceholders.length !== 1) {
+    fail(
+      `El placeholder "<!-- BANNER : …" aparece ${bannerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
     )
   }
 }
@@ -348,6 +441,91 @@ if (CTAS_DIR) {
   }
 }
 
+// --- NN-components/NN_banners/** ----------------------------------------------------
+// 2 archivos "shell" (big-banner-horizontal/vertical.html) + 16 de banner_moleculas/
+// (ver BANNER_MOLECULA_FILES arriba para los 4 excluidos a propósito).
+const bannerFileContents = {}
+if (BANNERS_DIR) {
+  for (const name of BANNER_FILES) {
+    const fp = path.join(BANNERS_DIR, name)
+    if (!fs.existsSync(fp)) {
+      fail(`No se encontró ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name} en ${MASTER_DIR}`)
+      continue
+    }
+    const content = fs.readFileSync(fp, 'utf8')
+
+    const anchorCount = content.split(BANNER_MOLECULAS_ANCHOR).length - 1
+    if (anchorCount !== 1) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: el ancla "${BANNER_MOLECULAS_ANCHOR}" aparece ${anchorCount} veces (se esperaba 1) — revisar components/banner/shell.ts`)
+    }
+    const linkCount = content.split(BANNER_LINK_PLACEHOLDER).length - 1
+    if (linkCount !== 2) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: "${BANNER_LINK_PLACEHOLDER}" aparece ${linkCount} veces (se esperaba 2: href + originalsrc)`)
+    }
+    if (!content.includes('</div></td>')) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: no se encontró el cierre "</div></td>" que components/banner/shell.ts usa como ancla de cierre`)
+    }
+
+    bannerFileContents[name] = content
+  }
+}
+
+const bannerMoleculaFileContents = {}
+if (BANNER_MOLECULAS_DIR) {
+  for (const name of BANNER_MOLECULA_FILES) {
+    const fp = path.join(BANNER_MOLECULAS_DIR, name)
+    if (!fs.existsSync(fp)) {
+      fail(`No se encontró ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/${name} en ${MASTER_DIR}`)
+      continue
+    }
+    bannerMoleculaFileContents[name] = fs.readFileSync(fp, 'utf8')
+  }
+
+  // modulo_tags_{horizontal,vertical}.html deben traer exactamente 3 pills —
+  // components/banner/items/render.ts asume esa cantidad para poder templetear
+  // 1-3 etiquetas editables a partir del archivo real.
+  for (const name of ['modulo_tags_horizontal.html', 'modulo_tags_vertical.html']) {
+    const content = bannerMoleculaFileContents[name]
+    if (!content) continue
+    const pillCount = content.split(TAG_PILL_DISCRIMINATOR).length - 1
+    if (pillCount !== 3) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/${name}: se esperaban 3 pills de tag ("${TAG_PILL_DISCRIMINATOR}") y hay ${pillCount} — revisar components/banner/items/render.ts`)
+    }
+  }
+
+  // molecula_cta_interno_*: no se copian (ver nota de CTA_INTERNO_FIXED_ALIGN),
+  // pero si el maestro cambió su cta_alineado fijo hay que enterarse: el
+  // hardcode de components/banner/items/render.ts quedaría desactualizado en
+  // silencio si no se aborta acá.
+  for (const [name, expectedAssign] of Object.entries(CTA_INTERNO_FIXED_ALIGN)) {
+    const fp = path.join(BANNER_MOLECULAS_DIR, name)
+    if (!fs.existsSync(fp)) {
+      fail(`No se encontró ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/${name} en ${MASTER_DIR}`)
+      continue
+    }
+    const content = fs.readFileSync(fp, 'utf8')
+    if (!content.includes(expectedAssign)) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/${name} ya no contiene "${expectedAssign}" — revisar el align fijo hardcodeado en components/banner/items/render.ts (CTA_INTERNO)`)
+    }
+  }
+
+  // Aviso (no aborta): un archivo nuevo en banner_moleculas/ que el script no
+  // conoce pasa desapercibido si no se avisa acá.
+  let actualMoleculaFiles = []
+  try {
+    actualMoleculaFiles = fs.readdirSync(BANNER_MOLECULAS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}: ${e.message}`)
+  }
+  const knownMoleculaFiles = new Set([...BANNER_MOLECULA_FILES, ...BANNER_MOLECULA_KNOWN_EXTRA_FILES])
+  const unknownMoleculaFiles = actualMoleculaFiles.filter((f) => !knownMoleculaFiles.has(f))
+  if (unknownMoleculaFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownMoleculaFiles.join(', ')} — revisar si hace falta agregarlos a BANNER_MOLECULA_FILES.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
@@ -412,6 +590,17 @@ if (ctaTemplateContent) {
 // Suelto además de inyectado: src/themes/themes.ts parsea los temas de acá.
 fs.writeFileSync(path.join(ASSETS_DIR, 'head-meta-tags.html'), headMetaHtml, 'utf8')
 
+const BANNERS_ASSETS_DIR = path.join(ASSETS_DIR, 'banners')
+fs.mkdirSync(BANNERS_ASSETS_DIR, { recursive: true })
+for (const [name, content] of Object.entries(bannerFileContents)) {
+  fs.writeFileSync(path.join(BANNERS_ASSETS_DIR, name), content, 'utf8')
+}
+const BANNER_MOLECULAS_ASSETS_DIR = path.join(BANNERS_ASSETS_DIR, BANNER_MOLECULAS_DIR_NAME)
+fs.mkdirSync(BANNER_MOLECULAS_ASSETS_DIR, { recursive: true })
+for (const [name, content] of Object.entries(bannerMoleculaFileContents)) {
+  fs.writeFileSync(path.join(BANNER_MOLECULAS_ASSETS_DIR, name), content, 'utf8')
+}
+
 const HEADERS_ASSETS_DIR = path.join(ASSETS_DIR, 'headers')
 fs.mkdirSync(HEADERS_ASSETS_DIR, { recursive: true })
 fs.writeFileSync(path.join(HEADERS_ASSETS_DIR, HEADER_WRAPPER_FILE), headerWrapperContent, 'utf8')
@@ -426,10 +615,13 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + BANNER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
 )
 console.log(
   `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,
+)
+console.log(
+  `${GREEN}✓${RESET} ${Object.keys(bannerFileContents).length + Object.keys(bannerMoleculaFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/`,
 )
 if (themesMissingColorFooter.length === themeCount) {
   console.warn(

@@ -4,9 +4,12 @@
 // ============================================================================
 import { create, useStore as useZustandStore } from 'zustand'
 import { temporal } from 'zundo'
-import type { ContentBlock, ContentBlockType, EmailDocument } from '../model'
+import type { BannerItem, ContentBlock, ContentBlockType, EmailDocument } from '../model'
+import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
 import { contentBlockRegistry } from '../contentBlockRegistry'
+import { getBannerItemDef } from '../bannerItemRegistry'
+import { applyImageModuleExclusivity } from '../components/banner/exclusivity'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
 
@@ -34,6 +37,20 @@ interface BuilderState {
   reorderContentBlock: (id: string, toIndex: number) => void
   removeContentBlock: (id: string) => void
   updateContentBlockFields: (id: string, fields: unknown) => void
+
+  /**
+   * Mismo espíritu que las acciones de contenidos, un nivel más adentro
+   * (doc.banner.items). `insertBannerItem`/`duplicateBannerItem` aplican
+   * además la única regla de exclusión dura del maestro (imagen fija vs.
+   * automática, ver components/banner/exclusivity.ts) ANTES de calcular el
+   * índice de inserción, para que `atIndex` se interprete contra la lista ya
+   * filtrada.
+   */
+  insertBannerItem: (type: BannerItemType, atIndex: number) => void
+  duplicateBannerItem: (id: string) => void
+  reorderBannerItem: (id: string, toIndex: number) => void
+  removeBannerItem: (id: string) => void
+  updateBannerItemFields: (id: string, fields: unknown) => void
 }
 
 export const useBuilder = create<BuilderState>()(
@@ -92,6 +109,66 @@ export const useBuilder = create<BuilderState>()(
           document: {
             ...s.document,
             contenidos: s.document.contenidos.map((b) => (b.id === id ? ({ ...b, fields } as ContentBlock) : b)),
+          },
+        })),
+
+      insertBannerItem: (type, atIndex) =>
+        set((s) => {
+          const def = getBannerItemDef(type)
+          if (!def) return s
+          const item = { id: newId(), type, fields: def.defaultFields } as BannerItem
+          const filtered = applyImageModuleExclusivity(s.document.banner.items, type)
+          const next = [...filtered]
+          next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, item)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+        }),
+
+      duplicateBannerItem: (id) =>
+        set((s) => {
+          const idx = s.document.banner.items.findIndex((it) => it.id === id)
+          if (idx === -1) return s
+          const original = s.document.banner.items[idx]
+          const copy = { ...original, id: newId() } as BannerItem
+          // Si el propio original es un módulo de imagen, applyImageModuleExclusivity
+          // lo saca de `filtered` (no puede convivir con su propia copia) — por
+          // eso la posición de inserción se calcula contando cuántos items
+          // ANTES del original sobrevivieron el filtro, no buscando el id del
+          // original (que puede haber desaparecido). Si el original SÍ
+          // sobrevive (caso normal, no es un módulo de imagen), la copia va
+          // justo DESPUÉS de él (+1); si no sobrevive, la copia toma su lugar.
+          const filtered = applyImageModuleExclusivity(s.document.banner.items, original.type)
+          const originalSurvives = filtered.includes(original)
+          const survivingBefore = s.document.banner.items.slice(0, idx).filter((it) => filtered.includes(it)).length
+          const insertAt = survivingBefore + (originalSurvives ? 1 : 0)
+          const next = [...filtered]
+          next.splice(insertAt, 0, copy)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+        }),
+
+      reorderBannerItem: (id, toIndex) =>
+        set((s) => {
+          const from = s.document.banner.items.findIndex((it) => it.id === id)
+          if (from === -1) return s
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const next = [...s.document.banner.items]
+          const [moved] = next.splice(from, 1)
+          next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, moved)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+        }),
+
+      removeBannerItem: (id) =>
+        set((s) => ({
+          document: { ...s.document, banner: { ...s.document.banner, items: s.document.banner.items.filter((it) => it.id !== id) } },
+        })),
+
+      updateBannerItemFields: (id, fields) =>
+        set((s) => ({
+          document: {
+            ...s.document,
+            banner: {
+              ...s.document.banner,
+              items: s.document.banner.items.map((it) => (it.id === id ? ({ ...it, fields } as BannerItem) : it)),
+            },
           },
         })),
     }),
