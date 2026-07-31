@@ -1,6 +1,6 @@
 import type { ZodType, ZodTypeDef } from 'zod'
 import type { ComponentType } from 'react'
-import type { ContentBlock, EmailDocument, SlotName } from './model'
+import type { ContentBlock, CtaBlock, EmailDocument, SlotName } from './model'
 import { contentBlockSchema } from './model'
 import { defaultFooterFields, footerSchema, type FooterFields } from './components/footer/schema'
 import { renderFooterSnippet } from './components/footer/render'
@@ -15,6 +15,7 @@ import { defaultBannerFields, bannerSchema, type BannerFields } from './componen
 import { renderBannerSnippet } from './components/banner/render'
 import { BannerPropertiesPanel } from './components/banner/PropertiesPanel'
 import { renderContenidosSnippet } from './components/contenidos/render'
+import { defaultCtaFields } from './components/cta/schema'
 import { defaultGlobalFields } from './global/schema'
 import { z } from 'zod'
 
@@ -120,11 +121,23 @@ export const registry: Partial<Record<SlotName, SlotDef<any>>> = {
   CONTENIDOS: contenidosSlotDef,
 }
 
+/** "siempre por defecto debajo del banner debe venir un cta, se puede eliminar"
+ *  (estructura_general.html línea 55). Id fijo (no newId()), mismo motivo que
+ *  'banner-tags-default' en components/banner/schema.ts: mantener
+ *  defaultEmailDocument determinista para tests. Sigue siendo removible vía el
+ *  botón × existente del overlay (removeContentBlock) — no hace falta ninguna
+ *  bandera "no removible". */
+const defaultContenidosCtaBlock: CtaBlock = {
+  id: 'contenidos-cta-default',
+  type: 'CTA',
+  fields: defaultCtaFields,
+}
+
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
   header: defaultHeaderFields,
   banner: defaultBannerFields,
   footer: defaultFooterFields,
   cierre: defaultCierreFields,
-  contenidos: [],
+  contenidos: [defaultContenidosCtaBlock],
 }

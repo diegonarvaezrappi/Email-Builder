@@ -74,7 +74,10 @@ describe('assembleEmailHtml', () => {
   })
 
   it('leaves no trace of the WRAPPER DE CONTENIDOS marker when there are no CTAs', () => {
-    const html = assembleEmailHtml(defaultEmailDocument)
+    // defaultEmailDocument ya trae un CTA por defecto (siempre debajo del
+    // banner, ver registry.ts) — se fuerza contenidos: [] acá para seguir
+    // probando el caso real "0 CTAs", no un default incidental.
+    const html = assembleEmailHtml({ ...defaultEmailDocument, contenidos: [] })
     expect(html).not.toContain('WRAPPER DE CONTENIDOS')
     expect(html).not.toContain('BLOCK:CTA:')
   })

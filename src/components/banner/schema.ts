@@ -17,6 +17,20 @@ export const BANNER_TYPE_LABELS: Record<BannerType, string> = {
   horizontal: 'Horizontal — mail con módulos de contenido',
 }
 
+/** Título corto para las cards de tipo de banner del panel izquierdo
+ *  (ui/LibraryPanel.tsx) — BANNER_TYPE_LABELS es la versión larga usada en la
+ *  lista de "piezas ocultas" del panel derecho, acá va solo el nombre. */
+export const BANNER_TYPE_TITLES: Record<BannerType, string> = {
+  vertical: 'Vertical',
+  horizontal: 'Horizontal',
+}
+
+/** Texto breve bajo cada card de tipo de banner, en lenguaje simple. */
+export const BANNER_TYPE_CAPTIONS: Record<BannerType, string> = {
+  vertical: 'Mail simple: solo CTA + cierre.',
+  horizontal: 'Mail con módulos de contenido.',
+}
+
 /**
  * Lo que una pieza de banner necesita saber del banner que la contiene. Cada
  * pieza tiene archivo horizontal y vertical con placeholders DISTINTOS (el

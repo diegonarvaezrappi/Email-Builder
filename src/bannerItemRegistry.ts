@@ -1,6 +1,7 @@
 import type { ZodType, ZodTypeDef } from 'zod'
-import type { ComponentType } from 'react'
+import type { ComponentType, SVGProps } from 'react'
 import type { EmailDocument } from './model'
+import { MOLECULE_ICONS } from './ui/moleculeIcons'
 import type { GlobalFields } from './global/schema'
 import type { BannerType, BannerItemRenderCtx } from './components/banner/schema'
 import { BANNER_ITEM_TYPE_VALUES, type BannerItemType } from './components/banner/items/schemas'
@@ -76,6 +77,10 @@ export interface BannerItemDef<TFields> {
     doc: EmailDocument
     onChangeGlobal: (next: GlobalFields) => void
   }>
+  /** Ícono SVG esquemático mostrado en el catálogo de piezas del panel derecho
+   *  (components/banner/ItemCatalog.tsx) — ver ui/moleculeIcons.tsx. Opcional a
+   *  propósito: una pieza sin ícono todavía no rompe el catálogo. */
+  Icon?: ComponentType<SVGProps<SVGSVGElement>>
 }
 
 const BOTH_ORIENTATIONS: readonly BannerType[] = ['horizontal', 'vertical']
@@ -90,6 +95,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultPromoFields,
     render: renderPromoSnippet,
     PropertiesPanel: PromoPropertiesPanel,
+    Icon: MOLECULE_ICONS.PROMO,
   },
   CREDITOS: {
     type: 'CREDITOS',
@@ -100,6 +106,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultCreditosFields,
     render: renderCreditosSnippet,
     PropertiesPanel: CreditosPropertiesPanel,
+    Icon: MOLECULE_ICONS.CREDITOS,
   },
   TEXTOXL: {
     type: 'TEXTOXL',
@@ -110,6 +117,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultTextoXlFields,
     render: renderTextoXlSnippet,
     PropertiesPanel: TextoXlPropertiesPanel,
+    Icon: MOLECULE_ICONS.TEXTOXL,
   },
   TEXTOM: {
     type: 'TEXTOM',
@@ -120,6 +128,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultTextoMFields,
     render: renderTextoMSnippet,
     PropertiesPanel: TextoMPropertiesPanel,
+    Icon: MOLECULE_ICONS.TEXTOM,
   },
   TEXTO_COMPLEMENTARIO: {
     type: 'TEXTO_COMPLEMENTARIO',
@@ -132,6 +141,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultTextoComplementarioFields,
     render: (fields, _doc, _ctx) => renderTextoComplementarioSnippet(fields),
     PropertiesPanel: TextoComplementarioPropertiesPanel,
+    Icon: MOLECULE_ICONS.TEXTO_COMPLEMENTARIO,
   },
   IMG_AUTOMATICA_MOLECULA: {
     type: 'IMG_AUTOMATICA_MOLECULA',
@@ -142,6 +152,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultImgAutomaticaMoleculaFields,
     render: renderImgAutomaticaMoleculaSnippet,
     PropertiesPanel: ImgAutomaticaMoleculaPropertiesPanel,
+    Icon: MOLECULE_ICONS.IMG_AUTOMATICA_MOLECULA,
   },
   CTA_INTERNO: {
     type: 'CTA_INTERNO',
@@ -152,6 +163,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultCtaInternoFields,
     render: renderCtaInternoSnippet,
     PropertiesPanel: CtaInternoPropertiesPanel,
+    Icon: MOLECULE_ICONS.CTA_INTERNO,
   },
   IMG_FIJA: {
     type: 'IMG_FIJA',
@@ -162,6 +174,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultImgFijaFields,
     render: renderImgFijaSnippet,
     PropertiesPanel: ImgFijaPropertiesPanel,
+    Icon: MOLECULE_ICONS.IMG_FIJA,
   },
   IMG_AUTOMATICA_MODULO: {
     type: 'IMG_AUTOMATICA_MODULO',
@@ -174,6 +187,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultImgAutomaticaModuloFields,
     render: (fields, _doc, _ctx) => renderImgAutomaticaModuloSnippet(fields),
     PropertiesPanel: ImgAutomaticaModuloPropertiesPanel,
+    Icon: MOLECULE_ICONS.IMG_AUTOMATICA_MODULO,
   },
   TAGS: {
     type: 'TAGS',
@@ -184,6 +198,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     defaultFields: defaultTagsFields,
     render: renderTagsSnippet,
     PropertiesPanel: TagsPropertiesPanel,
+    Icon: MOLECULE_ICONS.TAGS,
   },
 }
 

@@ -25,6 +25,7 @@ function App() {
   const reorderBannerItem = useBuilder((s) => s.reorderBannerItem)
   const removeBannerItem = useBuilder((s) => s.removeBannerItem)
   const updateBannerItemFields = useBuilder((s) => s.updateBannerItemFields)
+  const setBannerImageModule = useBuilder((s) => s.setBannerImageModule)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
@@ -86,7 +87,7 @@ function App() {
       </header>
 
       <div className="app-body">
-        <LibraryPanel document={doc} selected={selected} onSelect={setSelected} />
+        <LibraryPanel document={doc} selected={selected} onSelect={setSelected} onChangeSlot={setSlotFields} />
         <Viewport
           document={doc}
           selected={selected}
@@ -104,10 +105,13 @@ function App() {
         <InspectorPanel
           document={doc}
           selected={selected}
+          onSelect={setSelected}
           onChange={setSlotFields}
           onChangeBlock={updateContentBlockFields}
           onChangeBannerItem={updateBannerItemFields}
           onChangeGlobal={setGlobalFields}
+          onInsertBannerItem={insertBannerItem}
+          onSetBannerImageModule={setBannerImageModule}
         />
       </div>
     </div>

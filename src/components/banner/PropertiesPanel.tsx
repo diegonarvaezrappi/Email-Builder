@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { BANNER_TYPE_LABELS, BANNER_TYPE_VALUES } from './schema'
+import { BANNER_TYPE_LABELS } from './schema'
 import type { BannerFields } from './schema'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 
@@ -30,24 +30,9 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
     <div className="properties-panel">
       {value.removed && (
         <p className="inspector-hint">
-          Este componente fue eliminado del email. Arrástralo desde el panel de componentes para restaurarlo.
+          Este componente fue eliminado del email. Elegí un tipo de banner en el panel de componentes (o arrastralo) para restaurarlo.
         </p>
       )}
-
-      <label className="field">
-        <span>Tipo de banner</span>
-        <select
-          value={value.bannerType}
-          disabled={value.removed}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => set('bannerType', e.target.value as BannerFields['bannerType'])}
-        >
-          {BANNER_TYPE_VALUES.map((t) => (
-            <option key={t} value={t}>
-              {BANNER_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
-      </label>
 
       <label className="field">
         <span>Enlace del banner</span>

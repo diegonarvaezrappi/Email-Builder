@@ -275,6 +275,113 @@
   margin-left: 10px;
 }
 
+/* --- Selector tipo tarjeta: base compartida por las cards de tipo de banner
+   (panel izquierdo), tipo de imagen y catálogo de piezas (ambas en el panel
+   derecho) — mismo lenguaje visual que .lib-item pero en grid, para elegir
+   viendo todas las opciones a la vez en vez de una lista vertical. */
+.option-card {
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+}
+
+.option-card:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+
+.option-card.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.option-card:disabled {
+  color: var(--text);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.option-card-title {
+  font-weight: 600;
+}
+
+.option-card-caption {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.option-card.active .option-card-caption {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+/* Panel izquierdo: elegir vertical/horizontal. */
+.banner-type-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Panel derecho: elegir el módulo de imagen del banner horizontal. */
+.image-type-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Panel derecho: catálogo de piezas del banner (reemplaza la vieja sublista
+   "Piezas" del panel izquierdo). */
+.molecule-catalog-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.molecule-card {
+  align-items: center;
+  text-align: center;
+}
+
+.molecule-card-icon {
+  width: 100%;
+  height: 32px;
+  color: var(--text);
+}
+
+/* Botón "volver al banner" desde el panel de una pieza seleccionada. */
+.inspector-back {
+  font: inherit;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 0;
+  margin-bottom: 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.inspector-back:hover {
+  color: var(--text-h);
+}
+
 /* --- Panel derecho vacío ------------------------------------------------ */
 .panel-inspector.empty {
   display: flex;

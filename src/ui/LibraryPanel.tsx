@@ -13,13 +13,14 @@
 // nivel de tipo — las instancias concretas se seleccionan haciendo click en
 // su overlay del Viewport).
 //
-// BANNER es un híbrido: SÍ es un slot singleton (se puede eliminar/restaurar,
-// como Cierre), pero también aloja una lista repetible de hasta 10 tipos de
-// pieza (como CONTENIDOS). Se muestra como grupo con 2 filas de TIPO de
-// banner (vertical/horizontal — arrastrar una restaura el slot y fija ese
-// tipo en el mismo gesto) + una sublista de piezas, cada una habilitada solo
-// si tiene archivo/comportamiento para el tipo de banner activo (ver
-// bannerItemRegistry.ts, `orientations`).
+// BANNER es un slot singleton (se puede eliminar/restaurar, como Cierre), pero
+// a diferencia de Header/Footer/Cierre se muestra como un grupo con 2 cards
+// de TIPO de banner (vertical/horizontal) en vez de una sola fila — clickear
+// una cambia el tipo EN TIEMPO REAL (y restaura el slot si estaba eliminado),
+// resaltando la que está activa; también sigue siendo arrastrable, mismo
+// gesto que antes. El catálogo de piezas (los 10 tipos posibles, ver
+// bannerItemRegistry.ts) ya NO vive acá — se movió al panel derecho
+// (components/banner/ItemCatalog.tsx), visible al seleccionar el banner.
 //
 // Los ajustes globales (el tema) NO viven acá — van en la barra superior, ver
 // ui/ToolbarGlobals.tsx.
@@ -28,10 +29,9 @@ import type { EmailDocument, SlotName } from '../model'
 import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
-import { getBannerItemDef, BANNER_ITEM_LIBRARY_ORDER } from '../bannerItemRegistry'
-import { BANNER_TYPE_LABELS, BANNER_TYPE_VALUES } from '../components/banner/schema'
+import { BANNER_TYPE_CAPTIONS, BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/schema'
 import { isSlotSelected, selectSlot, type Selection } from './selection'
-import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, BANNER_TYPE_DRAG_TYPE, BANNER_ITEM_DRAG_TYPE } from './dragTypes'
+import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, BANNER_TYPE_DRAG_TYPE } from './dragTypes'
 
 /** Los 9 tipos de contenido que el maestro documenta dentro de CONTENIDOS — ver el comentario "WRAPPER DE CONTENIDOS". */
 const CONTENT_BLOCK_LIBRARY_ITEMS: { type: string; label: string }[] = [
@@ -50,9 +50,10 @@ interface LibraryPanelProps {
   document: EmailDocument
   selected: Selection | null
   onSelect: (next: Selection) => void
+  onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
 }
 
-export function LibraryPanel({ document: doc, selected, onSelect }: LibraryPanelProps) {
+export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }: LibraryPanelProps) {
   return (
     <aside className="panel-library">
       <section className="lib-section">
@@ -64,49 +65,33 @@ export function LibraryPanel({ document: doc, selected, onSelect }: LibraryPanel
               return (
                 <li key={slot} className="lib-group">
                   <span className="lib-group-label">{SLOT_LABELS.BANNER}</span>
-                  <ul className="lib-list lib-list-nested">
-                    {BANNER_TYPE_VALUES.map((type) => (
-                      <li key={type}>
-                        <button
-                          type="button"
-                          className={`lib-item${!isRemoved && doc.banner.bannerType === type ? ' active' : ''}`}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData(BANNER_TYPE_DRAG_TYPE, type)
-                            e.dataTransfer.effectAllowed = 'copy'
-                          }}
-                          onClick={() => onSelect(selectSlot('BANNER'))}
-                        >
-                          <span className="lib-item-name">{BANNER_TYPE_LABELS[type]}</span>
-                          {isRemoved && <span className="lib-item-tag">eliminado — arrastra para restaurar</span>}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <span className="lib-group-sub-label">Piezas</span>
-                  <ul className="lib-list lib-list-nested">
-                    {BANNER_ITEM_LIBRARY_ORDER.map((type) => {
-                      const def = getBannerItemDef(type)
-                      const enabled = Boolean(def?.orientations.includes(doc.banner.bannerType))
+                  <ul className="banner-type-grid">
+                    {BANNER_TYPE_VALUES.map((type) => {
+                      const active = !isRemoved && doc.banner.bannerType === type
                       return (
                         <li key={type}>
                           <button
                             type="button"
-                            className="lib-item"
-                            disabled={!enabled}
-                            draggable={enabled}
+                            className={`option-card banner-type-card${active ? ' active' : ''}`}
+                            aria-pressed={active}
+                            draggable
                             onDragStart={(e) => {
-                              e.dataTransfer.setData(BANNER_ITEM_DRAG_TYPE, type)
+                              e.dataTransfer.setData(BANNER_TYPE_DRAG_TYPE, type)
                               e.dataTransfer.effectAllowed = 'copy'
                             }}
+                            onClick={() => {
+                              onChangeSlot('banner', { ...doc.banner, bannerType: type, removed: false })
+                              onSelect(selectSlot('BANNER'))
+                            }}
                           >
-                            <span className="lib-item-name">{def?.label ?? type}</span>
-                            {!enabled && <span className="lib-item-tag">solo horizontal</span>}
+                            <span className="option-card-title">{BANNER_TYPE_TITLES[type]}</span>
+                            <span className="option-card-caption">{BANNER_TYPE_CAPTIONS[type]}</span>
                           </button>
                         </li>
                       )
                     })}
                   </ul>
+                  {isRemoved && <span className="lib-item-tag">eliminado — elegí un tipo para restaurarlo</span>}
                 </li>
               )
             }

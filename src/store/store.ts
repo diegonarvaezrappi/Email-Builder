@@ -9,7 +9,7 @@ import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
-import { applyImageModuleExclusivity } from '../components/banner/exclusivity'
+import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType } from '../components/banner/exclusivity'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
 
@@ -51,6 +51,16 @@ interface BuilderState {
   reorderBannerItem: (id: string, toIndex: number) => void
   removeBannerItem: (id: string) => void
   updateBannerItemFields: (id: string, fields: unknown) => void
+
+  /**
+   * Cambia (o agrega) el módulo de imagen del banner horizontal — IMG_FIJA e
+   * IMG_AUTOMATICA_MODULO son mutuamente excluyentes (ver exclusivity.ts). A
+   * diferencia de insertBannerItem, reemplaza en el MISMO índice si ya había
+   * un módulo de imagen, en vez de sacarlo y agregar el nuevo al final — así
+   * el selector de tipo de imagen del panel derecho no reordena el resto de
+   * las piezas del banner.
+   */
+  setBannerImageModule: (type: ImageModuleType) => void
 }
 
 export const useBuilder = create<BuilderState>()(
@@ -171,6 +181,19 @@ export const useBuilder = create<BuilderState>()(
             },
           },
         })),
+
+      setBannerImageModule: (type) =>
+        set((s) => {
+          const def = getBannerItemDef(type)
+          if (!def) return s
+          const items = s.document.banner.items
+          const idx = findImageModuleIndex(items)
+          const newItem = { id: newId(), type, fields: def.defaultFields } as BannerItem
+          const next = [...items]
+          if (idx === -1) next.push(newItem)
+          else next[idx] = newItem
+          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+        }),
     }),
     {
       limit: 100,

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useBuilder } from '../store'
-import { defaultEmailDocument } from '../../registry'
 import { defaultCtaFields } from '../../components/cta/schema'
 import { defaultTagsFields } from '../../components/banner/items/schemas'
 import type { BannerItem, CtaBlock } from '../../model'
@@ -12,7 +11,11 @@ const ctaBlock = (id: string, text = id): CtaBlock => ({
 })
 
 function setContenidos(blocks: CtaBlock[]) {
-  useBuilder.setState({ document: { ...defaultEmailDocument, contenidos: blocks } })
+  // Construye sobre el estado ACTUAL (no defaultEmailDocument): así no importa
+  // en qué orden beforeEach llame a este helper y a setBannerItems, ninguno
+  // pisa lo que el otro acaba de fijar (defaultEmailDocument.contenidos ya no
+  // es [] — trae 1 CTA por defecto, ver registry.ts).
+  useBuilder.setState((s) => ({ document: { ...s.document, contenidos: blocks } }))
 }
 
 function ids(): string[] {
@@ -32,9 +35,11 @@ const imgAutomaticaModuloItem = (id: string): BannerItem => ({
 })
 
 function setBannerItems(items: BannerItem[]) {
-  useBuilder.setState({
-    document: { ...defaultEmailDocument, banner: { ...defaultEmailDocument.banner, items } },
-  })
+  // Mismo motivo que setContenidos: construye sobre el estado actual, no sobre
+  // defaultEmailDocument, para no pisar lo que setContenidos ya haya fijado.
+  useBuilder.setState((s) => ({
+    document: { ...s.document, banner: { ...s.document.banner, items } },
+  }))
 }
 
 function bannerIds(): string[] {

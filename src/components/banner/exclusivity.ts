@@ -15,7 +15,12 @@ import type { BannerItem, BannerItemType } from './items/schemas'
  * entra en esta regla — es una pieza distinta, confirmada por diff contra
  * IMG_AUTOMATICA_MODULO, y coexiste con cualquier módulo de imagen.
  */
-const IMG_MODULE_TYPES: BannerItemType[] = ['IMG_FIJA', 'IMG_AUTOMATICA_MODULO']
+export type ImageModuleType = Extract<BannerItemType, 'IMG_FIJA' | 'IMG_AUTOMATICA_MODULO'>
+export const IMAGE_MODULE_TYPES: readonly ImageModuleType[] = ['IMG_FIJA', 'IMG_AUTOMATICA_MODULO']
+
+function isImageModuleType(type: BannerItemType): type is ImageModuleType {
+  return (IMAGE_MODULE_TYPES as readonly BannerItemType[]).includes(type)
+}
 
 /**
  * Filtra de `items` cualquier pieza de módulo de imagen existente cuando
@@ -24,6 +29,14 @@ const IMG_MODULE_TYPES: BannerItemType[] = ['IMG_FIJA', 'IMG_AUTOMATICA_MODULO']
  * contra la lista ya filtrada.
  */
 export function applyImageModuleExclusivity(items: BannerItem[], incomingType: BannerItemType): BannerItem[] {
-  if (!IMG_MODULE_TYPES.includes(incomingType)) return items
-  return items.filter((item) => !IMG_MODULE_TYPES.includes(item.type))
+  if (!isImageModuleType(incomingType)) return items
+  return items.filter((item) => !isImageModuleType(item.type))
+}
+
+/** Índice del módulo de imagen actual (IMG_FIJA o IMG_AUTOMATICA_MODULO) dentro
+ *  de `items`, -1 si el banner todavía no tiene ninguno. Usado por el selector
+ *  de tipo de imagen (auto/alto fijo) del panel derecho para saber cuál de las
+ *  2 cards resaltar y en qué posición reemplazar al cambiar de tipo. */
+export function findImageModuleIndex(items: BannerItem[]): number {
+  return items.findIndex((item) => isImageModuleType(item.type))
 }
