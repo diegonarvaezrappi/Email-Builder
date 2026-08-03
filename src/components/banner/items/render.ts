@@ -126,7 +126,7 @@ export function renderTextoMSnippet(fields: TextoMFields, _doc: EmailDocument, c
   return resolveBannerVars(raw, { banner_copy_modulo_textom: escapeHtmlText(fields.text) }, fileName)
 }
 
-// --- TEXTO_COMPLEMENTARIO (solo horizontal, sin variante) -----------------------
+// --- TEXTO_COMPLEMENTARIO (archivo único, sin variante por orientación — sirve para ambas) -----------------------
 
 const TEXTO_COMPLEMENTARIO_PLACEHOLDER = 'Más de 500 opciones de tacos solo durante una semana'
 

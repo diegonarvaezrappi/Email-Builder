@@ -134,9 +134,12 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     type: 'TEXTO_COMPLEMENTARIO',
     label: 'Texto complementario',
     zone: 'MOLECULA',
-    // Sin variante vertical en el maestro (modulo_texto_complementario.html no
-    // tiene par _horizontal/_vertical) — ver components/banner/items/render.ts.
-    orientations: ['horizontal'],
+    // modulo_texto_complementario.html es un único archivo compartido (sin
+    // par _horizontal/_vertical todavía, ver USO-DE-CADA-PARTE.md línea 131) —
+    // pero su contenido real (un <h4> de body sin ancho ni estilo atado a
+    // ninguna orientación) sirve igual para ambas, así que se habilita en las
+    // 2 — ver components/banner/items/render.ts.
+    orientations: BOTH_ORIENTATIONS,
     schema: textoComplementarioFieldsSchema,
     defaultFields: defaultTextoComplementarioFields,
     render: (fields, _doc, _ctx) => renderTextoComplementarioSnippet(fields),
