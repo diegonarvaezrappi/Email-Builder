@@ -46,6 +46,11 @@ export const headerSchema = z.object({
    *  COBRANDING_IMG_SRC_PLACEHOLDER en header/render.ts, que la usa como
    *  ancla para sustituir por esta URL. */
   cobrandingImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA'),
+  /** Los 40 archivos traen `border-radius: 5px` en las 3 <img> de cobranding.
+   *  Default `true` = se respeta el maestro tal cual; en `false`, render.ts se
+   *  lo quita a la <img> que queda (algunos logos de partner no deben salir
+   *  con esquinas redondeadas). */
+  cobrandingRounded: z.boolean().default(true),
 })
 
 export type HeaderFields = z.infer<typeof headerSchema>

@@ -34,6 +34,12 @@ const COBRANDING_IMG_RE = /<img class="cobranding-[sml]"[^>]*>/g
  *  en schema.ts, que es lo que este placeholder termina reemplazando. */
 const COBRANDING_IMG_SRC_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA'
 
+/** El `border-radius` inline de la <img> de cobranding (los 40 archivos traen
+ *  `border-radius: 5px` en las 3 variantes de tamaño — verificado). Se quita
+ *  solo cuando cobrandingRounded es false. El `;` es opcional a propósito:
+ *  en la variante de tamaño grande el maestro lo escribe sin espacio final. */
+const COBRANDING_BORDER_RADIUS_RE = /\s*border-radius\s*:[^;"]*;?/
+
 function headerTrRaw(fields: HeaderFields): string {
   const suffix = `/headers/${fields.brand}/${fields.layout}-${fields.logoBackground}.html`
   const path = Object.keys(rawHeaderFiles).find((p) => p.endsWith(suffix))
@@ -48,9 +54,15 @@ function headerTrRaw(fields: HeaderFields): string {
  * va también el separador, cuando el layout centrado lo trae). Con
  * cobranding: se conserva el <td> pero se deja solo la <img> del tamaño
  * elegido, quitando las otras 2, y se le pone la URL que haya elegido el
- * usuario (por defecto, la misma imagen placeholder del maestro). No hace
- * falta lógica especial por marca ni por layout — la presencia/ausencia del
- * separador ya viene resuelta por cuál de los 40 archivos se cargó.
+ * usuario (por defecto, la misma imagen placeholder del maestro), más el
+ * `border-radius` quitado si el usuario lo desactivó. No hace falta lógica
+ * especial por marca ni por layout — la presencia/ausencia del separador ya
+ * viene resuelta por cuál de los 40 archivos se cargó.
+ *
+ * El `border-radius` se quita DENTRO del replace de la <img>, no sobre el <td>
+ * entero: así no puede tocar el del `<table>` que envuelve el header
+ * (border-radius: 10px + overflow:hidden, lo que le da las esquinas al header
+ * completo) ni el del separador si algún día el maestro le pone uno.
  */
 function applyCobranding(trHtml: string, fields: HeaderFields): string {
   const anchorIndex = trHtml.indexOf(COBRANDING_ANCHOR)
@@ -64,9 +76,10 @@ function applyCobranding(trHtml: string, fields: HeaderFields): string {
   }
 
   const keepClass = `cobranding-${fields.cobrandingSize}`
-  let cell = trHtml
-    .slice(cellStart, cellEnd)
-    .replace(COBRANDING_IMG_RE, (imgTag) => (imgTag.includes(`class="${keepClass}"`) ? imgTag : ''))
+  let cell = trHtml.slice(cellStart, cellEnd).replace(COBRANDING_IMG_RE, (imgTag) => {
+    if (!imgTag.includes(`class="${keepClass}"`)) return ''
+    return fields.cobrandingRounded ? imgTag : imgTag.replace(COBRANDING_BORDER_RADIUS_RE, '')
+  })
 
   if (!cell.includes(COBRANDING_IMG_SRC_PLACEHOLDER)) {
     throw new Error(

@@ -95,6 +95,15 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
               ))}
             </select>
           </label>
+
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={value.cobrandingRounded}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('cobrandingRounded', e.target.checked)}
+            />
+            <span>Esquinas redondeadas</span>
+          </label>
         </>
       )}
     </div>

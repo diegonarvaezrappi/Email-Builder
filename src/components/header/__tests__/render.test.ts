@@ -70,6 +70,56 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA')
   })
 
+  it('keeps the master border-radius on the cobranding image by default', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true }, 'beige100')
+    const img = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    expect(img).toContain('border-radius')
+  })
+
+  it('strips the border-radius from the cobranding image when cobrandingRounded is false', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, cobranding: true, cobrandingRounded: false },
+      'beige100',
+    )
+    const img = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    expect(img).not.toContain('border-radius')
+    // El resto del estilo de la <img> sobrevive intacto.
+    expect(img).toContain('max-width: 180px')
+    expect(img).toContain('margin: 0 auto')
+  })
+
+  it('never strips the border-radius of the header wrapper table, only the cobranding image', () => {
+    // rappi-turbo es una de las 4 marcas cuyo <table> envolvente trae
+    // `border-radius: 10px; overflow: hidden` (las mismas 4 que usan
+    // bg_header_mail_general) — es lo que le redondea las esquinas al header
+    // completo, y no debe desaparecer al desactivar el del cobranding. Se usa
+    // esta marca justamente porque tiene los 2 border-radius a la vez, así que
+    // el test falla si el strip deja de estar acotado a la <img>.
+    const base = { ...defaultHeaderFields, brand: 'rappi-turbo' as const, cobranding: true }
+    const rounded = renderHeaderSnippet(base, 'beige100')
+    const notRounded = renderHeaderSnippet({ ...base, cobrandingRounded: false }, 'beige100')
+
+    for (const snippet of [rounded, notRounded]) {
+      expect(snippet).toContain('border-radius: 10px')
+    }
+    // La única diferencia es el de la <img>: 2 ocurrencias (wrapper + img)
+    // contra 1 (solo wrapper).
+    expect((rounded.match(/border-radius/g) ?? []).length).toBe(2)
+    expect((notRounded.match(/border-radius/g) ?? []).length).toBe(1)
+  })
+
+  it('does nothing with cobrandingRounded when cobranding is off (no cobranding markup at all)', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, brand: 'rappi-turbo', cobranding: false, cobrandingRounded: false },
+      'beige100',
+    )
+    expect(snippet).not.toContain('cobranding-')
+    // El del wrapper sobrevive: no depende del cobranding en absoluto.
+    expect(snippet).toContain('border-radius: 10px')
+  })
+
   it('escapes special characters in a user-provided cobranding URL', () => {
     const snippet = renderHeaderSnippet(
       { ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: 'https://example.com/a"b&c' },
