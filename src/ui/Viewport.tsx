@@ -59,6 +59,7 @@ import {
   renderEmailPreview,
   type PreviewCountry,
 } from '../preview/liquidPreview'
+import { applyClientScheme, type EmailClientScheme } from './darkSim'
 
 interface ViewportProps {
   document: EmailDocument
@@ -77,68 +78,6 @@ interface ViewportProps {
 }
 
 type Tab = 'preview' | 'code'
-
-/**
- * Cómo se ve el email en el "cliente de correo" simulado — Claro (el mail tal
- * cual, sin tocar) u Oscuro (como lo dejaría un cliente con dark mode
- * activado: el repo no trae NINGÚN soporte nativo de dark mode para el email
- * — sin `prefers-color-scheme`, sin `color-scheme`, sin los selectores que usa
- * Gmail — así que un cliente con dark mode encendido no "respeta" nada del
- * mail, lo auto-oscurece él mismo con su propio algoritmo, como hacen Gmail,
- * Outlook y Apple Mail con cualquier correo sin soporte explícito).
- *
- * Es un ajuste de VISTA, nunca del documento: no entra al historial de
- * undo/redo, no se persiste, y jamás toca el HTML exportado — se inyecta como
- * un <style> en el DOM del iframe en tiempo de ejecución (ver DARK_SIM_CSS).
- */
-type EmailClientScheme = 'light' | 'dark'
-
-/** Filtro de auto-oscurecido. Se usa dos veces; ver DARK_SIM_CSS. */
-const DARK_SIM_FILTER = 'invert(1) hue-rotate(180deg)'
-
-const DARK_SIM_STYLE_ID = 'email-builder-dark-sim'
-
-/**
- * La simulación de "cliente con dark mode": se invierte el documento entero y
- * se vuelve a invertir SOLO el contenido multimedia, con lo que las imágenes
- * quedan a color normal. Es lo que hacen Gmail/Outlook/Apple Mail y los
- * simuladores de dark mode: oscurecen fondos y textos, pero no tocan las fotos
- * ni los logos.
- *
- * Por qué `invert(1) hue-rotate(180deg)` y no `invert(1)` a secas: sin el
- * hue-rotate los tonos se van al color complementario (un link azul sale
- * amarillo y el naranja de marca sale cian). Con él los matices se conservan.
- * El precio es que el hue-rotate recorta los valores fuera de gama, así que la
- * doble inversión de las imágenes no es exactamente idéntica al original
- * (los colores muy saturados pierden algo de saturación) — se comparó contra
- * `invert(1)` puro, que devuelve la imagen exacta pero rompe todos los tonos
- * del resto, y esta es la mejor de las dos.
- *
- * Va DENTRO del documento del iframe: es la única forma de exceptuar las
- * imágenes, porque un filtro puesto en el elemento <iframe> se aplica al
- * resultado ya rasterizado y no distingue su contenido.
- *
- * El `background-color` explícito en `html` evita depender de la propagación
- * del fondo de `body` al canvas, que no queda cubierta por el filtro.
- */
-const DARK_SIM_CSS = [
-  `html{filter:${DARK_SIM_FILTER};background-color:#ffffff}`,
-  `img,picture,video,svg{filter:${DARK_SIM_FILTER}}`,
-].join('')
-
-/** Prende o apaga la simulación en el documento del iframe (sin recargarlo). */
-function applyClientScheme(root: Document, scheme: EmailClientScheme): void {
-  const existing = root.getElementById(DARK_SIM_STYLE_ID)
-  if (scheme === 'light') {
-    existing?.remove()
-    return
-  }
-  if (existing) return
-  const style = root.createElement('style')
-  style.id = DARK_SIM_STYLE_ID
-  style.textContent = DARK_SIM_CSS
-  ;(root.head ?? root.documentElement).appendChild(style)
-}
 
 /**
  * Ancho del preview — Escritorio (todo el ancho del panel, como la ventana de
