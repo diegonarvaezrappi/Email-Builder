@@ -61,6 +61,23 @@ describe('renderHeaderSnippet', () => {
     }
   })
 
+  it('replaces the cobranding image src with the URL the user chose', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: 'https://example.com/mi-logo.png' },
+      'beige100',
+    )
+    expect(snippet).toContain('src="https://example.com/mi-logo.png"')
+    expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA')
+  })
+
+  it('escapes special characters in a user-provided cobranding URL', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: 'https://example.com/a"b&c' },
+      'beige100',
+    )
+    expect(snippet).toContain('src="https://example.com/a&quot;b&amp;c"')
+  })
+
   it('resolves bg_header_mail_general to the literal value of the 6 pastel themes', () => {
     // contenido-aliado trae {{bg_header_mail_general}} en su variante claro.
     const fields = { ...defaultHeaderFields, brand: 'contenido-aliado' as const }

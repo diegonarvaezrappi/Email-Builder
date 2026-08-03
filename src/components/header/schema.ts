@@ -41,6 +41,11 @@ export const headerSchema = z.object({
   logoBackground: z.enum(HEADER_LOGO_BACKGROUND_VALUES).default('claro'),
   cobranding: z.boolean().default(false),
   cobrandingSize: z.enum(COBRANDING_SIZE_VALUES).default('m'),
+  /** Default = la URL placeholder que traen los 40 archivos de header
+   *  (idéntica en los 3 tamaños de cada uno) — debe coincidir con
+   *  COBRANDING_IMG_SRC_PLACEHOLDER en header/render.ts, que la usa como
+   *  ancla para sustituir por esta URL. */
+  cobrandingImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA'),
 })
 
 export type HeaderFields = z.infer<typeof headerSchema>

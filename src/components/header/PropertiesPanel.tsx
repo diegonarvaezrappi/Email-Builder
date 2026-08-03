@@ -72,19 +72,30 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
       </label>
 
       {value.cobranding && (
-        <label className="field">
-          <span>Tamaño del cobranding</span>
-          <select
-            value={value.cobrandingSize}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => set('cobrandingSize', e.target.value as HeaderFields['cobrandingSize'])}
-          >
-            {COBRANDING_SIZE_VALUES.map((s) => (
-              <option key={s} value={s}>
-                {COBRANDING_SIZE_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <>
+          <label className="field">
+            <span>URL de la imagen de cobranding</span>
+            <input
+              type="text"
+              value={value.cobrandingImageUrl}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('cobrandingImageUrl', e.target.value)}
+            />
+          </label>
+
+          <label className="field">
+            <span>Tamaño del cobranding</span>
+            <select
+              value={value.cobrandingSize}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => set('cobrandingSize', e.target.value as HeaderFields['cobrandingSize'])}
+            >
+              {COBRANDING_SIZE_VALUES.map((s) => (
+                <option key={s} value={s}>
+                  {COBRANDING_SIZE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
       )}
     </div>
   )
