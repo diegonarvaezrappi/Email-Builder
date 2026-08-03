@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { useBuilder, useTemporal } from './store/store'
-import { defaultHeaderFields } from './components/header/schema'
-import { defaultGlobalFields } from './global/schema'
+import { headerPatchForTheme, ctaStyleForTheme } from './themeDefaults'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
@@ -32,30 +31,31 @@ function App() {
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
 
-  // Si el tema general pasa a Pro/ProBlack: (1) si la marca del header sigue
-  // en su valor por defecto ('rappi', nunca tocada a mano), la cambiamos a la
-  // marca Pro equivalente — deja de aplicar en cuanto el usuario elige una
-  // marca distinta (ver plan del componente Header, punto 1: "si el usuario
-  // selecciona el tema general Pro, la app puede cargar por defecto el logo
-  // correspondiente a Pro"). (2) mismo criterio para el estilo de CTA:
-  // Pro/ProBlack documentan 'pro'/'problack' como el style_Look esperado
-  // (USO-DE-CADA-PARTE.md §4) — solo aplica mientras siga en su default sin
-  // tocar.
+  // Ajustes por defecto del header/CTA al cambiar el TEMA GENERAL — ver
+  // themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100 cambian
+  // la marca del header; pastel/oscuros fuerzan la versión del logo; Pro/
+  // ProBlack cambian el estilo de CTA). Un solo patch por header, no 2
+  // escrituras sueltas: si header.brand y header.logoBackground cambian a la
+  // vez (ej. tema Dark Turbo), 2 llamadas a setSlotFields seguidas se pisarían
+  // entre sí porque ambas partirían del mismo `doc.header` ya obsoleto tras la
+  // primera.
+  //
+  // prevTemaRef trackea el tema ANTERIOR (no el actual, que ya está en
+  // doc.global.tema) para poder distinguir "el usuario no tocó la marca desde
+  // el último cambio de tema" (seguro reemplazarla) de "el usuario la fijó a
+  // mano" (respetarla) — sin esto, en cuanto este mismo efecto cambia la marca
+  // una vez, se queda anclada en cualquier tema siguiente (ver themeDefaults.ts).
+  const prevTemaRef = useRef<string | null>(null)
   useEffect(() => {
-    if (doc.header.brand === defaultHeaderFields.brand) {
-      if (doc.global.tema === 'pro') {
-        setSlotFields('header', { ...doc.header, brand: 'rappi-pro' })
-      } else if (doc.global.tema === 'problack') {
-        setSlotFields('header', { ...doc.header, brand: 'rappi-pro-black' })
-      }
-    }
-    if (doc.global.ctaStyle === defaultGlobalFields.ctaStyle) {
-      if (doc.global.tema === 'pro') {
-        setGlobalFields({ ...doc.global, ctaStyle: 'pro' })
-      } else if (doc.global.tema === 'problack') {
-        setGlobalFields({ ...doc.global, ctaStyle: 'problack' })
-      }
-    }
+    const prevTema = prevTemaRef.current
+
+    const headerPatch = headerPatchForTheme(doc.header, doc.global.tema, prevTema)
+    if (headerPatch) setSlotFields('header', { ...doc.header, ...headerPatch })
+
+    const ctaStyle = ctaStyleForTheme(doc.global, doc.global.tema, prevTema)
+    if (ctaStyle) setGlobalFields({ ...doc.global, ctaStyle })
+
+    prevTemaRef.current = doc.global.tema
     // Deliberadamente solo depende del tema: si el usuario edita header.brand
     // (o cualquier otro campo del header/global) no debe re-disparar esta lógica.
   }, [doc.global.tema])

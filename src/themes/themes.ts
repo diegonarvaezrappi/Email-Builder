@@ -67,6 +67,24 @@ export function themeVars(slug: string): Record<string, string> {
 const PREMIUM_THEME_SLUGS = ['pro', 'problack']
 
 /**
+ * Los 6 temas "pastel" — fondos siempre claros y suaves (ver GUIA-DE-TEMAS.md).
+ * Exportado (a diferencia de PREMIUM_THEME_SLUGS) porque App.tsx también lo
+ * necesita: al entrar a un tema pastel, el logo del header se resetea a su
+ * versión de fondo claro — un logo "oscuro" (blanco) es casi invisible sobre
+ * un fondo pastel.
+ */
+export const PASTEL_THEME_SLUGS = ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100']
+
+/**
+ * Los 3 temas "oscuros / invertidos" — fondo oscuro por defecto (ver
+ * GUIA-DE-TEMAS.md). Exportado por la misma razón que PASTEL_THEME_SLUGS:
+ * App.tsx (vía themeDefaults.ts) fuerza el logo del header a su versión de
+ * fondo oscuro al entrar a cualquiera de estos 3 — mismo criterio de
+ * legibilidad que el de pastel, en la dirección opuesta.
+ */
+export const DARK_THEME_SLUGS = ['darkneon', 'darkturbo', 'darkneutro']
+
+/**
  * `font_style_look` que le corresponde al footer según el tema.
  *
  * Si el tema no existe (ej. un documento viejo en localStorage apuntando a un
@@ -111,8 +129,8 @@ const THEME_LABELS: Record<string, string> = {
 }
 
 const THEME_GROUPS: { label: string; slugs: string[] }[] = [
-  { label: 'Pastel', slugs: ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100'] },
-  { label: 'Oscuros / invertidos', slugs: ['darkneon', 'darkturbo', 'darkneutro'] },
+  { label: 'Pastel', slugs: PASTEL_THEME_SLUGS },
+  { label: 'Oscuros / invertidos', slugs: DARK_THEME_SLUGS },
   { label: 'Premium', slugs: PREMIUM_THEME_SLUGS },
 ]
 

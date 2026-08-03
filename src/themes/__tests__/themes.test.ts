@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colorFooterForTheme, groupedThemes, parseThemes, THEMES, themeLabel, themeVars } from '../themes'
+import { colorFooterForTheme, groupedThemes, parseThemes, PASTEL_THEME_SLUGS, THEMES, themeLabel, themeVars } from '../themes'
 
 describe('parseThemes', () => {
   it('pairs each theme branch with the color_footer_mail_general inside it', () => {
@@ -95,6 +95,17 @@ describe('colorFooterForTheme', () => {
 
   it('falls back to negro for an unknown theme', () => {
     expect(colorFooterForTheme('no-existe')).toBe('negro')
+  })
+})
+
+describe('PASTEL_THEME_SLUGS', () => {
+  it('lists exactly the 6 pastel themes documented in GUIA-DE-TEMAS.md, all real repo themes', () => {
+    expect(PASTEL_THEME_SLUGS.sort()).toEqual(
+      ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100'].sort(),
+    )
+    for (const slug of PASTEL_THEME_SLUGS) {
+      expect(THEMES.map((t) => t.slug), slug).toContain(slug)
+    }
   })
 })
 
