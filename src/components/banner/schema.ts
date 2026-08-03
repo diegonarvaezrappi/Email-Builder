@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { bannerItemSchema, defaultTagsFields } from './items/schemas'
+import {
+  bannerItemSchema,
+  defaultImgFijaFields,
+  defaultPromoFields,
+  defaultTextoComplementarioFields,
+  defaultTextoMFields,
+} from './items/schemas'
 
 /**
  * 'vertical' primero: es el default documentado por el maestro
@@ -42,22 +48,31 @@ export const bannerSchema = z.object({
   /** Reemplaza las 2 apariciones del token de relleno manual
    *  AQUIELLINKDELBANNER (href + originalsrc). Vacío = <a> sin destino. */
   link: z.string().default(''),
-  /** Borrado a mano desde el Viewport, se restaura arrastrando desde la
-   *  librería de componentes — mismo patrón que Cierre. */
-  removed: z.boolean().default(false),
   items: z.array(bannerItemSchema).default([]),
 })
 export type BannerFields = z.infer<typeof bannerSchema>
 
 /**
- * El `items: []` del schema queda puro/determinista; la regla de negocio
- * "banner vertical CON TAGS por defecto" (instrucción explícita del maestro,
- * mismo peso que el auto-ocultado Pro/ProBlack de Cierre) vive acá, no en el
- * schema. Id fijo (no newId()) a propósito: mantiene defaultEmailDocument
+ * El `items: []` del schema queda puro/determinista; la regla de negocio de
+ * qué trae el banner por defecto vive acá, no en el schema. Además del banner
+ * vertical con TAGS que documenta el maestro ("por defecto el template debe
+ * tener un banner vertical, con tags"), el banner por defecto viene pre-cargado
+ * con PROMO, TEXTOM, TEXTO_COMPLEMENTARIO e IMG_FIJA (decisión de producto, no
+ * del maestro): así un usuario nuevo ve de entrada, con datos de ejemplo, qué
+ * tipos de pieza puede combinar en vez de abrir la app con un banner casi
+ * vacío. TAGS trae 3 tags (el máximo, en vez del único por defecto de
+ * `defaultTagsFields`) para que quede claro que se pueden agregar varios.
+ * Ids fijos (no newId()) a propósito: mantienen defaultEmailDocument
  * determinista para tests — los ids solo necesitan ser únicos dentro de un
  * documento, y duplicateBannerItem siempre genera uno nuevo con newId().
  */
 export const defaultBannerFields: BannerFields = {
   ...bannerSchema.parse({}),
-  items: [{ id: 'banner-tags-default', type: 'TAGS', fields: defaultTagsFields }],
+  items: [
+    { id: 'banner-promo-default', type: 'PROMO', fields: defaultPromoFields },
+    { id: 'banner-textom-default', type: 'TEXTOM', fields: defaultTextoMFields },
+    { id: 'banner-texto-complementario-default', type: 'TEXTO_COMPLEMENTARIO', fields: defaultTextoComplementarioFields },
+    { id: 'banner-img-fija-default', type: 'IMG_FIJA', fields: defaultImgFijaFields },
+    { id: 'banner-tags-default', type: 'TAGS', fields: { tags: ['tag 1', 'tag 2', 'tag 3'] } },
+  ],
 }

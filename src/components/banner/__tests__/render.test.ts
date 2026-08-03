@@ -15,15 +15,14 @@ const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
 
 describe('renderBannerSnippet', () => {
-  it('default document (vertical + 1 TAGS item) renders the vertical shell with no molecule table (no MOLECULA-zone items)', () => {
+  it('default document (vertical, pre-loaded with PROMO/TEXTOM/TEXTO_COMPLEMENTARIO/IMG_FIJA/TAGS) renders every default piece', () => {
     const html = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
     expect(html).toContain('BANNER_VERTICAL')
+    expect(html).toContain('BITEM:PROMO:')
+    expect(html).toContain('BITEM:TEXTOM:')
+    expect(html).toContain('BITEM:TEXTO_COMPLEMENTARIO:')
+    expect(html).toContain('BITEM:IMG_FIJA:')
     expect(html).toContain('BITEM:TAGS:')
-  })
-
-  it('removed: true renders as an empty string', () => {
-    const html = renderBannerSnippet({ ...defaultEmailDocument.banner, removed: true }, defaultEmailDocument)
-    expect(html).toBe('')
   })
 
   it('groups a run of consecutive MOLECULA-zone items into ONE molecule table', () => {

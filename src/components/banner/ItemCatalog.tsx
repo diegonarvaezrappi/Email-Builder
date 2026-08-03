@@ -14,11 +14,10 @@ import { BANNER_ITEM_DRAG_TYPE } from '../../ui/dragTypes'
 interface BannerItemCatalogProps {
   bannerType: BannerType
   excludeTypes?: readonly BannerItemType[]
-  disabled?: boolean
   onInsert: (type: BannerItemType) => void
 }
 
-export function BannerItemCatalog({ bannerType, excludeTypes = [], disabled, onInsert }: BannerItemCatalogProps) {
+export function BannerItemCatalog({ bannerType, excludeTypes = [], onInsert }: BannerItemCatalogProps) {
   const visibleTypes = BANNER_ITEM_LIBRARY_ORDER.filter((type) => !excludeTypes.includes(type))
 
   return (
@@ -27,7 +26,7 @@ export function BannerItemCatalog({ bannerType, excludeTypes = [], disabled, onI
       <ul className="molecule-catalog-grid">
         {visibleTypes.map((type) => {
           const def = getBannerItemDef(type)
-          const enabled = !disabled && Boolean(def?.orientations.includes(bannerType))
+          const enabled = Boolean(def?.orientations.includes(bannerType))
           const Icon = def?.Icon
           return (
             <li key={type}>
@@ -44,7 +43,7 @@ export function BannerItemCatalog({ bannerType, excludeTypes = [], disabled, onI
               >
                 {Icon && <Icon className="option-card-icon" />}
                 <span className="option-card-title">{def?.label ?? type}</span>
-                {!enabled && !disabled && <span className="lib-item-tag">solo horizontal</span>}
+                {!enabled && <span className="lib-item-tag">solo horizontal</span>}
               </button>
             </li>
           )

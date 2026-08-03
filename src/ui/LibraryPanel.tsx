@@ -13,14 +13,14 @@
 // nivel de tipo — las instancias concretas se seleccionan haciendo click en
 // su overlay del Viewport).
 //
-// BANNER es un slot singleton (se puede eliminar/restaurar, como Cierre), pero
-// a diferencia de Header/Footer/Cierre se muestra como un grupo con 2 cards
-// de TIPO de banner (vertical/horizontal) en vez de una sola fila — clickear
-// una cambia el tipo EN TIEMPO REAL (y restaura el slot si estaba eliminado),
-// resaltando la que está activa; también sigue siendo arrastrable, mismo
-// gesto que antes. El catálogo de piezas (los 10 tipos posibles, ver
-// bannerItemRegistry.ts) ya NO vive acá — se movió al panel derecho
-// (components/banner/ItemCatalog.tsx), visible al seleccionar el banner.
+// BANNER, a diferencia de Header/Footer/Cierre, no es removable — el email
+// siempre debe tener uno de los 2 tipos de banner — así que se muestra como
+// un grupo con 2 cards de TIPO (vertical/horizontal) en vez de una sola fila
+// togglable: clickear una cambia el tipo EN TIEMPO REAL, resaltando la que
+// está activa (también se puede arrastrar, mismo gesto). El catálogo de
+// piezas (los 10 tipos posibles, ver bannerItemRegistry.ts) ya NO vive acá —
+// se movió al panel derecho (components/banner/ItemCatalog.tsx), visible al
+// seleccionar el banner.
 //
 // Los ajustes globales (el tema) NO viven acá — van en la barra superior, ver
 // ui/ToolbarGlobals.tsx.
@@ -62,13 +62,12 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
         <ul className="lib-list">
           {SLOT_ORDER.map((slot) => {
             if (slot === 'BANNER') {
-              const isRemoved = Boolean(registry.BANNER?.removable && doc.banner.removed)
               return (
                 <li key={slot} className="lib-group">
                   <span className="lib-group-label">{SLOT_LABELS.BANNER}</span>
                   <ul className="banner-type-grid">
                     {BANNER_TYPE_VALUES.map((type) => {
-                      const active = !isRemoved && doc.banner.bannerType === type
+                      const active = doc.banner.bannerType === type
                       const Icon = BANNER_TYPE_ICONS[type]
                       return (
                         <li key={type}>
@@ -82,7 +81,7 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                               e.dataTransfer.effectAllowed = 'copy'
                             }}
                             onClick={() => {
-                              onChangeSlot('banner', { ...doc.banner, bannerType: type, removed: false })
+                              onChangeSlot('banner', { ...doc.banner, bannerType: type })
                               onSelect(selectSlot('BANNER'))
                             }}
                           >
@@ -93,7 +92,6 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                       )
                     })}
                   </ul>
-                  {isRemoved && <span className="lib-item-tag">eliminado — elegí un tipo para restaurarlo</span>}
                 </li>
               )
             }

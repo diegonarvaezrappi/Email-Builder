@@ -28,18 +28,11 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
 
   return (
     <div className="properties-panel">
-      {value.removed && (
-        <p className="inspector-hint">
-          Este componente fue eliminado del email. Elegí un tipo de banner en el panel de componentes (o arrastralo) para restaurarlo.
-        </p>
-      )}
-
       <label className="field">
         <span>Enlace del banner</span>
         <input
           type="text"
           placeholder="https://..."
-          disabled={value.removed}
           value={value.link}
           onChange={(e: ChangeEvent<HTMLInputElement>) => set('link', e.target.value)}
         />

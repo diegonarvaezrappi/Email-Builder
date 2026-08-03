@@ -126,16 +126,11 @@ export function InspectorPanel({
         <h2>{SLOT_LABELS.BANNER}</h2>
         <PropertiesPanel value={doc.banner} onChange={(next) => onChange('banner', next)} />
         {doc.banner.bannerType === 'horizontal' && (
-          <BannerImageTypeSelector
-            items={doc.banner.items}
-            disabled={doc.banner.removed}
-            onSelect={onSetBannerImageModule}
-          />
+          <BannerImageTypeSelector items={doc.banner.items} onSelect={onSetBannerImageModule} />
         )}
         <BannerItemCatalog
           bannerType={doc.banner.bannerType}
           excludeTypes={doc.banner.bannerType === 'horizontal' ? IMAGE_MODULE_TYPES : []}
-          disabled={doc.banner.removed}
           onInsert={(type) => onInsertBannerItem(type, doc.banner.items.length)}
         />
       </aside>

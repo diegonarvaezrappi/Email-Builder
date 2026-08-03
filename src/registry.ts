@@ -86,7 +86,8 @@ const bannerSlotDef: SlotDef<BannerFields> = {
   defaultFields: defaultBannerFields,
   render: (fields, doc) => renderBannerSnippet(fields, doc),
   PropertiesPanel: BannerPropertiesPanel,
-  removable: true,
+  // Sin `removable`: a diferencia de Cierre, el banner (uno de los 2 tipos)
+  // siempre debe estar presente en el email — no tiene sentido "eliminarlo".
 }
 
 const contenidosSlotDef: SlotDef<ContentBlock[]> = {

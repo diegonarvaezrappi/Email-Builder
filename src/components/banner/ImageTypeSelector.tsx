@@ -25,11 +25,10 @@ const IMAGE_TYPE_OPTIONS: { type: ImageModuleType; title: string; caption: strin
 
 interface BannerImageTypeSelectorProps {
   items: BannerItem[]
-  disabled?: boolean
   onSelect: (type: ImageModuleType) => void
 }
 
-export function BannerImageTypeSelector({ items, disabled, onSelect }: BannerImageTypeSelectorProps) {
+export function BannerImageTypeSelector({ items, onSelect }: BannerImageTypeSelectorProps) {
   const idx = findImageModuleIndex(items)
   const currentType = idx === -1 ? undefined : items[idx].type
 
@@ -43,7 +42,6 @@ export function BannerImageTypeSelector({ items, disabled, onSelect }: BannerIma
               type="button"
               className={`option-card image-type-card${currentType === opt.type ? ' active' : ''}`}
               aria-pressed={currentType === opt.type}
-              disabled={disabled}
               onClick={() => onSelect(opt.type)}
             >
               <span className="option-card-title">{opt.title}</span>

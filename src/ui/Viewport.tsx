@@ -234,12 +234,10 @@ export function Viewport({
     onChangeSlot(def.docKey, { ...doc[def.docKey], removed: false })
   }
 
-  // Elegir un TIPO de banner desde la librería restaura el slot (si estaba
-  // eliminado) y fija su tipo en el mismo gesto — distinto de handleRestore
-  // (que solo prende `removed`) porque acá el payload trae, además, CUÁL de
-  // los 2 tipos eligió el usuario.
+  // Elegir un TIPO de banner desde la librería (arrastrando la card) fija ese
+  // tipo — el banner en sí nunca se elimina, así que no hay nada que restaurar.
   const handleSetBannerType = (type: BannerType) => {
-    onChangeSlot('banner', { ...doc.banner, bannerType: type, removed: false })
+    onChangeSlot('banner', { ...doc.banner, bannerType: type })
   }
 
   return (
@@ -788,17 +786,19 @@ function EmailFrame({
             </button>
           </div>
         ))}
-        {/* BANNER es el único slot removable que puede tener piezas propias
-            (bannerItemRects) exactamente encima de su badge/botón de
-            eliminar — sin esta copia redibujada AL FINAL (encima de todo),
-            esos controles quedarían inalcanzables en cuanto el banner
-            tuviera una pieza cubriéndolos (el caso por defecto: banner
-            vertical con 1 tag ocupa casi todo el rect del slot). El
-            contenedor tiene pointer-events:none para dejar pasar los clicks
-            del medio a las piezas de abajo; solo estos 2 controles, ya
-            angostos, se reactivan explícitamente (ver .slot-hit-controls en App.css). */}
+        {/* BANNER es el único slot que puede tener piezas propias
+            (bannerItemRects) exactamente encima de su badge de selección —
+            sin esta copia redibujada AL FINAL (encima de todo), ese badge
+            quedaría inalcanzable en cuanto el banner tuviera una pieza
+            cubriéndolo (el caso por defecto: banner vertical con 1 tag ocupa
+            casi todo el rect del slot). El contenedor tiene
+            pointer-events:none para dejar pasar los clicks del medio a las
+            piezas de abajo; solo este botón, ya angosto, se reactiva
+            explícitamente (ver .slot-hit-controls en App.css). No tiene botón
+            de eliminar: el banner (uno de los 2 tipos) siempre debe estar
+            presente en el email, no es removable. */}
         {slotRects
-          .filter((r) => r.slot === 'BANNER' && registry.BANNER?.removable)
+          .filter((r) => r.slot === 'BANNER')
           .map(({ slot, top, left, width, height: h }) => (
             <div
               key={`${slot}-controls`}
@@ -813,14 +813,6 @@ function EmailFrame({
                 onClick={() => onSelect(selectSlot(slot))}
               >
                 {SLOT_LABELS[slot]}
-              </button>
-              <button
-                type="button"
-                className="slot-delete"
-                aria-label={`Eliminar ${SLOT_LABELS[slot]}`}
-                onClick={() => onRemove(slot)}
-              >
-                ×
               </button>
             </div>
           ))}

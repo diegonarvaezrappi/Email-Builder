@@ -76,8 +76,6 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
 }
 
 export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): string {
-  if (fields.removed) return ''
-
   const { shell, moleculeTable } = bannerShell(fields.bannerType)
   const ctx: BannerItemRenderCtx = { bannerType: fields.bannerType }
 
