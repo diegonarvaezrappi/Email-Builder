@@ -29,9 +29,10 @@ import type { EmailDocument, SlotName } from '../model'
 import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
-import { BANNER_TYPE_CAPTIONS, BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/schema'
+import { BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/schema'
 import { isSlotSelected, selectSlot, type Selection } from './selection'
 import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, BANNER_TYPE_DRAG_TYPE } from './dragTypes'
+import { BANNER_TYPE_ICONS } from './moleculeIcons'
 
 /** Los 9 tipos de contenido que el maestro documenta dentro de CONTENIDOS — ver el comentario "WRAPPER DE CONTENIDOS". */
 const CONTENT_BLOCK_LIBRARY_ITEMS: { type: string; label: string }[] = [
@@ -68,6 +69,7 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                   <ul className="banner-type-grid">
                     {BANNER_TYPE_VALUES.map((type) => {
                       const active = !isRemoved && doc.banner.bannerType === type
+                      const Icon = BANNER_TYPE_ICONS[type]
                       return (
                         <li key={type}>
                           <button
@@ -84,8 +86,8 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                               onSelect(selectSlot('BANNER'))
                             }}
                           >
+                            <Icon className="option-card-icon" />
                             <span className="option-card-title">{BANNER_TYPE_TITLES[type]}</span>
-                            <span className="option-card-caption">{BANNER_TYPE_CAPTIONS[type]}</span>
                           </button>
                         </li>
                       )

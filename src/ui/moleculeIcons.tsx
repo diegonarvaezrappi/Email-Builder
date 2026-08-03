@@ -14,6 +14,7 @@
 // ============================================================================
 import type { ComponentType, SVGProps } from 'react'
 import type { BannerItemType } from '../components/banner/items/schemas'
+import type { BannerType } from '../components/banner/schema'
 
 type IconProps = SVGProps<SVGSVGElement>
 
@@ -137,6 +138,39 @@ export function TagsIcon(props: IconProps) {
       <rect x="44" y="16" width="16" height="10" rx="5" fill="currentColor" opacity="0.7" />
     </svg>
   )
+}
+
+/** Silueta portrait (una sola columna, contenido apilado) — mirror de
+ *  big-banner-vertical.html: la tabla "MODULO MOLECULAS" ocupa todo el ancho
+ *  y las piezas se apilan una sobre otra en un único <td>. */
+export function BannerVerticalIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="18" y="3" width="28" height="34" rx="4" stroke="currentColor" strokeWidth="2" />
+      <rect x="24" y="9" width="16" height="6" rx="3" fill="currentColor" opacity="0.6" />
+      <rect x="24" y="19" width="16" height="4" rx="2" fill="currentColor" opacity="0.4" />
+      <rect x="24" y="27" width="16" height="4" rx="2" fill="currentColor" opacity="0.4" />
+    </svg>
+  )
+}
+
+/** Silueta landscape partida en 2 columnas — mirror de
+ *  big-banner-horizontal.html: columna izquierda de 240px para la tabla
+ *  "MODULO MOLECULAS" + columna derecha para el módulo de imagen. */
+export function BannerHorizontalIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="4" y="8" width="56" height="24" rx="4" stroke="currentColor" strokeWidth="2" />
+      <line x1="32" y1="8" x2="32" y2="32" stroke="currentColor" strokeWidth="2" opacity="0.5" />
+      <rect x="9" y="14" width="18" height="6" rx="3" fill="currentColor" opacity="0.6" />
+      <rect x="36" y="13" width="20" height="14" rx="2" fill="currentColor" opacity="0.3" />
+    </svg>
+  )
+}
+
+export const BANNER_TYPE_ICONS: Record<BannerType, ComponentType<IconProps>> = {
+  vertical: BannerVerticalIcon,
+  horizontal: BannerHorizontalIcon,
 }
 
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {

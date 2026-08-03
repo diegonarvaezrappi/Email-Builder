@@ -25,12 +25,6 @@ export const BANNER_TYPE_TITLES: Record<BannerType, string> = {
   horizontal: 'Horizontal',
 }
 
-/** Texto breve bajo cada card de tipo de banner, en lenguaje simple. */
-export const BANNER_TYPE_CAPTIONS: Record<BannerType, string> = {
-  vertical: 'Mail simple: solo CTA + cierre.',
-  horizontal: 'Mail con módulos de contenido.',
-}
-
 /**
  * Lo que una pieza de banner necesita saber del banner que la contiene. Cada
  * pieza tiene archivo horizontal y vertical con placeholders DISTINTOS (el

@@ -33,7 +33,7 @@ export function BannerItemCatalog({ bannerType, excludeTypes = [], disabled, onI
             <li key={type}>
               <button
                 type="button"
-                className="option-card molecule-card"
+                className="option-card"
                 disabled={!enabled}
                 draggable={enabled}
                 onDragStart={(e) => {
@@ -42,7 +42,7 @@ export function BannerItemCatalog({ bannerType, excludeTypes = [], disabled, onI
                 }}
                 onClick={() => enabled && onInsert(type)}
               >
-                {Icon && <Icon className="molecule-card-icon" />}
+                {Icon && <Icon className="option-card-icon" />}
                 <span className="option-card-title">{def?.label ?? type}</span>
                 {!enabled && !disabled && <span className="lib-item-tag">solo horizontal</span>}
               </button>
