@@ -151,14 +151,43 @@ function withCreditosAcentoVariant(html: string, variant: CreditosFields['varian
   return substituteAll(withBg, CREDITOS_COLOR_VAR, CREDITOS_ACENTO_COLOR_VAR, fileName)
 }
 
+// --- CREDITOS: leyenda "DE REINTEGRO" ---------------------------------------
+// Mismo tratamiento que la celda "Ahora" de PROMO (applyAhoraCell más abajo
+// en este archivo): texto literal (NO Liquid) en molecula_creditos_*.html, así
+// que se ubica anclando en el texto mismo (único en el archivo) en vez de una
+// clase — a diferencia de "Ahora", "DE REINTEGRO" no tiene una clase propia
+// vía variable (`class="bnr-sm"` es fija, no `{{...}}`). Ojo: acá el monto y
+// la leyenda comparten el mismo <td> (no como PROMO, que los separa en 2), así
+// que `deReintegroEnabled=false` borra solo el <div> de la leyenda, no la
+// celda completa — el monto sigue intacto.
+const DE_REINTEGRO_TEXT_LITERAL = '>DE REINTEGRO<'
+
+function applyDeReintegroCell(html: string, fields: CreditosFields, fileName: string): string {
+  const textIndex = html.indexOf(DE_REINTEGRO_TEXT_LITERAL)
+  if (textIndex === -1) {
+    throw new Error(`${fileName}: no se encontró "${DE_REINTEGRO_TEXT_LITERAL}" — revisar components/banner/items/render.ts`)
+  }
+  const divStart = html.lastIndexOf('<div', textIndex)
+  const divEnd = html.indexOf('</div>', textIndex) + '</div>'.length
+
+  if (!fields.deReintegroEnabled) {
+    return html.slice(0, divStart) + html.slice(divEnd)
+  }
+
+  const div = html.slice(divStart, divEnd)
+  const newDiv = div.replace(DE_REINTEGRO_TEXT_LITERAL, () => `>${renderRichText(fields.deReintegroText, LIQUID_COLOR_TOKENS)}<`)
+  return html.slice(0, divStart) + newDiv + html.slice(divEnd)
+}
+
 export function renderCreditosSnippet(fields: CreditosFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_creditos_${ctx.bannerType}.html`
   let raw = stripComments(loadBannerMoleculaFile(fileName))
   if (ctx.bannerType === 'horizontal') raw = fixCreditosHorizontalFontSizeTypo(raw, fileName)
   raw = withCreditosAcentoVariant(raw, fields.variant, doc.global.tema, fileName)
-  const size = liveTextSizing(fields.creditosText, ctx.bannerType)
+  raw = applyDeReintegroCell(raw, fields, fileName)
+  const size = liveTextSizing(plainText(fields.creditosText), ctx.bannerType)
   const vars: Record<string, string> = {
-    banner_copy_modulo_creditos: escapeHtmlText(fields.creditosText),
+    banner_copy_modulo_creditos: renderRichText(fields.creditosText, LIQUID_COLOR_TOKENS),
     ...sizingVars(
       {
         classVar: 'banner_copy_modulo_creditos_class',

@@ -20,6 +20,12 @@ import {
 const doc = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultEmailDocument, ...over })
 const ctx = (bannerType: 'horizontal' | 'vertical'): BannerItemRenderCtx => ({ bannerType })
 const promoFields = (promoText: string) => ({ promoText: richTextFromPlain(promoText), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') })
+const creditosFields = (creditosText: string, variant: 'generica' | 'acento' = 'generica') => ({
+  creditosText: richTextFromPlain(creditosText),
+  variant,
+  deReintegroEnabled: true,
+  deReintegroText: richTextFromPlain('DE REINTEGRO'),
+})
 
 // `{% %}` tags: ninguna de estas 9 piezas (todas salvo CTA_INTERNO) debe
 // dejar una sola. `{{banner_*}}` sin resolver: bug real (resolveBannerVars
@@ -101,23 +107,52 @@ describe('renderPromoSnippet', () => {
 
 describe('renderCreditosSnippet', () => {
   it.each(['horizontal', 'vertical'] as const)('%s: short -> bnr-xl, long -> bnr-lg, "DE REINTEGRO" survives untouched', (bannerType) => {
-    const short = renderCreditosSnippet({ creditosText: '120', variant: 'generica' }, doc(), ctx(bannerType))
-    const long = renderCreditosSnippet({ creditosText: '12345', variant: 'generica' }, doc(), ctx(bannerType))
+    const short = renderCreditosSnippet(creditosFields('120'), doc(), ctx(bannerType))
+    const long = renderCreditosSnippet(creditosFields('12345'), doc(), ctx(bannerType))
     expect(short).toContain('bnr-xl')
     expect(long).toContain('bnr-lg')
     expect(short).toContain('DE REINTEGRO')
   })
 
   it('has no Liquid left besides the _mail_general vars', () => {
-    const html = renderCreditosSnippet({ creditosText: '120', variant: 'generica' }, doc(), ctx('vertical'))
+    const html = renderCreditosSnippet(creditosFields('120'), doc(), ctx('vertical'))
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
   })
 
   it('horizontal: fixes the master\'s "font-siaze" typo so the amount actually gets a font-size (was silently dropped by the browser)', () => {
-    const html = renderCreditosSnippet({ creditosText: '120', variant: 'generica' }, doc(), ctx('horizontal'))
+    const html = renderCreditosSnippet(creditosFields('120'), doc(), ctx('horizontal'))
     expect(html).not.toContain('font-siaze')
     expect(html).toMatch(/font-size:\s*\{\{banner_copy_modulo_creditos_fontsize\}\}|font-size:\s*\d/)
+  })
+
+  describe('la leyenda "DE REINTEGRO"', () => {
+    it.each(['horizontal', 'vertical'] as const)('%s: reemplaza el texto por el que ponga el usuario', (bannerType) => {
+      const html = renderCreditosSnippet(
+        { ...creditosFields('120'), deReintegroText: richTextFromPlain('REEMBOLSO') },
+        doc(),
+        ctx(bannerType),
+      )
+      expect(html).toContain('>REEMBOLSO<')
+      expect(html).not.toContain('>DE REINTEGRO<')
+    })
+
+    it.each(['horizontal', 'vertical'] as const)('%s: deReintegroEnabled=false borra solo el <div> de la leyenda, el monto sigue intacto', (bannerType) => {
+      const html = renderCreditosSnippet({ ...creditosFields('120'), deReintegroEnabled: false }, doc(), ctx(bannerType))
+      expect(html).not.toContain('DE REINTEGRO')
+      expect(html).toContain('120')
+      expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+      expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
+    })
+
+    it('aplica modificadores de texto (negrita, mismo mecanismo que PROMO/TEXTOM)', () => {
+      const html = renderCreditosSnippet(
+        { ...creditosFields('120'), deReintegroText: [{ text: 'DE REINTEGRO', marks: ['bold'] }] },
+        doc(),
+        ctx('vertical'),
+      )
+      expect(html).toContain('<span style="font-weight: bold;">DE REINTEGRO</span>')
+    })
   })
 
   describe('variant "acento"', () => {
@@ -131,7 +166,7 @@ describe('renderCreditosSnippet', () => {
     it.each(pastelOrDarkCases)(
       'tema %s, %s: swaps bg_creditos/color_creditos for bg_solid_generico100_mail_body/color_acento2 (both occurrences)',
       (tema, bannerType) => {
-        const html = renderCreditosSnippet({ creditosText: '120', variant: 'acento' }, doc({ global: { ...doc().global, tema } }), ctx(bannerType))
+        const html = renderCreditosSnippet(creditosFields('120', 'acento'), doc({ global: { ...doc().global, tema } }), ctx(bannerType))
         expect(html).not.toContain('{{bg_creditos_mail_general}}')
         expect(html).not.toContain('{{color_creditos_mail_general}}')
         expect(html).toContain('{{bg_solid_generico100_mail_body}}')
@@ -140,12 +175,8 @@ describe('renderCreditosSnippet', () => {
     )
 
     it.each(['pro', 'problack'] as const)('on %s, "acento" is a no-op — renders identically to "generica"', (tema) => {
-      const withAcento = renderCreditosSnippet({ creditosText: '120', variant: 'acento' }, doc({ global: { ...doc().global, tema } }), ctx('vertical'))
-      const withGenerica = renderCreditosSnippet(
-        { creditosText: '120', variant: 'generica' },
-        doc({ global: { ...doc().global, tema } }),
-        ctx('vertical'),
-      )
+      const withAcento = renderCreditosSnippet(creditosFields('120', 'acento'), doc({ global: { ...doc().global, tema } }), ctx('vertical'))
+      const withGenerica = renderCreditosSnippet(creditosFields('120', 'generica'), doc({ global: { ...doc().global, tema } }), ctx('vertical'))
       expect(withAcento).toBe(withGenerica)
     })
   })

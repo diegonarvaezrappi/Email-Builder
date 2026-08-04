@@ -78,7 +78,11 @@ describe('renderBannerSnippet', () => {
   it('theme-leak test: for every theme, no {{...}} of any kind survives in the rendered banner (all 10 item types present)', () => {
     const allItems: BannerItem[] = [
       { id: '1', type: 'PROMO', fields: { promoText: richTextFromPlain('120'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') } },
-      { id: '2', type: 'CREDITOS', fields: { creditosText: '120', variant: 'generica' } },
+      {
+        id: '2',
+        type: 'CREDITOS',
+        fields: { creditosText: richTextFromPlain('120'), variant: 'generica', deReintegroEnabled: true, deReintegroText: richTextFromPlain('DE REINTEGRO') },
+      },
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } },
@@ -190,7 +194,11 @@ describe('renderBannerSnippet', () => {
   })
 
   describe('CREDITOS "acento" variant — full pipeline (renderCreditosSnippet solo deja el token, este pass lo resuelve)', () => {
-    const creditos = (id: string): BannerItem => ({ id, type: 'CREDITOS', fields: { creditosText: '120', variant: 'acento' } })
+    const creditos = (id: string): BannerItem => ({
+      id,
+      type: 'CREDITOS',
+      fields: { creditosText: richTextFromPlain('120'), variant: 'acento', deReintegroEnabled: true, deReintegroText: richTextFromPlain('DE REINTEGRO') },
+    })
 
     it('en beige100 (pastel), bg_solid_generico100_mail_body y color_acento2 quedan baked, sin Liquid sin resolver', () => {
       const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'beige100' } })

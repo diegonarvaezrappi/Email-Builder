@@ -74,9 +74,22 @@ export const CREDITOS_VARIANT_LABELS: Record<CreditosVariant, string> = {
   acento: 'Acento',
 }
 
+/**
+ * `deReintegroEnabled`/`deReintegroText` controlan la leyenda "DE REINTEGRO"
+ * que acompaña al monto — mismo tratamiento que `ahoraEnabled`/`ahoraText` de
+ * PROMO (ver arriba): el maestro trae ese texto hardcodeado
+ * (no es Liquid), así que se edita/quita desde acá (ver applyDeReintegroCell
+ * en items/render.ts) apuntando al `<div>` que lo contiene, no a un `<td>`
+ * completo — a diferencia de PROMO, acá el monto y la leyenda comparten la
+ * misma celda. `creditosText`/`deReintegroText` son RichText (mismo set de
+ * modificadores que PROMO, SIN los 3 de color — pedido explícito del usuario
+ * para ambos módulos).
+ */
 export const creditosFieldsSchema = z.object({
-  creditosText: z.string().default('120'),
+  creditosText: richTextSchema.default(defaultRichText('120')),
   variant: z.enum(CREDITOS_VARIANT_VALUES).default('generica'),
+  deReintegroEnabled: z.boolean().default(true),
+  deReintegroText: richTextSchema.default(defaultRichText('DE REINTEGRO')),
 })
 export type CreditosFields = z.infer<typeof creditosFieldsSchema>
 export const defaultCreditosFields: CreditosFields = creditosFieldsSchema.parse({})

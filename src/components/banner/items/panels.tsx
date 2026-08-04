@@ -78,16 +78,12 @@ export function PromoPropertiesPanel({ value, onChange, doc }: BannerItemPanelPr
 
 export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<CreditosFields>) {
   const acentoSinEfecto = value.variant === 'acento' && !PASTEL_THEME_SLUGS.includes(doc.global.tema) && !DARK_THEME_SLUGS.includes(doc.global.tema)
+  const colors = richTextColorsForTema(doc.global.tema)
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Créditos</span>
-        <input
-          type="text"
-          value={value.creditosText}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, creditosText: e.target.value })}
-        />
-        <span className="field-hint">Acompaña siempre a la leyenda fija "DE REINTEGRO".</span>
+        <RichTextInput value={value.creditosText} onChange={(creditosText) => onChange({ ...value, creditosText })} colors={colors} showColors={false} />
       </label>
       <label className="field">
         <span>Variante de color</span>
@@ -102,6 +98,24 @@ export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPane
           ))}
         </select>
         {acentoSinEfecto && <span className="field-hint">En Pro/ProBlack esta variante no cambia el color — se ve igual que Genérica.</span>}
+      </label>
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.deReintegroEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, deReintegroEnabled: e.target.checked })}
+        />
+        <span>Mostrar el texto "DE REINTEGRO"</span>
+      </label>
+      <label className="field">
+        <span>Texto de "DE REINTEGRO"</span>
+        <RichTextInput
+          value={value.deReintegroText}
+          onChange={(deReintegroText) => onChange({ ...value, deReintegroText })}
+          colors={colors}
+          disabled={!value.deReintegroEnabled}
+          showColors={false}
+        />
       </label>
     </div>
   )
