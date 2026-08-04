@@ -456,6 +456,83 @@
   color: var(--text);
 }
 
+/* --- RichTextInput (modificadores de texto de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO) --- */
+.rich-text-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rich-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.rich-text-toolbar button {
+  font: inherit;
+  font-size: 13px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.rich-text-toolbar button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+
+.rich-text-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rich-text-toolbar button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.rich-text-toolbar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+.rich-text-swatch::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--swatch-color);
+  border: 1px solid var(--border);
+}
+
+.rich-text-editable {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  min-height: 20px;
+}
+
+.rich-text-editable:focus-visible {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
 /* --- Barra de Preview/Código -------------------------------------------- */
 .viewport-bar {
   display: flex;

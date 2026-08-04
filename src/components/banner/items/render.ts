@@ -6,13 +6,18 @@
 // ese render más abajo).
 //
 // Los `{{xxx_mail_general}}` de tema que puedan quedar en el HTML devuelto acá
-// (bg_descuento, color_descuento, bg_creditos, color_creditos, color_acento2,
-// bg_tag_fondo, color_texto, img_overlay_2) se dejan intactos a propósito:
-// components/banner/render.ts los resuelve todos de una sola pasada al final,
-// mismo precedente que resolveHeaderThemeVars en components/header/render.ts.
+// (bg_descuento, color_descuento, bg_creditos, color_creditos, color_acento1,
+// color_acento2, bg_tag_fondo, color_texto, img_overlay_2) se dejan intactos a
+// propósito: components/banner/render.ts los resuelve todos de una sola
+// pasada al final, mismo precedente que resolveHeaderThemeVars en
+// components/header/render.ts. color_acento1/color_texto también pueden
+// aparecer inyectados por los modificadores de texto (subtono 1 / color base)
+// de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO — ver richText/render.ts.
 // ============================================================================
 import type { EmailDocument } from '../../../model'
 import { escapeHtmlAttr, escapeHtmlText } from '../../../template/htmlText'
+import { plainText } from '../../../richText/model'
+import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { renderCtaSnippet } from '../../cta/render'
 import type { BannerItemRenderCtx } from '../schema'
 import { loadBannerMoleculaFile } from './files'
@@ -96,9 +101,9 @@ export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocumen
 export function renderTextoXlSnippet(fields: TextoXlFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_textoxl_${ctx.bannerType}.html`
   const raw = stripComments(loadBannerMoleculaFile(fileName))
-  const size = liveTextSizing(fields.text, ctx.bannerType)
+  const size = liveTextSizing(plainText(fields.text), ctx.bannerType)
   const vars: Record<string, string> = {
-    banner_copy_modulo_textoxl: escapeHtmlText(fields.text),
+    banner_copy_modulo_textoxl: renderRichText(fields.text, LIQUID_COLOR_TOKENS),
     ...sizingVars(
       {
         classVar: 'banner_copy_modulo_textoxl_class',
@@ -123,7 +128,7 @@ export function renderTextoXlSnippet(fields: TextoXlFields, _doc: EmailDocument,
 export function renderTextoMSnippet(fields: TextoMFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_textom_${ctx.bannerType}.html`
   const raw = stripComments(loadBannerMoleculaFile(fileName))
-  return resolveBannerVars(raw, { banner_copy_modulo_textom: escapeHtmlText(fields.text) }, fileName)
+  return resolveBannerVars(raw, { banner_copy_modulo_textom: renderRichText(fields.text, LIQUID_COLOR_TOKENS) }, fileName)
 }
 
 // --- TEXTO_COMPLEMENTARIO (archivo único, sin variante por orientación — sirve para ambas) -----------------------
@@ -133,7 +138,7 @@ const TEXTO_COMPLEMENTARIO_PLACEHOLDER = 'Más de 500 opciones de tacos solo dur
 export function renderTextoComplementarioSnippet(fields: TextoComplementarioFields): string {
   const fileName = 'modulo_texto_complementario.html'
   const raw = stripComments(loadBannerMoleculaFile(fileName))
-  return substituteOnce(raw, TEXTO_COMPLEMENTARIO_PLACEHOLDER, escapeHtmlText(fields.text), fileName)
+  return substituteOnce(raw, TEXTO_COMPLEMENTARIO_PLACEHOLDER, renderRichText(fields.text, LIQUID_COLOR_TOKENS), fileName)
 }
 
 // --- IMG_AUTOMATICA_MOLECULA -----------------------------------------------

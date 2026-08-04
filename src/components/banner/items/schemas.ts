@@ -14,6 +14,7 @@
 // también el orden en que aparecen en el panel de componentes.
 // ============================================================================
 import { z } from 'zod'
+import { defaultRichText, richTextSchema } from '../../../richText/model'
 
 export const BANNER_ITEM_TYPE_VALUES = [
   'PROMO',
@@ -41,16 +42,22 @@ export const creditosFieldsSchema = z.object({ creditosText: z.string().default(
 export type CreditosFields = z.infer<typeof creditosFieldsSchema>
 export const defaultCreditosFields: CreditosFields = creditosFieldsSchema.parse({})
 
-export const textoXlFieldsSchema = z.object({ text: z.string().default('120 créditos') })
+/** `text` es RichText (runs con marcas), no un string plano, desde que se
+ *  agregaron los modificadores de texto (bold/italic/tachado/subrayado/
+ *  superíndice/color) por selección — ver richText/model.ts y el panel de
+ *  esta pieza (items/panels.tsx, RichTextInput). `richTextSchema` migra solo
+ *  un string viejo (documento guardado antes de este cambio) a un run sin
+ *  marcas, así no se pierde ni se invalida el documento completo al cargar. */
+export const textoXlFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('120 créditos')) })
 export type TextoXlFields = z.infer<typeof textoXlFieldsSchema>
 export const defaultTextoXlFields: TextoXlFields = textoXlFieldsSchema.parse({})
 
-export const textoMFieldsSchema = z.object({ text: z.string().default('de regalo para tu proxima compra') })
+export const textoMFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('de regalo para tu proxima compra')) })
 export type TextoMFields = z.infer<typeof textoMFieldsSchema>
 export const defaultTextoMFields: TextoMFields = textoMFieldsSchema.parse({})
 
 export const textoComplementarioFieldsSchema = z.object({
-  text: z.string().default('Más de 500 opciones de tacos solo durante una semana'),
+  text: richTextSchema.default(defaultRichText('Más de 500 opciones de tacos solo durante una semana')),
 })
 export type TextoComplementarioFields = z.infer<typeof textoComplementarioFieldsSchema>
 export const defaultTextoComplementarioFields: TextoComplementarioFields = textoComplementarioFieldsSchema.parse({})

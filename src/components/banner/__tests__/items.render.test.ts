@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
 import type { EmailDocument } from '../../../model'
+import { richTextFromPlain } from '../../../richText/model'
 import type { BannerItemRenderCtx } from '../schema'
 import {
   renderCreditosSnippet,
@@ -72,35 +73,41 @@ describe('renderCreditosSnippet', () => {
 
 describe('renderTextoXlSnippet', () => {
   it.each(['horizontal', 'vertical'] as const)('%s: short -> bnr-xl, long -> bnr-lg', (bannerType) => {
-    expect(renderTextoXlSnippet({ text: '120' }, doc(), ctx(bannerType))).toContain('bnr-xl')
-    expect(renderTextoXlSnippet({ text: '120 créditos' }, doc(), ctx(bannerType))).toContain('bnr-lg')
+    expect(renderTextoXlSnippet({ text: richTextFromPlain('120') }, doc(), ctx(bannerType))).toContain('bnr-xl')
+    expect(renderTextoXlSnippet({ text: richTextFromPlain('120 créditos') }, doc(), ctx(bannerType))).toContain('bnr-lg')
   })
 })
 
 describe('renderTextoMSnippet', () => {
   it('horizontal uses the fixed 30px/31px inline size; vertical uses 50px/51px — no sizing vars involved', () => {
-    const h = renderTextoMSnippet({ text: 'x' }, doc(), ctx('horizontal'))
-    const v = renderTextoMSnippet({ text: 'x' }, doc(), ctx('vertical'))
+    const h = renderTextoMSnippet({ text: richTextFromPlain('x') }, doc(), ctx('horizontal'))
+    const v = renderTextoMSnippet({ text: richTextFromPlain('x') }, doc(), ctx('vertical'))
     expect(h).toContain('font-size: 30px; line-height: 31px')
     expect(v).toContain('font-size: 50px; line-height: 51px')
     expect(h).toContain('class="bnr-md"')
   })
 
   it('has no Liquid left besides the _mail_general var', () => {
-    const html = renderTextoMSnippet({ text: 'de regalo' }, doc(), ctx('horizontal'))
+    const html = renderTextoMSnippet({ text: richTextFromPlain('de regalo') }, doc(), ctx('horizontal'))
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
   })
 })
 
 describe('renderTextoComplementarioSnippet', () => {
-  it('replaces the placeholder sentence with the user text, no Liquid at all (file has none)', () => {
-    const html = renderTextoComplementarioSnippet({ text: 'Nuevo texto complementario' })
+  it('replaces the placeholder sentence with the user text, no Liquid at all besides a plain-text run', () => {
+    const html = renderTextoComplementarioSnippet({ text: richTextFromPlain('Nuevo texto complementario') })
     expect(html).toContain('Nuevo texto complementario')
     expect(html).not.toContain('Más de 500 opciones de tacos')
-    // Este archivo, a diferencia de los demás, no tiene NINGÚN Liquid — ni
-    // siquiera un `_mail_general` (su color es un #FFFFFF hardcodeado).
+    // Este archivo, a diferencia de los demás, no tiene NINGÚN Liquid propio —
+    // ni siquiera un `_mail_general` (su color es un #FFFFFF hardcodeado); un
+    // run SIN modificadores de color no inyecta ningún {{...}} tampoco.
     expect(html).not.toMatch(/\{%|\{\{/)
+  })
+
+  it('a color modifier (subtono1) DOES inject a {{color_acento1_mail_general}} token for the final theme pass', () => {
+    const html = renderTextoComplementarioSnippet({ text: [{ text: 'Nuevo texto', marks: ['colorAcento1'] }] })
+    expect(html).toContain('{{color_acento1_mail_general}}')
   })
 })
 

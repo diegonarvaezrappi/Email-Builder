@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
 import { renderBannerSnippet } from '../render'
 import { THEME_SLUGS } from '../../../themes/themes'
+import { richTextFromPlain } from '../../../richText/model'
 import type { EmailDocument } from '../../../model'
 import type { BannerItem } from '../items/schemas'
 
@@ -11,7 +12,7 @@ const withItems = (items: BannerItem[], over: Partial<EmailDocument> = {}) =>
 
 const promo = (id: string, promoText = '120'): BannerItem => ({ id, type: 'PROMO', fields: { promoText } })
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['tag 1'] } })
-const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: 'x' } })
+const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
 
 describe('renderBannerSnippet', () => {
@@ -73,8 +74,8 @@ describe('renderBannerSnippet', () => {
     const allItems: BannerItem[] = [
       { id: '1', type: 'PROMO', fields: { promoText: '120' } },
       { id: '2', type: 'CREDITOS', fields: { creditosText: '120' } },
-      { id: '3', type: 'TEXTOXL', fields: { text: 'x' } },
-      { id: '4', type: 'TEXTOM', fields: { text: 'x' } },
+      { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
+      { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } },
       { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoLink: '' } },
       { id: '7', type: 'TAGS', fields: { tags: ['a'] } },
