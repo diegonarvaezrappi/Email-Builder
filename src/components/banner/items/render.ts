@@ -12,7 +12,7 @@
 // pasada al final, mismo precedente que resolveHeaderThemeVars en
 // components/header/render.ts. color_acento1/color_texto también pueden
 // aparecer inyectados por los modificadores de texto (subtono 1 / color base)
-// de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO — ver richText/render.ts.
+// de PROMO/TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO — ver richText/render.ts.
 // ============================================================================
 import type { EmailDocument } from '../../../model'
 import { escapeHtmlAttr, escapeHtmlText } from '../../../template/htmlText'
@@ -47,13 +47,47 @@ function stripComments(html: string): string {
 
 // --- PROMO -------------------------------------------------------------------
 
+/**
+ * La celda vertical "Ahora" que acompaña al monto — texto literal (NO Liquid)
+ * en molecula_promo_*.html, así que se ubica por la clase de sizing que sí es
+ * `{{banner_copy_modulo_ahora_class}}` (única en el archivo, ver sizing.ts)
+ * para encontrar el <td> que la contiene entero. `ahoraEnabled=false` borra
+ * la celda completa (mismo criterio que applyCobranding en
+ * components/header/render.ts: anclar en algo único, cortar por límites de
+ * <td>); si sigue activa, solo se reemplaza el texto "Ahora" por el RichText
+ * del usuario (mismos modificadores que TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO),
+ * dentro de esa misma celda.
+ */
+const AHORA_CLASS_MARKER = 'banner_copy_modulo_ahora_class'
+const AHORA_TEXT_LITERAL = '>Ahora<'
+
+function applyAhoraCell(html: string, fields: PromoFields, fileName: string): string {
+  const classIndex = html.indexOf(AHORA_CLASS_MARKER)
+  if (classIndex === -1) {
+    throw new Error(`${fileName}: no se encontró "${AHORA_CLASS_MARKER}" — revisar components/banner/items/render.ts`)
+  }
+  const cellStart = html.lastIndexOf('<td', classIndex)
+  const cellEnd = html.indexOf('</td>', classIndex) + '</td>'.length
+
+  if (!fields.ahoraEnabled) {
+    return html.slice(0, cellStart) + html.slice(cellEnd)
+  }
+
+  const cell = html.slice(cellStart, cellEnd)
+  if (!cell.includes(AHORA_TEXT_LITERAL)) {
+    throw new Error(`${fileName}: ya no contiene "${AHORA_TEXT_LITERAL}" dentro de la celda "Ahora" — revisar components/banner/items/render.ts`)
+  }
+  const newCell = cell.replace(AHORA_TEXT_LITERAL, () => `>${renderRichText(fields.ahoraText, LIQUID_COLOR_TOKENS)}<`)
+  return html.slice(0, cellStart) + newCell + html.slice(cellEnd)
+}
+
 export function renderPromoSnippet(fields: PromoFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_promo_${ctx.bannerType}.html`
-  const raw = stripComments(loadBannerMoleculaFile(fileName))
-  const size = liveTextSizing(fields.promoText, ctx.bannerType)
-  const ahora = ahoraSizing(fields.promoText, ctx.bannerType)
+  const raw = applyAhoraCell(stripComments(loadBannerMoleculaFile(fileName)), fields, fileName)
+  const size = liveTextSizing(plainText(fields.promoText), ctx.bannerType)
+  const ahora = ahoraSizing(plainText(fields.promoText), ctx.bannerType)
   const vars: Record<string, string> = {
-    banner_copy_modulo_promo: escapeHtmlText(fields.promoText),
+    banner_copy_modulo_promo: renderRichText(fields.promoText, LIQUID_COLOR_TOKENS),
     ...sizingVars(
       {
         classVar: 'banner_copy_modulo_prom_class',

@@ -25,6 +25,15 @@ interface RichTextInputProps {
   value: RichText
   onChange: (next: RichText) => void
   colors: RichTextColorMap
+  /** Igual que `disabled` en un `<input>` — el valor se conserva (y sigue
+   *  pintado) pero no se puede editar ni seleccionar marcas. Usado por PROMO
+   *  para el texto de "Ahora" cuando su checkbox está apagado. */
+  disabled?: boolean
+  /** Oculta el separador + los 3 swatches de color de la toolbar — pedido
+   *  explícito del usuario para los 2 textos de PROMO (monto y "Ahora"), a
+   *  diferencia de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO que sí los traen.
+   *  Default true (comportamiento sin cambios para esos 3). */
+  showColors?: boolean
 }
 
 function colorsEqual(a: RichTextColorMap, b: RichTextColorMap): boolean {
@@ -37,7 +46,7 @@ const COLOR_SWATCHES: { mark: 'colorBase' | 'colorAcento1' | 'colorAcento2'; lab
   { mark: 'colorAcento2', label: 'Subtono 2' },
 ]
 
-export function RichTextInput({ value, onChange, colors }: RichTextInputProps) {
+export function RichTextInput({ value, onChange, colors, disabled = false, showColors = true }: RichTextInputProps) {
   const ref = useRef<HTMLDivElement>(null)
   const lastValueRef = useRef<RichText | null>(null)
   const lastColorsRef = useRef<RichTextColorMap | null>(null)
@@ -126,7 +135,7 @@ export function RichTextInput({ value, onChange, colors }: RichTextInputProps) {
     <button
       type="button"
       className={isActive(mark) ? 'active' : ''}
-      disabled={!hasSelection}
+      disabled={disabled || !hasSelection}
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => applyMark(mark)}
       aria-label={label}
@@ -137,7 +146,7 @@ export function RichTextInput({ value, onChange, colors }: RichTextInputProps) {
   )
 
   return (
-    <div className="rich-text-input">
+    <div className={`rich-text-input${disabled ? ' rich-text-input-disabled' : ''}`}>
       <div className="rich-text-toolbar" role="toolbar" aria-label="Modificadores de texto">
         {markButton('bold', 'Negrita', <b>B</b>)}
         {markButton('italic', 'Cursiva', <i>I</i>)}
@@ -150,25 +159,26 @@ export function RichTextInput({ value, onChange, colors }: RichTextInputProps) {
             X<sup>2</sup>
           </span>,
         )}
-        <span className="rich-text-toolbar-sep" />
-        {COLOR_SWATCHES.map(({ mark, label }) => (
-          <button
-            key={mark}
-            type="button"
-            className={`rich-text-swatch${isActive(mark) ? ' active' : ''}`}
-            disabled={!hasSelection}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => applyColor(mark)}
-            aria-label={label}
-            title={label}
-            style={{ '--swatch-color': colors[mark] } as CSSProperties}
-          />
-        ))}
+        {showColors && <span className="rich-text-toolbar-sep" />}
+        {showColors &&
+          COLOR_SWATCHES.map(({ mark, label }) => (
+            <button
+              key={mark}
+              type="button"
+              className={`rich-text-swatch${isActive(mark) ? ' active' : ''}`}
+              disabled={disabled || !hasSelection}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyColor(mark)}
+              aria-label={label}
+              title={label}
+              style={{ '--swatch-color': colors[mark] } as CSSProperties}
+            />
+          ))}
       </div>
       <div
         ref={ref}
         className="rich-text-editable"
-        contentEditable
+        contentEditable={!disabled}
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}
@@ -177,7 +187,7 @@ export function RichTextInput({ value, onChange, colors }: RichTextInputProps) {
         onKeyUp={refreshSelection}
         onBlur={refreshSelection}
       />
-      {!hasSelection && <span className="field-hint">Seleccioná una palabra o frase para aplicarle un modificador.</span>}
+      {!disabled && !hasSelection && <span className="field-hint">Seleccioná una palabra o frase para aplicarle un modificador.</span>}
     </div>
   )
 }

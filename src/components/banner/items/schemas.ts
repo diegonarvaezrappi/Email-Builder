@@ -34,7 +34,22 @@ export type BannerItemType = (typeof BANNER_ITEM_TYPE_VALUES)[number]
 // (06-examples/estructura_general.html) y de las URLs placeholder de cada
 // archivo real de 02-components/02_banners/banner_moleculas/.
 
-export const promoFieldsSchema = z.object({ promoText: z.string().default('$14.000') })
+/**
+ * `ahoraEnabled`/`ahoraText` controlan la celda vertical "Ahora" que acompaña
+ * al monto — pedido explícito del usuario: el maestro trae ese texto
+ * hardcodeado (no es una variable Liquid), así que se edita/quita a nivel de
+ * celda completa desde acá (ver applyAhoraCell en items/render.ts). Ambos
+ * textos (`promoText` y `ahoraText`) son RichText, no string — mismo set de
+ * modificadores (bold/italic/tachado/subrayado/superíndice/color) que
+ * TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO, pedido explícito del usuario para
+ * igualar Texto M. `richTextSchema` migra un string viejo (documentos
+ * guardados antes de este cambio) a un run sin marcas.
+ */
+export const promoFieldsSchema = z.object({
+  promoText: richTextSchema.default(defaultRichText('$14.000')),
+  ahoraEnabled: z.boolean().default(true),
+  ahoraText: richTextSchema.default(defaultRichText('Ahora')),
+})
 export type PromoFields = z.infer<typeof promoFieldsSchema>
 export const defaultPromoFields: PromoFields = promoFieldsSchema.parse({})
 

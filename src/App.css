@@ -533,6 +533,11 @@
   border-color: var(--accent-border);
 }
 
+.rich-text-input-disabled .rich-text-editable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* --- Barra de Preview/Código -------------------------------------------- */
 .viewport-bar {
   display: flex;

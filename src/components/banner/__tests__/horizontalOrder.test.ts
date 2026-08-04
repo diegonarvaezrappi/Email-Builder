@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { enforceHorizontalItemOrder } from '../horizontalOrder'
+import { richTextFromPlain } from '../../../richText/model'
 import type { BannerItem } from '../items/schemas'
 
-const promo = (id: string): BannerItem => ({ id, type: 'PROMO', fields: { promoText: '120' } })
+const promo = (id: string): BannerItem => ({
+  id,
+  type: 'PROMO',
+  fields: { promoText: richTextFromPlain('120'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') },
+})
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: [] } })
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['a'] } })
 const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })

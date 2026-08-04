@@ -10,7 +10,11 @@ const doc = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultE
 const withItems = (items: BannerItem[], over: Partial<EmailDocument> = {}) =>
   doc({ ...over, banner: { ...defaultEmailDocument.banner, ...over.banner, items } })
 
-const promo = (id: string, promoText = '120'): BannerItem => ({ id, type: 'PROMO', fields: { promoText } })
+const promo = (id: string, promoText = '120'): BannerItem => ({
+  id,
+  type: 'PROMO',
+  fields: { promoText: richTextFromPlain(promoText), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') },
+})
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['tag 1'] } })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
@@ -73,7 +77,7 @@ describe('renderBannerSnippet', () => {
 
   it('theme-leak test: for every theme, no {{...}} of any kind survives in the rendered banner (all 10 item types present)', () => {
     const allItems: BannerItem[] = [
-      { id: '1', type: 'PROMO', fields: { promoText: '120' } },
+      { id: '1', type: 'PROMO', fields: { promoText: richTextFromPlain('120'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') } },
       { id: '2', type: 'CREDITOS', fields: { creditosText: '120', variant: 'generica' } },
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },

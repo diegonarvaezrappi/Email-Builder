@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useBuilder } from '../store'
 import { defaultCtaFields } from '../../components/cta/schema'
 import { defaultTagsFields } from '../../components/banner/items/schemas'
+import { richTextFromPlain } from '../../richText/model'
 import type { BannerItem, CtaBlock } from '../../model'
 
 const ctaBlock = (id: string, text = id): CtaBlock => ({
@@ -50,7 +51,11 @@ function setBannerType(bannerType: 'vertical' | 'horizontal') {
   useBuilder.setState((s) => ({ document: { ...s.document, banner: { ...s.document.banner, bannerType } } }))
 }
 
-const promoItem = (id: string): BannerItem => ({ id, type: 'PROMO', fields: { promoText: '120' } })
+const promoItem = (id: string): BannerItem => ({
+  id,
+  type: 'PROMO',
+  fields: { promoText: richTextFromPlain('120'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') },
+})
 
 beforeEach(() => {
   setContenidos([])
@@ -372,12 +377,12 @@ describe('removeBannerItem', () => {
 describe('updateBannerItemFields', () => {
   it('updates only the targeted item, leaving the others untouched', () => {
     setBannerItems([
-      { id: 'a', type: 'PROMO', fields: { promoText: 'uno' } },
-      { id: 'b', type: 'PROMO', fields: { promoText: 'dos' } },
+      { id: 'a', type: 'PROMO', fields: { promoText: richTextFromPlain('uno'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') } },
+      { id: 'b', type: 'PROMO', fields: { promoText: richTextFromPlain('dos'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') } },
     ])
     useBuilder.getState().updateBannerItemFields('a', { promoText: 'editado' })
     const items = useBuilder.getState().document.banner.items
     expect(items[0].fields).toEqual({ promoText: 'editado' })
-    expect(items[1].fields).toEqual({ promoText: 'dos' })
+    expect(items[1].fields).toEqual({ promoText: richTextFromPlain('dos'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') })
   })
 })

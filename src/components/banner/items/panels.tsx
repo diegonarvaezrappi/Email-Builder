@@ -45,13 +45,32 @@ interface BannerItemPanelProps<TFields> {
   onChangeGlobal: (next: GlobalFields) => void
 }
 
-export function PromoPropertiesPanel({ value, onChange }: BannerItemPanelProps<PromoFields>) {
+export function PromoPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<PromoFields>) {
+  const colors = richTextColorsForTema(doc.global.tema)
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Monto de la promo</span>
-        <input type="text" value={value.promoText} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ promoText: e.target.value })} />
+        <RichTextInput value={value.promoText} onChange={(promoText) => onChange({ ...value, promoText })} colors={colors} showColors={false} />
         <span className="field-hint">El tamaño de letra se ajusta solo según el largo del texto.</span>
+      </label>
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.ahoraEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, ahoraEnabled: e.target.checked })}
+        />
+        <span>Mostrar el texto "Ahora"</span>
+      </label>
+      <label className="field">
+        <span>Texto de "Ahora"</span>
+        <RichTextInput
+          value={value.ahoraText}
+          onChange={(ahoraText) => onChange({ ...value, ahoraText })}
+          colors={colors}
+          disabled={!value.ahoraEnabled}
+          showColors={false}
+        />
       </label>
     </div>
   )

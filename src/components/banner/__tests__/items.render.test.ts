@@ -19,6 +19,7 @@ import {
 
 const doc = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultEmailDocument, ...over })
 const ctx = (bannerType: 'horizontal' | 'vertical'): BannerItemRenderCtx => ({ bannerType })
+const promoFields = (promoText: string) => ({ promoText: richTextFromPlain(promoText), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') })
 
 // `{% %}` tags: ninguna de estas 9 piezas (todas salvo CTA_INTERNO) debe
 // dejar una sola. `{{banner_*}}` sin resolver: bug real (resolveBannerVars
@@ -31,28 +32,70 @@ const UNRESOLVED_BANNER_VAR_RE = /\{\{\s*banner_[a-z_0-9]+\s*\}\}/
 
 describe('renderPromoSnippet', () => {
   it.each(['horizontal', 'vertical'] as const)('%s: short text -> bnr-xl, long text -> bnr-lg', (bannerType) => {
-    const short = renderPromoSnippet({ promoText: '120' }, doc(), ctx(bannerType))
-    const long = renderPromoSnippet({ promoText: '$14.000' }, doc(), ctx(bannerType))
+    const short = renderPromoSnippet(promoFields('120'), doc(), ctx(bannerType))
+    const long = renderPromoSnippet(promoFields('$14.000'), doc(), ctx(bannerType))
     expect(short).toContain('bnr-xl')
     expect(long).toContain('bnr-lg')
   })
 
   it('carries the promo text verbatim, including a literal "$" (no String.replace corruption)', () => {
-    const html = renderPromoSnippet({ promoText: '$14.000' }, doc(), ctx('horizontal'))
+    const html = renderPromoSnippet(promoFields('$14.000'), doc(), ctx('horizontal'))
     expect(html).toContain('$14.000')
   })
 
   it('has no Liquid left (banner_* vars resolved; _mail_general left for the final theme pass)', () => {
-    const html = renderPromoSnippet({ promoText: '120' }, doc(), ctx('horizontal'))
+    const html = renderPromoSnippet(promoFields('120'), doc(), ctx('horizontal'))
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
     expect(html).toContain('{{bg_descuento_mail_general}}')
   })
 
   it('escapes HTML-significant characters in the promo text', () => {
-    const html = renderPromoSnippet({ promoText: '<b>x</b>' }, doc(), ctx('horizontal'))
+    const html = renderPromoSnippet({ ...promoFields('120'), promoText: richTextFromPlain('<b>x</b>') }, doc(), ctx('horizontal'))
     expect(html).toContain('&lt;b&gt;x&lt;/b&gt;')
     expect(html).not.toContain('<b>x</b>')
+  })
+
+  it('applies rich-text marks to the promo amount (bold, same mechanism as TEXTOM)', () => {
+    const html = renderPromoSnippet(
+      { ...promoFields('120'), promoText: [{ text: '120', marks: ['bold'] }] },
+      doc(),
+      ctx('vertical'),
+    )
+    expect(html).toContain('<span style="font-weight: bold;">120</span>')
+  })
+
+  describe('la celda "Ahora"', () => {
+    it.each(['horizontal', 'vertical'] as const)('%s: reemplaza el texto "Ahora" por el que ponga el usuario', (bannerType) => {
+      const html = renderPromoSnippet({ ...promoFields('120'), ahoraText: richTextFromPlain('Antes') }, doc(), ctx(bannerType))
+      expect(html).toContain('>Antes<')
+      expect(html).not.toContain('>Ahora<')
+    })
+
+    it.each(['horizontal', 'vertical'] as const)('%s: ahoraEnabled=false borra la celda completa, incluida su clase de sizing', (bannerType) => {
+      const html = renderPromoSnippet({ ...promoFields('120'), ahoraEnabled: false }, doc(), ctx(bannerType))
+      expect(html).not.toContain('Ahora')
+      expect(html).not.toContain('banner_copy_modulo_ahora')
+      // El resto de la pieza (el monto) sigue intacto.
+      expect(html).toContain('120')
+      expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+      expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
+    })
+
+    it('escapa HTML-significant characters en el texto de "Ahora"', () => {
+      const html = renderPromoSnippet({ ...promoFields('120'), ahoraText: richTextFromPlain('<b>x</b>') }, doc(), ctx('horizontal'))
+      expect(html).toContain('&lt;b&gt;x&lt;/b&gt;')
+      expect(html).not.toContain('<b>x</b>')
+    })
+
+    it('aplica modificadores de texto al "Ahora" (subrayado, mismo mecanismo que TEXTOM)', () => {
+      const html = renderPromoSnippet(
+        { ...promoFields('120'), ahoraText: [{ text: 'Ahora', marks: ['underline'] }] },
+        doc(),
+        ctx('vertical'),
+      )
+      expect(html).toContain('<span style="text-decoration: underline;">Ahora</span>')
+    })
   })
 })
 
