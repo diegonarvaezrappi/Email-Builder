@@ -62,10 +62,10 @@ export const defaultPromoFields: PromoFields = promoFieldsSchema.parse({})
  * lugar, decisión de producto distinta a lo que el comentario del maestro
  * describe). 'generica' = el comportamiento de siempre (bg_creditos_mail_general
  * + color_creditos_mail_general, sin cambios). 'acento' = fondo
- * bg_solid_generico100_mail_body + texto color_acento2_mail_general,
- * pero el selector solo tiene efecto visual en pastel/oscuros — en Pro/ProBlack
- * el selector queda visible (a pedido del usuario) pero renderiza igual que
- * 'generica' (ver withCreditosAcentoVariant en items/render.ts).
+ * bg_solid_generico100_mail_body + texto color_acento2_mail_general, en los
+ * 11 temas por igual (pedido explícito del usuario — una versión anterior de
+ * este comentario lo limitaba a pastel/oscuros y dejaba Pro/ProBlack como
+ * no-op; ver withCreditosAcentoVariant en items/render.ts).
  */
 export const CREDITOS_VARIANT_VALUES = ['generica', 'acento'] as const
 export type CreditosVariant = (typeof CREDITOS_VARIANT_VALUES)[number]

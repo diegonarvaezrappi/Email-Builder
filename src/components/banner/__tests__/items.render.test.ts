@@ -161,10 +161,14 @@ describe('renderCreditosSnippet', () => {
       ['beige100', 'vertical'],
       ['darkturbo', 'horizontal'],
       ['darkturbo', 'vertical'],
+      ['pro', 'horizontal'],
+      ['pro', 'vertical'],
+      ['problack', 'horizontal'],
+      ['problack', 'vertical'],
     ] as const
 
     it.each(pastelOrDarkCases)(
-      'tema %s, %s: swaps bg_creditos/color_creditos for bg_solid_generico100_mail_body/color_acento2 (both occurrences)',
+      'tema %s, %s: swaps bg_creditos/color_creditos for bg_solid_generico100_mail_body/color_acento2 (both occurrences) — applies on los 11 temas, incl. Pro/ProBlack',
       (tema, bannerType) => {
         const html = renderCreditosSnippet(creditosFields('120', 'acento'), doc({ global: { ...doc().global, tema } }), ctx(bannerType))
         expect(html).not.toContain('{{bg_creditos_mail_general}}')
@@ -173,12 +177,6 @@ describe('renderCreditosSnippet', () => {
         expect((html.match(/\{\{color_acento2_mail_general\}\}/g) ?? []).length).toBe(2)
       },
     )
-
-    it.each(['pro', 'problack'] as const)('on %s, "acento" is a no-op — renders identically to "generica"', (tema) => {
-      const withAcento = renderCreditosSnippet(creditosFields('120', 'acento'), doc({ global: { ...doc().global, tema } }), ctx('vertical'))
-      const withGenerica = renderCreditosSnippet(creditosFields('120', 'generica'), doc({ global: { ...doc().global, tema } }), ctx('vertical'))
-      expect(withAcento).toBe(withGenerica)
-    })
   })
 })
 

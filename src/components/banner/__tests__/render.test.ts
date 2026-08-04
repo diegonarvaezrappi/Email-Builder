@@ -208,11 +208,21 @@ describe('renderBannerSnippet', () => {
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
 
-    it('en Pro, no hay swap — sigue con el bg_creditos/color_creditos propios de Pro', () => {
+    it('en Pro, también hay swap (pedido explícito del usuario) — bg_solid_generico100/color_acento2 propios de Pro', () => {
       const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'pro' } })
       const html = renderBannerSnippet(d.banner, d)
-      expect(html).toContain('bgcolor="#CC984E"') // bg_creditos_mail_general de Pro, sin swap
-      expect(html).not.toContain('bgcolor="#000000"') // bg_solid_generico100_mail_body de Pro — no debe aparecer
+      expect(html).toContain('bgcolor="#000000"') // bg_solid_generico100_mail_body de Pro
+      expect((html.match(/color:\s*#A2A2A2/g) ?? []).length).toBe(2) // color_acento2_mail_general de Pro, monto + "DE REINTEGRO"
+      expect(html).not.toContain('bgcolor="#CC984E"') // bg_creditos_mail_general de Pro — ya no debe aparecer
+      expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
+    })
+
+    it('en ProBlack, también hay swap — bg_solid_generico100/color_acento2 propios de ProBlack', () => {
+      const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'problack' } })
+      const html = renderBannerSnippet(d.banner, d)
+      expect(html).toContain('bgcolor="#FFFFFF"') // bg_solid_generico100_mail_body de ProBlack
+      expect((html.match(/color:\s*#919AAA/g) ?? []).length).toBe(2) // color_acento2_mail_general de ProBlack
+      expect(html).not.toContain('bgcolor="#CC984E"')
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
   })

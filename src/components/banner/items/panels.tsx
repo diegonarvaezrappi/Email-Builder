@@ -4,7 +4,7 @@ import { CTA_STYLE_LABELS, CTA_STYLE_VALUES } from '../../../global/schema'
 import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import type { RichTextColorMap } from '../../../richText/model'
-import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS, themeVars } from '../../../themes/themes'
+import { themeVars } from '../../../themes/themes'
 import { CREDITOS_VARIANT_LABELS, CREDITOS_VARIANT_VALUES } from './schemas'
 import type {
   CreditosFields,
@@ -77,7 +77,6 @@ export function PromoPropertiesPanel({ value, onChange, doc }: BannerItemPanelPr
 }
 
 export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<CreditosFields>) {
-  const acentoSinEfecto = value.variant === 'acento' && !PASTEL_THEME_SLUGS.includes(doc.global.tema) && !DARK_THEME_SLUGS.includes(doc.global.tema)
   const colors = richTextColorsForTema(doc.global.tema)
   return (
     <div className="properties-panel">
@@ -97,7 +96,6 @@ export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPane
             </option>
           ))}
         </select>
-        {acentoSinEfecto && <span className="field-hint">En Pro/ProBlack esta variante no cambia el color — se ve igual que Genérica.</span>}
       </label>
       <label className="field field-checkbox">
         <input
