@@ -134,15 +134,13 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     type: 'TEXTO_COMPLEMENTARIO',
     label: 'Texto complementario',
     zone: 'MOLECULA',
-    // modulo_texto_complementario.html es un único archivo compartido (sin
-    // par _horizontal/_vertical todavía, ver USO-DE-CADA-PARTE.md línea 131) —
-    // pero su contenido real (un <h4> de body sin ancho ni estilo atado a
-    // ninguna orientación) sirve igual para ambas, así que se habilita en las
-    // 2 — ver components/banner/items/render.ts.
+    // Desde un pull reciente del maestro, tiene par _horizontal/_vertical
+    // real (molecula_texto_complementario_*.html), igual que TEXTOXL/TEXTOM —
+    // ver components/banner/items/render.ts.
     orientations: BOTH_ORIENTATIONS,
     schema: textoComplementarioFieldsSchema,
     defaultFields: defaultTextoComplementarioFields,
-    render: (fields, _doc, _ctx) => renderTextoComplementarioSnippet(fields),
+    render: renderTextoComplementarioSnippet,
     PropertiesPanel: TextoComplementarioPropertiesPanel,
     Icon: MOLECULE_ICONS.TEXTO_COMPLEMENTARIO,
   },

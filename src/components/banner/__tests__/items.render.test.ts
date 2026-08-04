@@ -151,18 +151,38 @@ describe('renderTextoMSnippet', () => {
 })
 
 describe('renderTextoComplementarioSnippet', () => {
-  it('replaces the placeholder sentence with the user text, no Liquid at all besides a plain-text run', () => {
-    const html = renderTextoComplementarioSnippet({ text: richTextFromPlain('Nuevo texto complementario') })
-    expect(html).toContain('Nuevo texto complementario')
-    expect(html).not.toContain('Más de 500 opciones de tacos')
-    // Este archivo, a diferencia de los demás, no tiene NINGÚN Liquid propio —
-    // ni siquiera un `_mail_general` (su color es un #FFFFFF hardcodeado); un
-    // run SIN modificadores de color no inyecta ningún {{...}} tampoco.
-    expect(html).not.toMatch(/\{%|\{\{/)
+  // Desde el pull que reemplazó modulo_texto_complementario.html (único, <h4>
+  // hardcodeado en #FFFFFF) por el par real molecula_texto_complementario_
+  // {horizontal,vertical}.html (<h2>, color: {{color_texto_mail_general}}) —
+  // ver la nota completa en components/banner/items/render.ts.
+  it.each(['horizontal', 'vertical'] as const)('%s: uses <h2>, not the old <h4>', (bannerType) => {
+    const html = renderTextoComplementarioSnippet({ text: richTextFromPlain('x') }, doc(), ctx(bannerType))
+    expect(html, bannerType).toContain('<h2')
+    expect(html, bannerType).not.toContain('<h4')
   })
 
-  it('a color modifier (subtono1) DOES inject a {{color_acento1_mail_general}} token for the final theme pass', () => {
-    const html = renderTextoComplementarioSnippet({ text: [{ text: 'Nuevo texto', marks: ['colorAcento1'] }] })
+  it.each(['horizontal', 'vertical'] as const)('%s: replaces the placeholder with the user text', (bannerType) => {
+    const html = renderTextoComplementarioSnippet({ text: richTextFromPlain('Nuevo texto complementario') }, doc(), ctx(bannerType))
+    expect(html, bannerType).toContain('Nuevo texto complementario')
+  })
+
+  it.each(['horizontal', 'vertical'] as const)(
+    '%s: no Liquid `{%%}` tags left, but color_texto_mail_general DOES survive for the final theme pass (no longer hardcoded #FFFFFF)',
+    (bannerType) => {
+      const html = renderTextoComplementarioSnippet({ text: richTextFromPlain('x') }, doc(), ctx(bannerType))
+      expect(html, bannerType).not.toMatch(NO_LIQUID_TAG_RE)
+      expect(html, bannerType).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
+      expect(html, bannerType).toContain('{{color_texto_mail_general}}')
+      expect(html, bannerType).not.toContain('#FFFFFF')
+    },
+  )
+
+  it('a color modifier (subtono1) overrides the default color_texto with its own {{color_acento1_mail_general}} token', () => {
+    const html = renderTextoComplementarioSnippet(
+      { text: [{ text: 'Nuevo texto', marks: ['colorAcento1'] }] },
+      doc(),
+      ctx('vertical'),
+    )
     expect(html).toContain('{{color_acento1_mail_general}}')
   })
 })

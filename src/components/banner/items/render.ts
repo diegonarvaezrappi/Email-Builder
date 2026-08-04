@@ -169,14 +169,25 @@ export function renderTextoMSnippet(fields: TextoMFields, doc: EmailDocument, ct
   return resolveBannerVars(raw, { banner_copy_modulo_textom: renderRichText(fields.text, LIQUID_COLOR_TOKENS) }, fileName)
 }
 
-// --- TEXTO_COMPLEMENTARIO (archivo único, sin variante por orientación — sirve para ambas) -----------------------
+// --- TEXTO_COMPLEMENTARIO ----------------------------------------------------
+// Hasta un pull reciente del maestro era un único archivo compartido
+// (modulo_texto_complementario.html) con un <h4 style="color: #FFFFFF;">
+// hardcodeado — el propio archivo ya avisaba "PENDIENTE: revisar si este
+// placeholder sigue haciendo falta ahora que existe
+// modulo_texto_complemento_horizontal.html / _vertical.html". Ese pull lo
+// reemplazó por el par real: molecula_texto_complementario_horizontal.html /
+// _vertical.html, con `<h2 style="color: {{color_texto_mail_general}} ">` —
+// ya no hardcodeado, y ahora sí con variante por orientación, igual que
+// TEXTOXL/TEXTOM. El placeholder de texto sigue llamándose
+// `{{banner_copy_modulo_textom}}` en el archivo real (confirmado por diff —
+// copy-paste del molde de TEXTOM al crear este par, no un error de esta app);
+// se sustituye tal cual, sin renombrarlo, porque cada archivo se resuelve por
+// separado y no hay colisión real con la pieza TEXTOM.
 
-const TEXTO_COMPLEMENTARIO_PLACEHOLDER = 'Más de 500 opciones de tacos solo durante una semana'
-
-export function renderTextoComplementarioSnippet(fields: TextoComplementarioFields): string {
-  const fileName = 'modulo_texto_complementario.html'
+export function renderTextoComplementarioSnippet(fields: TextoComplementarioFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
+  const fileName = `molecula_texto_complementario_${ctx.bannerType}.html`
   const raw = stripComments(loadBannerMoleculaFile(fileName))
-  return substituteOnce(raw, TEXTO_COMPLEMENTARIO_PLACEHOLDER, renderRichText(fields.text, LIQUID_COLOR_TOKENS), fileName)
+  return resolveBannerVars(raw, { banner_copy_modulo_textom: renderRichText(fields.text, LIQUID_COLOR_TOKENS) }, fileName)
 }
 
 // --- IMG_AUTOMATICA_MOLECULA -----------------------------------------------

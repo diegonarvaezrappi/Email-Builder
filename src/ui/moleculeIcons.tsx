@@ -69,7 +69,7 @@ export function TextoMIcon(props: IconProps) {
 }
 
 /** 3 líneas finas apiladas, ancho decreciente — forma de párrafo — mirror de
- *  modulo_texto_complementario.html (un <h4> de cuerpo, no un titular). */
+ *  molecula_texto_complementario_*.html (un <h2> de cuerpo, no un titular). */
 export function TextoComplementarioIcon(props: IconProps) {
   return (
     <svg {...svgProps(props)}>

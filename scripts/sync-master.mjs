@@ -16,13 +16,16 @@
 //    `color_footer_mail_general` de cada uno — ver src/themes/themes.ts. Así
 //    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
 //    agrega un tema nuevo la app lo levanta sin tocar código.
-// 3b. Copia NN-components/banners/big-banner-{horizontal,vertical}.html + 16
-//    de los 20 archivos de banners/banner_moleculas/ → src/assets/templates/banners/,
+// 3b. Copia NN-components/banners/big-banner-{horizontal,vertical}.html + 17
+//    de los 22 archivos de banners/banner_moleculas/ → src/assets/templates/banners/,
 //    preservando la subcarpeta — ver src/components/banner/shell.ts (que
 //    parsea los 2 shells) y src/components/banner/items/render.ts (que carga
-//    las 16 piezas vía import.meta.glob). Los 4 archivos excluidos a
+//    las 17 piezas vía import.meta.glob). Los 4 archivos excluidos a
 //    propósito (2 duplicados byte a byte, 2 que son solo un content-block de
-//    CTA) están documentados junto a BANNER_MOLECULA_FILES más abajo.
+//    CTA) están documentados junto a BANNER_MOLECULA_FILES más abajo; el 5to
+//    archivo real (molecula_texto_pastilla.html) queda sin sincronizar porque
+//    todavía no se decidió si agregarlo como pieza — el warning de "archivo
+//    nuevo sin sincronizar" más abajo lo recuerda en cada corrida.
 // 4. VALIDA el contrato antes de escribir nada:
 //    - Los marcadores `<!-- FOOTER -->` y `<!-- CIERRES -->` (los slots
 //      simples ya implementados) deben aparecer EXACTAMENTE una vez cada uno
@@ -223,8 +226,9 @@ const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/g
 const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
 
 /**
- * Las 16 piezas que la app importa de banner_moleculas/ (20 archivos reales).
- * Quedan FUERA a propósito 4 de los 20:
+ * Las 17 piezas que la app importa de banner_moleculas/ (22 archivos reales).
+ * Quedan FUERA a propósito 4 de los 22 (+ 1 más, ver nota arriba sobre
+ * molecula_texto_pastilla.html):
  *  - molecula_texto_M_horizontal.html / _vertical.html: duplicados byte a
  *    byte de molecula_textom_*, marcados como "posible duplicado sin
  *    resolver" en 05-docs/INDICE-DE-COMPONENTES.md. Sincronizar los 2 pares
@@ -233,6 +237,13 @@ const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
  *    {% assign %} + la referencia al content block CTA-template, exactamente
  *    lo que emite src/components/cta/render.ts. No se copian (mismo criterio
  *    que cta-llamado.html) pero SÍ se validan más abajo.
+ *
+ * `modulo_texto_complementario.html` (archivo único, compartido entre
+ * orientaciones, con un `<h4 style="color: #FFFFFF;">` hardcodeado) fue
+ * REEMPLAZADO upstream por este par — el pull que trajo este cambio también
+ * lo promovió de "modulo" a "molecula" (ver 06-examples/template_maestro_original.html).
+ * Nuevo contenido real: `<h2 style="color: {{color_texto_mail_general}} ">`,
+ * ya no hardcodeado — ver components/banner/items/render.ts.
  */
 const BANNER_MOLECULA_FILES = [
   'molecula_promo_horizontal.html',
@@ -243,7 +254,8 @@ const BANNER_MOLECULA_FILES = [
   'molecula_textoxl_vertical.html',
   'molecula_textom_horizontal.html',
   'molecula_textom_vertical.html',
-  'modulo_texto_complementario.html',
+  'molecula_texto_complementario_horizontal.html',
+  'molecula_texto_complementario_vertical.html',
   'molecula_img_automatica_horizontal.html',
   'molecula_img_automatica_vertical.html',
   'modulo_img_altofijo_horizontal.html',
