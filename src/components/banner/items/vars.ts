@@ -40,3 +40,15 @@ export function substituteOnce(html: string, placeholder: string, value: string,
   }
   return html.replace(placeholder, () => value)
 }
+
+/** Igual que substituteOnce, pero para un placeholder que el archivo real
+ *  repite más de una vez (ej. color_creditos_mail_general aparece 2 veces en
+ *  molecula_creditos_*.html: el monto y "DE REINTEGRO") — replaceAll en vez
+ *  de replace, misma guardia de "sigue existiendo" y mismo reemplazo por
+ *  función para no interpretar `$` del valor como patrón especial. */
+export function substituteAll(html: string, placeholder: string, value: string, fileName: string): string {
+  if (!html.includes(placeholder)) {
+    throw new Error(`${fileName}: ya no contiene "${placeholder}" — revisar components/banner/items/render.ts`)
+  }
+  return html.replaceAll(placeholder, () => value)
+}

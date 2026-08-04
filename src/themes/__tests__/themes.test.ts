@@ -83,6 +83,17 @@ describe('themeVars', () => {
   it('returns nothing for an unknown theme', () => {
     expect(themeVars('no-existe')).toEqual({})
   })
+
+  it('also captures bg_solid_generico100_mail_body (EXTRA_THEME_VAR_NAMES exception), one real value per theme', () => {
+    // Sufijo _mail_body, no _mail_general — ver el comentario largo en
+    // themes.ts sobre por qué se agrega por nombre exacto y no ampliando el
+    // sufijo entero (alineado_molecular_mail_body vive fuera de las ramas de
+    // tema y NO debería colarse acá).
+    expect(themeVars('beige100').bg_solid_generico100_mail_body).toBe('#FFFFFF')
+    expect(themeVars('darkneon').bg_solid_generico100_mail_body).toBe('#000000')
+    expect(themeVars('pro').bg_solid_generico100_mail_body).toBe('#000000')
+    expect(themeVars('problack').bg_solid_generico100_mail_body).toBe('#FFFFFF')
+  })
 })
 
 describe('colorFooterForTheme', () => {

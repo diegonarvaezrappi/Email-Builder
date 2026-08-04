@@ -74,7 +74,7 @@ describe('renderBannerSnippet', () => {
   it('theme-leak test: for every theme, no {{...}} of any kind survives in the rendered banner (all 10 item types present)', () => {
     const allItems: BannerItem[] = [
       { id: '1', type: 'PROMO', fields: { promoText: '120' } },
-      { id: '2', type: 'CREDITOS', fields: { creditosText: '120' } },
+      { id: '2', type: 'CREDITOS', fields: { creditosText: '120', variant: 'generica' } },
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } },
@@ -94,7 +94,9 @@ describe('renderBannerSnippet', () => {
     })
     const html = renderBannerSnippet(d.banner, d)
     expect(html).toContain('rgba(229,182,127,0.5)') // bg_tag_fondo_mail_general
-    expect(html).toContain('rgba(0,0,0,0.0)') // bg_bannertono_mail_general
+    // backgroundEnabled defaults a true (default estático del schema, sin el
+    // ajuste por tema de App.tsx) — en pastel eso pinta bg_solid_mail_general.
+    expect(html).toContain('#FFF0DD') // bg_solid_mail_general de beige100
   })
 
   describe('backgroundEnabled', () => {
@@ -135,6 +137,70 @@ describe('renderBannerSnippet', () => {
       })
       const html = renderBannerSnippet(d.banner, d)
       expect(html).toContain('rgba(229,182,127,0.5)') // bg_tag_fondo_mail_general, sin tocar
+      expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
+    })
+
+    // Temas pastel: al revés de oscuros/Pro/ProBlack, el propio maestro
+    // documenta el fondo APAGADO por defecto ahí — activarlo pinta
+    // bg_solid_mail_general (no el tono del tema, transparente en pastel) y
+    // el mismo padding literal que los temas no-pastel ya traen por defecto.
+    describe('en temas pastel', () => {
+      it('activado, pinta bg_solid_mail_general como tono y el padding "on" de los temas no-pastel', () => {
+        const cases: [tema: string, bgSolid: string][] = [
+          ['beige100', '#FFF0DD'],
+          ['verde100', '#C0FDD3'],
+        ]
+        for (const [tema, bgSolid] of cases) {
+          // padd_banner_mail_general vive en la tabla de MOLECULAS (ver
+          // shell.ts) — solo se inserta si hay al menos una pieza de zona
+          // MOLECULA (PROMO acá), no con TAGS solo (zona MODULO).
+          const d = withItems([promo('a')], {
+            global: { ...defaultEmailDocument.global, tema },
+            banner: { ...defaultEmailDocument.banner, backgroundEnabled: true },
+          })
+          const html = renderBannerSnippet(d.banner, d)
+          const container = html.match(/background:\s*[^;]*;\s*max-width:\s*480px[^>]*>/)?.[0]
+          expect(container, tema).toBeDefined()
+          expect(container, tema).toContain(bgSolid)
+          expect(html, tema).toContain('padding:15px 10px')
+        }
+      })
+
+      it('desactivado (default), no pinta ningún fondo — ni el tono ni la imagen "en blanco" que sí se fuerza en oscuros/Pro/ProBlack', () => {
+        // Regresión: bg_bannerimg no puede pasar a la URL "en blanco" acá —
+        // sobre un tono transparente eso pintaría un recuadro blanco, algo
+        // que el maestro documenta explícitamente que NO debe pasar en
+        // pastel ("se mantiene idéntico" sin importar el checkbox).
+        const d = withItems([promo('a')], {
+          global: { ...defaultEmailDocument.global, tema: 'beige100' },
+          banner: { ...defaultEmailDocument.banner, backgroundEnabled: false },
+        })
+        const html = renderBannerSnippet(d.banner, d)
+        const container = html.match(/background:\s*[^;]*;\s*max-width:\s*480px[^>]*>/)?.[0]
+        expect(container).toBeDefined()
+        expect(container).toContain('rgba(0,0,0,0.0)')
+        expect(html).not.toContain('https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A')
+        expect(html).toContain('padding:0px 0px')
+      })
+    })
+  })
+
+  describe('CREDITOS "acento" variant — full pipeline (renderCreditosSnippet solo deja el token, este pass lo resuelve)', () => {
+    const creditos = (id: string): BannerItem => ({ id, type: 'CREDITOS', fields: { creditosText: '120', variant: 'acento' } })
+
+    it('en beige100 (pastel), bg_solid_generico100_mail_body y color_acento2 quedan baked, sin Liquid sin resolver', () => {
+      const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
+      const html = renderBannerSnippet(d.banner, d)
+      expect(html).toContain('bgcolor="#FFFFFF"') // bg_solid_generico100_mail_body de beige100
+      expect((html.match(/color:\s*#FF441F/g) ?? []).length).toBe(2) // color_acento2_mail_general, monto + "DE REINTEGRO"
+      expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
+    })
+
+    it('en Pro, no hay swap — sigue con el bg_creditos/color_creditos propios de Pro', () => {
+      const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'pro' } })
+      const html = renderBannerSnippet(d.banner, d)
+      expect(html).toContain('bgcolor="#CC984E"') // bg_creditos_mail_general de Pro, sin swap
+      expect(html).not.toContain('bgcolor="#000000"') // bg_solid_generico100_mail_body de Pro — no debe aparecer
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
   })

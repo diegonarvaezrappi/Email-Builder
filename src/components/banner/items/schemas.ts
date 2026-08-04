@@ -38,7 +38,31 @@ export const promoFieldsSchema = z.object({ promoText: z.string().default('$14.0
 export type PromoFields = z.infer<typeof promoFieldsSchema>
 export const defaultPromoFields: PromoFields = promoFieldsSchema.parse({})
 
-export const creditosFieldsSchema = z.object({ creditosText: z.string().default('120') })
+/**
+ * CREDITOS puede cambiar de color — pedido explícito del usuario (no viene
+ * del maestro, aunque el maestro sí trae un comentario propio en
+ * molecula_creditos_*.html que documenta una idea similar con OTROS valores:
+ * fondo `bg_solid_generico100_mail_body` con tipografía `color_acento1_mail_general`
+ * ["generico"] — la variante de acá usa `color_acento2_mail_general` en su
+ * lugar, decisión de producto distinta a lo que el comentario del maestro
+ * describe). 'generica' = el comportamiento de siempre (bg_creditos_mail_general
+ * + color_creditos_mail_general, sin cambios). 'acento' = fondo
+ * bg_solid_generico100_mail_body + texto color_acento2_mail_general,
+ * pero el selector solo tiene efecto visual en pastel/oscuros — en Pro/ProBlack
+ * el selector queda visible (a pedido del usuario) pero renderiza igual que
+ * 'generica' (ver withCreditosAcentoVariant en items/render.ts).
+ */
+export const CREDITOS_VARIANT_VALUES = ['generica', 'acento'] as const
+export type CreditosVariant = (typeof CREDITOS_VARIANT_VALUES)[number]
+export const CREDITOS_VARIANT_LABELS: Record<CreditosVariant, string> = {
+  generica: 'Genérica',
+  acento: 'Acento',
+}
+
+export const creditosFieldsSchema = z.object({
+  creditosText: z.string().default('120'),
+  variant: z.enum(CREDITOS_VARIANT_VALUES).default('generica'),
+})
 export type CreditosFields = z.infer<typeof creditosFieldsSchema>
 export const defaultCreditosFields: CreditosFields = creditosFieldsSchema.parse({})
 

@@ -13,12 +13,17 @@
 // fondo personalizado — entran por el mismo camino.
 // ============================================================================
 
+import { EXTRA_THEME_VAR_NAMES } from './themes'
+
 /**
  * Referencias a variables de tema. El sufijo `_mail_general` es lo que las
  * distingue del resto del Liquid del mail (convención del repo, ver
- * 05-docs/GUIA-DE-TEMAS.md). Se aceptan espacios internos por si acaso.
+ * 05-docs/GUIA-DE-TEMAS.md), salvo las excepciones por nombre exacto de
+ * EXTRA_THEME_VAR_NAMES (ver themes.ts) — deben resolverse acá con el mismo
+ * mapa `vars` o quedarían como Liquid sin resolver en el HTML exportado. Se
+ * aceptan espacios internos por si acaso.
  */
-const THEME_VAR_RE = /\{\{\s*([a-z_0-9]+_mail_general)\s*\}\}/g
+const THEME_VAR_RE = new RegExp(`\\{\\{\\s*([a-z_0-9]+_mail_general|${EXTRA_THEME_VAR_NAMES.join('|')})\\s*\\}\\}`, 'g')
 
 /** El `{% assign tema_general_mail_general = '...' %}` de entrada, con su línea. */
 const TEMA_ASSIGN_RE = /[ \t]*\{%\s*assign\s+tema_general_mail_general\s*=\s*'[^']*'\s*%\}[ \t]*\r?\n?/g

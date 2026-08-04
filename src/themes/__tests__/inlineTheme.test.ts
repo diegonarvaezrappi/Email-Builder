@@ -28,6 +28,12 @@ describe('resolveThemeVars', () => {
   it('tolerates inner spaces in the reference', () => {
     expect(resolveThemeVars('{{ bg_solid_mail_general }}', { bg_solid_mail_general: '#FFF' })).toBe('#FFF')
   })
+
+  it('also resolves bg_solid_generico100_mail_body (EXTRA_THEME_VAR_NAMES exception, not _mail_general-suffixed)', () => {
+    expect(resolveThemeVars('<table bgcolor="{{bg_solid_generico100_mail_body}}">', { bg_solid_generico100_mail_body: '#FFFFFF' })).toBe(
+      '<table bgcolor="#FFFFFF">',
+    )
+  })
 })
 
 describe('stripThemeDefinitions', () => {

@@ -4,7 +4,8 @@ import { CTA_STYLE_LABELS, CTA_STYLE_VALUES } from '../../../global/schema'
 import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import type { RichTextColorMap } from '../../../richText/model'
-import { themeVars } from '../../../themes/themes'
+import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS, themeVars } from '../../../themes/themes'
+import { CREDITOS_VARIANT_LABELS, CREDITOS_VARIANT_VALUES } from './schemas'
 import type {
   CreditosFields,
   CtaInternoFields,
@@ -56,7 +57,8 @@ export function PromoPropertiesPanel({ value, onChange }: BannerItemPanelProps<P
   )
 }
 
-export function CreditosPropertiesPanel({ value, onChange }: BannerItemPanelProps<CreditosFields>) {
+export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<CreditosFields>) {
+  const acentoSinEfecto = value.variant === 'acento' && !PASTEL_THEME_SLUGS.includes(doc.global.tema) && !DARK_THEME_SLUGS.includes(doc.global.tema)
   return (
     <div className="properties-panel">
       <label className="field">
@@ -64,9 +66,23 @@ export function CreditosPropertiesPanel({ value, onChange }: BannerItemPanelProp
         <input
           type="text"
           value={value.creditosText}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ creditosText: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, creditosText: e.target.value })}
         />
         <span className="field-hint">Acompaña siempre a la leyenda fija "DE REINTEGRO".</span>
+      </label>
+      <label className="field">
+        <span>Variante de color</span>
+        <select
+          value={value.variant}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ ...value, variant: e.target.value as CreditosFields['variant'] })}
+        >
+          {CREDITOS_VARIANT_VALUES.map((v) => (
+            <option key={v} value={v}>
+              {CREDITOS_VARIANT_LABELS[v]}
+            </option>
+          ))}
+        </select>
+        {acentoSinEfecto && <span className="field-hint">En Pro/ProBlack esta variante no cambia el color — se ve igual que Genérica.</span>}
       </label>
     </div>
   )

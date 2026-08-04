@@ -18,7 +18,7 @@ import type { EmailDocument } from '../../../model'
 import { escapeHtmlAttr, escapeHtmlText } from '../../../template/htmlText'
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
-import { DARK_THEME_SLUGS } from '../../../themes/themes'
+import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS } from '../../../themes/themes'
 import { renderCtaSnippet } from '../../cta/render'
 import type { BannerItemRenderCtx } from '../schema'
 import { loadBannerMoleculaFile } from './files'
@@ -35,7 +35,7 @@ import type {
   TextoXlFields,
 } from './schemas'
 import { ahoraSizing, liveTextSizing, sizingVars } from './sizing'
-import { resolveBannerVars, substituteOnce } from './vars'
+import { resolveBannerVars, substituteAll, substituteOnce } from './vars'
 
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 
@@ -96,10 +96,32 @@ function fixCreditosHorizontalFontSizeTypo(html: string, fileName: string): stri
   return html.replace(CREDITOS_HORIZONTAL_FONT_TYPO, 'font-size:')
 }
 
-export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
+// --- CREDITOS: variante "Acento" --------------------------------------------
+// Pedido explícito del usuario (no del maestro — ver el comentario largo en
+// items/schemas.ts sobre el "generico" que sí describe el maestro, con otros
+// valores). El selector queda visible para los 11 temas, pero solo tiene
+// efecto en pastel/oscuros (a pedido del usuario, tras cambiar de opinión
+// sobre ocultarlo en Pro/ProBlack): ahí, seleccionar "Acento" swapea el fondo
+// a bg_solid_generico100_mail_body y la tipografía (aparece 2 veces: el monto
+// y "DE REINTEGRO") a color_acento2_mail_general. En Pro/ProBlack el swap no
+// se aplica — renderiza igual que "Genérica".
+const CREDITOS_BG_VAR = '{{bg_creditos_mail_general}}'
+const CREDITOS_ACENTO_BG_VAR = '{{bg_solid_generico100_mail_body}}'
+const CREDITOS_COLOR_VAR = '{{color_creditos_mail_general}}'
+const CREDITOS_ACENTO_COLOR_VAR = '{{color_acento2_mail_general}}'
+
+function withCreditosAcentoVariant(html: string, variant: CreditosFields['variant'], tema: string, fileName: string): string {
+  if (variant !== 'acento') return html
+  if (!PASTEL_THEME_SLUGS.includes(tema) && !DARK_THEME_SLUGS.includes(tema)) return html
+  const withBg = substituteOnce(html, CREDITOS_BG_VAR, CREDITOS_ACENTO_BG_VAR, fileName)
+  return substituteAll(withBg, CREDITOS_COLOR_VAR, CREDITOS_ACENTO_COLOR_VAR, fileName)
+}
+
+export function renderCreditosSnippet(fields: CreditosFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_creditos_${ctx.bannerType}.html`
   let raw = stripComments(loadBannerMoleculaFile(fileName))
   if (ctx.bannerType === 'horizontal') raw = fixCreditosHorizontalFontSizeTypo(raw, fileName)
+  raw = withCreditosAcentoVariant(raw, fields.variant, doc.global.tema, fileName)
   const size = liveTextSizing(fields.creditosText, ctx.bannerType)
   const vars: Record<string, string> = {
     banner_copy_modulo_creditos: escapeHtmlText(fields.creditosText),

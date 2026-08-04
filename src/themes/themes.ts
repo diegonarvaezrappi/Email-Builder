@@ -14,7 +14,29 @@ import headMetaTagsRaw from '../assets/templates/head-meta-tags.html?raw'
 
 /** Debe quedar sincronizado con THEME_BRANCH_RE de scripts/sync-master.mjs. */
 const THEME_BRANCH_RE = /tema_general_mail_general\s*==\s*'([^']+)'/g
-const ASSIGN_RE = /\{%\s*assign\s+([a-z_0-9]+_mail_general)\s*=\s*'([^']*)'\s*%\}/g
+
+/**
+ * La convención del repo es que las variables de tema terminan en
+ * `_mail_general` — pero `bg_solid_generico100_mail_body` es una excepción
+ * real: se define UNA vez por cada una de las 11 ramas de tema (mismo lugar,
+ * mismo patrón que cualquier `_mail_general`, confirmado línea por línea en
+ * head-meta-tags.html), solo que con el sufijo `_mail_body` porque el repo la
+ * agrupa con las variables de "contenido"/CTA en vez de las de banner/header.
+ * Se agrega por NOMBRE EXACTO (no ampliando el sufijo a todo `_mail_body`) a
+ * propósito: hay otras `_mail_body` en el archivo (ej.
+ * `alineado_molecular_mail_body`) que NO viven dentro de las ramas de tema
+ * — son parte de un `{% if %}` de ejemplo distinto, y ampliar el sufijo las
+ * capturaría igual, ensuciando el tema que las absorba (mismo riesgo ya
+ * documentado para variables de ejemplo fuera de rama, ver el comentario de
+ * `problack` en [[project_master_upstream_state]]). Si el día de mañana se
+ * necesita otra variable `_mail_body`, agregarla acá a mano, con el mismo
+ * cuidado (confirmar que aparece exactamente 1 vez POR rama).
+ */
+export const EXTRA_THEME_VAR_NAMES = ['bg_solid_generico100_mail_body']
+const ASSIGN_RE = new RegExp(
+  `\\{%\\s*assign\\s+([a-z_0-9]+_mail_general|${EXTRA_THEME_VAR_NAMES.join('|')})\\s*=\\s*'([^']*)'\\s*%\\}`,
+  'g',
+)
 
 export interface ThemeDef {
   /** Valor de `tema_general_mail_general` (ej. 'beige100', 'problack'). */
