@@ -46,9 +46,16 @@ function bannerIds(): string[] {
   return useBuilder.getState().document.banner.items.map((it) => it.id)
 }
 
+function setBannerType(bannerType: 'vertical' | 'horizontal') {
+  useBuilder.setState((s) => ({ document: { ...s.document, banner: { ...s.document.banner, bannerType } } }))
+}
+
+const promoItem = (id: string): BannerItem => ({ id, type: 'PROMO', fields: { promoText: '120' } })
+
 beforeEach(() => {
   setContenidos([])
   setBannerItems([])
+  setBannerType('vertical')
 })
 
 describe('insertContentBlock', () => {
@@ -295,6 +302,62 @@ describe('reorderBannerItem', () => {
     setBannerItems([tagsItem('A'), tagsItem('B')])
     useBuilder.getState().reorderBannerItem('does-not-exist', 0)
     expect(bannerIds()).toEqual(['A', 'B'])
+  })
+})
+
+// El maestro fija el orden en horizontal (molecula -> imagen -> tags, ver
+// components/banner/horizontalOrder.ts) — estas 4 acciones lo deben
+// respetar siempre, sin importar el índice de destino pedido.
+describe('horizontal banner item ordering (enforceHorizontalItemOrder)', () => {
+  it('insertBannerItem: inserting a molecule-zone piece past the image module snaps it back before it', () => {
+    setBannerType('horizontal')
+    setBannerItems([imgFijaItem('img')])
+    useBuilder.getState().insertBannerItem('PROMO', 5)
+    expect(bannerIds().slice(-1)).toEqual(['img'])
+    expect(useBuilder.getState().document.banner.items.map((it) => it.type)).toEqual(['PROMO', 'IMG_FIJA'])
+  })
+
+  it('insertBannerItem: inserting TAGS before the image module snaps it back after it', () => {
+    setBannerType('horizontal')
+    setBannerItems([imgFijaItem('img')])
+    useBuilder.getState().insertBannerItem('TAGS', 0)
+    expect(useBuilder.getState().document.banner.items.map((it) => it.type)).toEqual(['IMG_FIJA', 'TAGS'])
+  })
+
+  it('duplicateBannerItem: duplicating TAGS to sit right after itself, ahead of the image, still ends up after the image', () => {
+    setBannerType('horizontal')
+    setBannerItems([tagsItem('tags'), imgFijaItem('img')])
+    useBuilder.getState().duplicateBannerItem('tags')
+    const types = useBuilder.getState().document.banner.items.map((it) => it.type)
+    expect(types).toEqual(['IMG_FIJA', 'TAGS', 'TAGS'])
+  })
+
+  it('reorderBannerItem: dragging TAGS to the front is a no-op in practice — it lands back after the image', () => {
+    setBannerType('horizontal')
+    setBannerItems([promoItem('a'), imgFijaItem('img'), tagsItem('tags')])
+    useBuilder.getState().reorderBannerItem('tags', 0)
+    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
+  })
+
+  it('reorderBannerItem: dragging a molecule item past the image module snaps it back before it', () => {
+    setBannerType('horizontal')
+    setBannerItems([promoItem('a'), imgFijaItem('img'), tagsItem('tags')])
+    useBuilder.getState().reorderBannerItem('a', 3)
+    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
+  })
+
+  it('reorderBannerItem: reordering 2 molecule items among themselves works normally (same rank, no snap-back)', () => {
+    setBannerType('horizontal')
+    setBannerItems([promoItem('a'), { id: 'b', type: 'TEXTOM', fields: { text: [] } }, imgFijaItem('img')])
+    useBuilder.getState().reorderBannerItem('b', 0)
+    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['b', 'a', 'img'])
+  })
+
+  it('vertical banners are completely unaffected — any order is left as the user made it', () => {
+    setBannerType('vertical')
+    setBannerItems([tagsItem('tags'), imgFijaItem('img')])
+    useBuilder.getState().reorderBannerItem('tags', 0)
+    expect(bannerIds()).toEqual(['tags', 'img'])
   })
 })
 

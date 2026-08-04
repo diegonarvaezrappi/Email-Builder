@@ -14,6 +14,7 @@ const promo = (id: string, promoText = '120'): BannerItem => ({ id, type: 'PROMO
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['tag 1'] } })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
+const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
 
 describe('renderBannerSnippet', () => {
   it('default document (vertical, pre-loaded with PROMO/TEXTOM/TEXTO_COMPLEMENTARIO/IMG_FIJA/TAGS) renders every default piece', () => {
@@ -135,6 +136,27 @@ describe('renderBannerSnippet', () => {
       const html = renderBannerSnippet(d.banner, d)
       expect(html).toContain('rgba(229,182,127,0.5)') // bg_tag_fondo_mail_general, sin tocar
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
+    })
+  })
+
+  describe('horizontal item order (defensive re-check, see horizontalOrder.ts)', () => {
+    it('a stored order that would only be valid in vertical (TAGS before the image) renders reordered when bannerType is horizontal', () => {
+      // Este orden nunca debería poder guardarse vía las acciones del store
+      // (ya lo normalizan), pero cambiar bannerType de vertical a horizontal
+      // no pasa por ellas — esto simula justo ese caso: doc.banner.items
+      // "atrasado", y renderBannerSnippet lo corrige solo antes de renderizar.
+      const d = withItems([tags('tags'), promo('a'), imgFija('img')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal' },
+      })
+      const html = renderBannerSnippet(d.banner, d)
+      const idxA = html.indexOf('BITEM:PROMO:a')
+      const idxImg = html.indexOf('BITEM:IMG_FIJA:img')
+      const idxTags = html.indexOf('BITEM:TAGS:tags')
+      expect(idxA).toBeGreaterThan(-1)
+      expect(idxImg).toBeGreaterThan(-1)
+      expect(idxTags).toBeGreaterThan(-1)
+      expect(idxA).toBeLessThan(idxImg)
+      expect(idxImg).toBeLessThan(idxTags)
     })
   })
 })

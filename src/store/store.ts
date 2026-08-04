@@ -10,6 +10,7 @@ import type { GlobalFields } from '../global/schema'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType } from '../components/banner/exclusivity'
+import { enforceHorizontalItemOrder } from '../components/banner/horizontalOrder'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
 
@@ -130,7 +131,8 @@ export const useBuilder = create<BuilderState>()(
           const filtered = applyImageModuleExclusivity(s.document.banner.items, type)
           const next = [...filtered]
           next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, item)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
         }),
 
       duplicateBannerItem: (id) =>
@@ -152,7 +154,8 @@ export const useBuilder = create<BuilderState>()(
           const insertAt = survivingBefore + (originalSurvives ? 1 : 0)
           const next = [...filtered]
           next.splice(insertAt, 0, copy)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
         }),
 
       reorderBannerItem: (id, toIndex) =>
@@ -163,7 +166,8 @@ export const useBuilder = create<BuilderState>()(
           const next = [...s.document.banner.items]
           const [moved] = next.splice(from, 1)
           next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, moved)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
         }),
 
       removeBannerItem: (id) =>
@@ -192,7 +196,8 @@ export const useBuilder = create<BuilderState>()(
           const next = [...items]
           if (idx === -1) next.push(newItem)
           else next[idx] = newItem
-          return { document: { ...s.document, banner: { ...s.document.banner, items: next } } }
+          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
+          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
         }),
     }),
     {

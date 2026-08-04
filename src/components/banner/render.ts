@@ -10,6 +10,7 @@ import { wrapWithBannerItemMarkers } from '../../template/contentBlocks'
 import { getBannerItemDef, type BannerItemRenderCtx } from '../../bannerItemRegistry'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { themeVars } from '../../themes/themes'
+import { enforceHorizontalItemOrder } from './horizontalOrder'
 import { bannerShell, ITEMS_MARKER, MOLECULAS_MARKER } from './shell'
 import type { BannerFields } from './schema'
 import type { BannerItem } from './items/schemas'
@@ -78,7 +79,12 @@ interface ItemGroup {
  */
 export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: BannerItemRenderCtx): ItemGroup[] {
   const groups: ItemGroup[] = []
-  for (const item of items) {
+  // Red de seguridad: store/store.ts ya deja doc.banner.items en el orden
+  // válido para horizontal tras cualquier inserción/reordenamiento, pero
+  // cambiar bannerType de vertical a horizontal (ui/LibraryPanel.tsx) no pasa
+  // por esas acciones — ver horizontalOrder.ts.
+  const orderedItems = enforceHorizontalItemOrder(items, ctx.bannerType)
+  for (const item of orderedItems) {
     const def = getBannerItemDef(item.type)
     if (!def || !def.orientations.includes(ctx.bannerType)) continue
 
