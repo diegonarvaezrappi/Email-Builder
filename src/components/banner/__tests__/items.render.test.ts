@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
 import type { EmailDocument } from '../../../model'
 import { richTextFromPlain } from '../../../richText/model'
+import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
 import {
   renderCreditosSnippet,
@@ -82,6 +83,30 @@ describe('renderTextoXlSnippet', () => {
     expect(renderTextoXlSnippet({ text: richTextFromPlain('120') }, doc(), ctx(bannerType))).toContain('bnr-xl')
     expect(renderTextoXlSnippet({ text: richTextFromPlain('120 créditos') }, doc(), ctx(bannerType))).toContain('bnr-lg')
   })
+
+  describe('accent color by theme', () => {
+    const nonDarkThemes = THEME_SLUGS.filter((tema) => !DARK_THEME_SLUGS.includes(tema))
+
+    it.each(nonDarkThemes)('%s (not a dark theme): keeps color_acento2_mail_general', (tema) => {
+      const html = renderTextoXlSnippet(
+        { text: richTextFromPlain('x') },
+        doc({ global: { ...defaultEmailDocument.global, tema } }),
+        ctx('vertical'),
+      )
+      expect(html, tema).toContain('{{color_acento2_mail_general}}')
+      expect(html, tema).not.toContain('{{color_acento1_mail_general}}')
+    })
+
+    it.each(DARK_THEME_SLUGS)('%s (dark theme): switches to color_acento1_mail_general', (tema) => {
+      const html = renderTextoXlSnippet(
+        { text: richTextFromPlain('x') },
+        doc({ global: { ...defaultEmailDocument.global, tema } }),
+        ctx('vertical'),
+      )
+      expect(html, tema).toContain('{{color_acento1_mail_general}}')
+      expect(html, tema).not.toContain('{{color_acento2_mail_general}}')
+    })
+  })
 })
 
 describe('renderTextoMSnippet', () => {
@@ -97,6 +122,31 @@ describe('renderTextoMSnippet', () => {
     const html = renderTextoMSnippet({ text: richTextFromPlain('de regalo') }, doc(), ctx('horizontal'))
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
+  })
+
+  describe('accent color by theme (same rule as TEXTOXL)', () => {
+    it.each(THEME_SLUGS.filter((tema) => !DARK_THEME_SLUGS.includes(tema)))(
+      '%s (not a dark theme): keeps color_acento2_mail_general',
+      (tema) => {
+        const html = renderTextoMSnippet(
+          { text: richTextFromPlain('x') },
+          doc({ global: { ...defaultEmailDocument.global, tema } }),
+          ctx('vertical'),
+        )
+        expect(html, tema).toContain('{{color_acento2_mail_general}}')
+        expect(html, tema).not.toContain('{{color_acento1_mail_general}}')
+      },
+    )
+
+    it.each(DARK_THEME_SLUGS)('%s (dark theme): switches to color_acento1_mail_general', (tema) => {
+      const html = renderTextoMSnippet(
+        { text: richTextFromPlain('x') },
+        doc({ global: { ...defaultEmailDocument.global, tema } }),
+        ctx('vertical'),
+      )
+      expect(html, tema).toContain('{{color_acento1_mail_general}}')
+      expect(html, tema).not.toContain('{{color_acento2_mail_general}}')
+    })
   })
 })
 

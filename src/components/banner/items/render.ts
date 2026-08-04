@@ -18,6 +18,7 @@ import type { EmailDocument } from '../../../model'
 import { escapeHtmlAttr, escapeHtmlText } from '../../../template/htmlText'
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
+import { DARK_THEME_SLUGS } from '../../../themes/themes'
 import { renderCtaSnippet } from '../../cta/render'
 import type { BannerItemRenderCtx } from '../schema'
 import { loadBannerMoleculaFile } from './files'
@@ -115,11 +116,29 @@ export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocumen
   return resolveBannerVars(raw, vars, fileName)
 }
 
+// --- TEXTOXL / TEXTOM: color de acento por tema -----------------------------
+// El maestro trae `color: {{color_acento2_mail_general}}` fijo en las 2
+// moléculas (el naranja de marca casi constante en todos los temas — ver
+// memoria project_banner_text_colors_2026-08-03). Pedido explícito: en los 3
+// temas oscuros, usar `color_acento1_mail_general` en su lugar (mejor
+// contraste sobre esos fondos). Se sustituye el NOMBRE de la variable acá,
+// ANTES de la pasada final de tema de components/banner/render.ts — esa
+// pasada sigue resolviendo cualquier `_mail_general` que quede, sin tener que
+// conocer esta regla. THROW si el literal ya no aparece: el maestro cambió
+// esa línea y hay que revisar este parche.
+const TEXTOXL_TEXTOM_ACCENT_VAR = '{{color_acento2_mail_general}}'
+const TEXTOXL_TEXTOM_DARK_ACCENT_VAR = '{{color_acento1_mail_general}}'
+
+function withDarkThemeAccentOverride(html: string, tema: string, fileName: string): string {
+  if (!DARK_THEME_SLUGS.includes(tema)) return html
+  return substituteOnce(html, TEXTOXL_TEXTOM_ACCENT_VAR, TEXTOXL_TEXTOM_DARK_ACCENT_VAR, fileName)
+}
+
 // --- TEXTOXL -------------------------------------------------------------------
 
-export function renderTextoXlSnippet(fields: TextoXlFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
+export function renderTextoXlSnippet(fields: TextoXlFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_textoxl_${ctx.bannerType}.html`
-  const raw = stripComments(loadBannerMoleculaFile(fileName))
+  const raw = withDarkThemeAccentOverride(stripComments(loadBannerMoleculaFile(fileName)), doc.global.tema, fileName)
   const size = liveTextSizing(plainText(fields.text), ctx.bannerType)
   const vars: Record<string, string> = {
     banner_copy_modulo_textoxl: renderRichText(fields.text, LIQUID_COLOR_TOKENS),
@@ -144,9 +163,9 @@ export function renderTextoXlSnippet(fields: TextoXlFields, _doc: EmailDocument,
 // estos (05-docs/INDICE-DE-COMPONENTES.md los marca como duplicado sin
 // resolver) — no se sincronizan ni se usan.
 
-export function renderTextoMSnippet(fields: TextoMFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
+export function renderTextoMSnippet(fields: TextoMFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_textom_${ctx.bannerType}.html`
-  const raw = stripComments(loadBannerMoleculaFile(fileName))
+  const raw = withDarkThemeAccentOverride(stripComments(loadBannerMoleculaFile(fileName)), doc.global.tema, fileName)
   return resolveBannerVars(raw, { banner_copy_modulo_textom: renderRichText(fields.text, LIQUID_COLOR_TOKENS) }, fileName)
 }
 
