@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { useBuilder, useTemporal } from './store/store'
-import { headerPatchForTheme, ctaStyleForTheme } from './themeDefaults'
+import { headerPatchForTheme, ctaStyleForTheme, bannerBackgroundEnabledForTheme } from './themeDefaults'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
@@ -31,10 +31,11 @@ function App() {
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
 
-  // Ajustes por defecto del header/CTA al cambiar el TEMA GENERAL — ver
+  // Ajustes por defecto del header/CTA/banner al cambiar el TEMA GENERAL — ver
   // themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100 cambian
   // la marca del header; pastel/oscuros fuerzan la versión del logo; Pro/
-  // ProBlack cambian el estilo de CTA). Un solo patch por header, no 2
+  // ProBlack cambian el estilo de CTA; pastel apaga el fondo del banner por
+  // defecto). Un solo patch por header, no 2
   // escrituras sueltas: si header.brand y header.logoBackground cambian a la
   // vez (ej. tema Dark Turbo), 2 llamadas a setSlotFields seguidas se pisarían
   // entre sí porque ambas partirían del mismo `doc.header` ya obsoleto tras la
@@ -54,6 +55,9 @@ function App() {
 
     const ctaStyle = ctaStyleForTheme(doc.global, doc.global.tema, prevTema)
     if (ctaStyle) setGlobalFields({ ...doc.global, ctaStyle })
+
+    const backgroundEnabled = bannerBackgroundEnabledForTheme(doc.banner, doc.global.tema, prevTema)
+    if (backgroundEnabled !== null) setSlotFields('banner', { ...doc.banner, backgroundEnabled })
 
     prevTemaRef.current = doc.global.tema
     // Deliberadamente solo depende del tema: si el usuario edita header.brand

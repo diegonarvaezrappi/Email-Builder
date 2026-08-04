@@ -51,11 +51,15 @@ export const bannerSchema = z.object({
   items: z.array(bannerItemSchema).default([]),
   /** El contenedor de banner trae, por tema, un tono sólido
    *  (`bg_bannertono_mail_general`) y a veces una imagen (`bg_bannerimg_mail_general`)
-   *  — activos por defecto en oscuros/Pro/ProBlack, transparentes en pastel
-   *  (ver components/banner/render.ts). `true` = respetar lo que traiga el
-   *  tema activo (default); `false` = forzar el "apagado" que el propio
-   *  maestro documenta en un comentario dentro de big-banner-*.html, sin
-   *  importar el tema. */
+   *  — activos por defecto en oscuros/Pro/ProBlack, apagados por defecto en
+   *  pastel (ver components/banner/render.ts). `true` = respetar/activar el
+   *  fondo del tema activo; `false` = forzar el "apagado" que el propio
+   *  maestro documenta en un comentario dentro de big-banner-*.html. En
+   *  pastel, activarlo pinta `bg_solid_mail_general` (no el tono del tema,
+   *  que ahí es transparente) — mismo comentario del maestro. El default
+   *  estático de este campo (true) es el de los temas NO pastel; el efecto
+   *  de tema en App.tsx (themeDefaults.ts) lo corrige a `false` al entrar a
+   *  un tema pastel, mismo patrón que header.brand/logoBackground. */
   backgroundEnabled: z.boolean().default(true),
 })
 export type BannerFields = z.infer<typeof bannerSchema>

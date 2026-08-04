@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { defaultHeaderFields } from '../components/header/schema'
+import { defaultBannerFields } from '../components/banner/schema'
 import { defaultGlobalFields } from '../global/schema'
-import { ctaStyleForTheme, headerPatchForTheme } from '../themeDefaults'
+import { bannerBackgroundEnabledForTheme, ctaStyleForTheme, headerPatchForTheme } from '../themeDefaults'
 
 // prevTema=null en la mayoría de estos tests = "primer render, sin tema
 // anterior" (mismo criterio que el chequeo original contra el default). Los
@@ -156,5 +157,38 @@ describe('ctaStyleForTheme', () => {
   it('does not revert a manually-chosen ctaStyle', () => {
     const globalManuallyChanged = { ...defaultGlobalFields, ctaStyle: 'verde' as const }
     expect(ctaStyleForTheme(globalManuallyChanged, 'beige100', 'pro')).toBeNull()
+  })
+})
+
+describe('bannerBackgroundEnabledForTheme', () => {
+  it('turns it off while entering a pastel theme from the default (true)', () => {
+    for (const tema of ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100']) {
+      expect(bannerBackgroundEnabledForTheme(defaultBannerFields, tema, null)).toBe(false)
+    }
+  })
+
+  it('returns null for non-pastel themes — true is already the default estático del schema', () => {
+    expect(bannerBackgroundEnabledForTheme(defaultBannerFields, 'darkturbo', null)).toBeNull()
+    expect(bannerBackgroundEnabledForTheme(defaultBannerFields, 'pro', null)).toBeNull()
+  })
+
+  it('reverts pastel -> oscuro back to true, since the user never touched the checkbox (same bug as brand)', () => {
+    const afterPastel = bannerBackgroundEnabledForTheme(defaultBannerFields, 'beige100', null)
+    expect(afterPastel).toBe(false)
+
+    const bannerAfterPastel = { ...defaultBannerFields, backgroundEnabled: afterPastel! }
+    expect(bannerBackgroundEnabledForTheme(bannerAfterPastel, 'darkturbo', 'beige100')).toBe(true)
+  })
+
+  it('does not revert a manually-enabled pastel background when leaving the theme', () => {
+    // El usuario prendió el checkbox a mano en beige100 (bg_solid_mail_general
+    // visible); este efecto no debe apagarlo de nuevo al pasar a darkturbo.
+    const bannerManuallyEnabled = { ...defaultBannerFields, backgroundEnabled: true }
+    expect(bannerBackgroundEnabledForTheme(bannerManuallyEnabled, 'darkturbo', 'beige100')).toBeNull()
+  })
+
+  it('does not re-disable a manually-enabled pastel background on an unrelated theme change between 2 pastel themes', () => {
+    const bannerManuallyEnabled = { ...defaultBannerFields, backgroundEnabled: true }
+    expect(bannerBackgroundEnabledForTheme(bannerManuallyEnabled, 'rosa100', 'beige100')).toBeNull()
   })
 })

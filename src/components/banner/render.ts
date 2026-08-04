@@ -9,7 +9,7 @@ import { escapeHtmlAttr } from '../../template/htmlText'
 import { wrapWithBannerItemMarkers } from '../../template/contentBlocks'
 import { getBannerItemDef, type BannerItemRenderCtx } from '../../bannerItemRegistry'
 import { resolveThemeVars } from '../../themes/inlineTheme'
-import { themeVars } from '../../themes/themes'
+import { PASTEL_THEME_SLUGS, themeVars } from '../../themes/themes'
 import { enforceHorizontalItemOrder } from './horizontalOrder'
 import { bannerShell, ITEMS_MARKER, MOLECULAS_MARKER } from './shell'
 import type { BannerFields } from './schema'
@@ -36,6 +36,33 @@ const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
 const BANNER_BACKGROUND_OFF_VARS = {
   bg_bannertono_mail_general: 'rgba(0,0,0,0.0)',
   bg_bannerimg_mail_general: 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A',
+}
+
+/**
+ * Mismo comentario "CONTENEDOR DEL BANNER" de big-banner-*.html, pero para el
+ * grupo pastel — que trae el fondo APAGADO por defecto (al revés de oscuros/
+ * Pro/ProBlack): su propio `bg_bannertono_mail_general` ya es transparente y
+ * su `padd_banner_mail_general` ya es `0px 0px`, así que activar el checkbox
+ * ahí no puede reutilizar BANNER_BACKGROUND_OFF_VARS (ese `bg_bannerimg`
+ * pintaría un recuadro blanco encima del tono transparente — el maestro
+ * documenta que la fila de imagen para pastel "se mantiene idéntico" sin
+ * importar el estado del checkbox, así que nunca se toca acá). El maestro
+ * dice literalmente que, activado, el tono pasa a `{{bg_solid_mail_general}}`
+ * y el padding al mismo literal que los temas no-pastel ya traen por defecto.
+ */
+const PASTEL_BANNER_BACKGROUND_ON_PADDING = '15px 10px'
+
+function bannerThemeVars(fields: BannerFields, tema: string): Record<string, string> {
+  const vars = themeVars(tema)
+  if (PASTEL_THEME_SLUGS.includes(tema)) {
+    if (!fields.backgroundEnabled) return vars
+    return {
+      ...vars,
+      bg_bannertono_mail_general: vars.bg_solid_mail_general,
+      padd_banner_mail_general: PASTEL_BANNER_BACKGROUND_ON_PADDING,
+    }
+  }
+  return fields.backgroundEnabled ? vars : { ...vars, ...BANNER_BACKGROUND_OFF_VARS }
 }
 
 /**
@@ -122,11 +149,10 @@ export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): s
   // el tema. No toca `{{content_blocks.${CTA-template}}}` del CTA interno:
   // resolveThemeVars exige el sufijo `_mail_general`.
   //
-  // Con el fondo desactivado, se pisan bg_bannertono/bg_bannerimg ANTES de
-  // resolver — así el resto de las variables del tema (colores de texto, tags,
-  // etc.) se resuelven igual que siempre, solo estas 2 cambian.
-  const vars = fields.backgroundEnabled
-    ? themeVars(doc.global.tema)
-    : { ...themeVars(doc.global.tema), ...BANNER_BACKGROUND_OFF_VARS }
+  // Con el fondo desactivado (o activado en pastel), se pisan bg_bannertono/
+  // bg_bannerimg/padd_banner ANTES de resolver — así el resto de las
+  // variables del tema (colores de texto, tags, etc.) se resuelven igual que
+  // siempre, solo estas cambian. Ver bannerThemeVars más arriba.
+  const vars = bannerThemeVars(fields, doc.global.tema)
   return resolveThemeVars(html, vars)
 }

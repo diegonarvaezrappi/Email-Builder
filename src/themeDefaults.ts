@@ -31,6 +31,8 @@
 // ============================================================================
 import { defaultHeaderFields } from './components/header/schema'
 import type { HeaderFields } from './components/header/schema'
+import { defaultBannerFields } from './components/banner/schema'
+import type { BannerFields } from './components/banner/schema'
 import { defaultGlobalFields } from './global/schema'
 import type { CtaStyle, GlobalFields } from './global/schema'
 import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS } from './themes/themes'
@@ -85,6 +87,21 @@ function expectedCtaStyleForTema(tema: string): CtaStyle {
 }
 
 /**
+ * El fondo del banner (banner.backgroundEnabled) viene activado por defecto
+ * en el schema (true, el comportamiento de los temas no-pastel) — en pastel
+ * el maestro documenta que el contenedor viene APAGADO por defecto (ver
+ * components/banner/render.ts), así que el default correcto ahí es false.
+ * Mismo patrón de "no tocado desde el tema anterior" que brand/ctaStyle (NO
+ * el de logoBackground, que siempre se fuerza): activar/desactivar el fondo
+ * es una elección válida en cualquier tema, así que si el usuario ya tocó el
+ * checkbox a mano, este efecto no debe volver a pisarlo hasta el próximo
+ * cambio de tema sin tocar.
+ */
+function expectedBackgroundEnabledForTema(tema: string): boolean {
+  return !PASTEL_THEME_SLUGS.includes(tema)
+}
+
+/**
  * Qué campos del header debería escribir el efecto de tema, o null si ninguno
  * aplica. Devuelve un patch (no el header completo) para que el caller decida
  * cómo mezclarlo — juntar brand + logoBackground en un solo patch (en vez de
@@ -126,4 +143,15 @@ export function ctaStyleForTheme(global: GlobalFields, tema: string, prevTema: s
 
   const ctaStyle = expectedCtaStyleForTema(tema)
   return ctaStyle !== global.ctaStyle ? ctaStyle : null
+}
+
+/** Análogo para banner.backgroundEnabled — ver expectedBackgroundEnabledForTema. */
+export function bannerBackgroundEnabledForTheme(banner: BannerFields, tema: string, prevTema: string | null): boolean | null {
+  const untouchedSincePrevTema =
+    banner.backgroundEnabled ===
+    (prevTema === null ? defaultBannerFields.backgroundEnabled : expectedBackgroundEnabledForTema(prevTema))
+  if (!untouchedSincePrevTema) return null
+
+  const backgroundEnabled = expectedBackgroundEnabledForTema(tema)
+  return backgroundEnabled !== banner.backgroundEnabled ? backgroundEnabled : null
 }
