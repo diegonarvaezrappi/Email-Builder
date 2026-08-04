@@ -69,6 +69,12 @@ describe('renderCreditosSnippet', () => {
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
   })
+
+  it('horizontal: fixes the master\'s "font-siaze" typo so the amount actually gets a font-size (was silently dropped by the browser)', () => {
+    const html = renderCreditosSnippet({ creditosText: '120' }, doc(), ctx('horizontal'))
+    expect(html).not.toContain('font-siaze')
+    expect(html).toMatch(/font-size:\s*\{\{banner_copy_modulo_creditos_fontsize\}\}|font-size:\s*\d/)
+  })
 })
 
 describe('renderTextoXlSnippet', () => {

@@ -76,10 +76,29 @@ export function renderPromoSnippet(fields: PromoFields, _doc: EmailDocument, ctx
 }
 
 // --- CREDITOS ------------------------------------------------------------------
+// BUG DEL MAESTRO (no se puede tocar el archivo — regla de solo lectura): el
+// <span> del monto en molecula_creditos_horizontal.html trae `font-siaze` en
+// vez de `font-size` (confirmado por diff contra el vertical, que sí lo
+// escribe bien) — el navegador descarta esa declaración inline inválida
+// entera, y como los `.bnr-xl/.bnr-lg` con !important de template_base.html
+// SOLO aplican en el breakpoint mobile (max-width:620px), en escritorio el
+// número de CREDITOS pierde su tamaño grande y queda con el font-size por
+// defecto — exactamente el "pierde sus estilos" reportado. Se corrige acá
+// después de cargar el archivo. THROW si el typo ya no aparece: significaría
+// que David lo arregló upstream y este parche quedó muerto, hay que borrarlo.
+const CREDITOS_HORIZONTAL_FONT_TYPO = 'font-siaze:'
+
+function fixCreditosHorizontalFontSizeTypo(html: string, fileName: string): string {
+  if (!html.includes(CREDITOS_HORIZONTAL_FONT_TYPO)) {
+    throw new Error(`${fileName}: ya no contiene el typo "${CREDITOS_HORIZONTAL_FONT_TYPO}" — quitar fixCreditosHorizontalFontSizeTypo en components/banner/items/render.ts`)
+  }
+  return html.replace(CREDITOS_HORIZONTAL_FONT_TYPO, 'font-size:')
+}
 
 export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_creditos_${ctx.bannerType}.html`
-  const raw = stripComments(loadBannerMoleculaFile(fileName))
+  let raw = stripComments(loadBannerMoleculaFile(fileName))
+  if (ctx.bannerType === 'horizontal') raw = fixCreditosHorizontalFontSizeTypo(raw, fileName)
   const size = liveTextSizing(fields.creditosText, ctx.bannerType)
   const vars: Record<string, string> = {
     banner_copy_modulo_creditos: escapeHtmlText(fields.creditosText),
