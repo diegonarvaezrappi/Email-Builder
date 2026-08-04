@@ -41,6 +41,15 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
         </span>
       </label>
 
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.backgroundEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set('backgroundEnabled', e.target.checked)}
+        />
+        <span>Fondo del banner (color/imagen por defecto del tema)</span>
+      </label>
+
       {hiddenItems.length > 0 && (
         <div className="field">
           <span>Piezas ocultas (no aplican al tipo "{BANNER_TYPE_LABELS[value.bannerType]}")</span>

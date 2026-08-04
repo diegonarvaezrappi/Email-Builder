@@ -20,6 +20,24 @@ import type { BannerItem } from './items/schemas'
 const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
 
 /**
+ * Los valores "apagado" que el propio maestro documenta en el comentario
+ * `<!-- CONTENEDOR DEL BANNER: ... -->` de big-banner-horizontal.html /
+ * big-banner-vertical.html — es el mismo mecanismo que ahí se describe como
+ * edición manual (reemplazar el `{{..._mail_general}}` por este literal),
+ * acá aplicado desde el checkbox "Fondo del banner" en vez de a mano.
+ *
+ * `bgBannerimg` no es un `url()` vacío: es la MISMA imagen placeholder en
+ * blanco que el maestro ya usa en otros lugares como "acá no va nada"
+ * (ver 04_content-modules/logos/modulo-logos.html) — más fiel al maestro que
+ * inventar un `url()` vacío, y evita que algún cliente de correo trate un
+ * `background-image: url();` roto de forma rara.
+ */
+const BANNER_BACKGROUND_OFF_VARS = {
+  bg_bannertono_mail_general: 'rgba(0,0,0,0.0)',
+  bg_bannerimg_mail_general: 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A',
+}
+
+/**
  * Los 5 `{% assign %}` de EJEMPLO (banner_copy_modulo_* / banner_img_modulo_auto_ancho)
  * que el maestro trae ANTES del doctype (06-examples/estructura_general.html) — Liquid VIVO
  * (no comentado) que hoy se cuela tal cual en todo HTML exportado (confirmado
@@ -97,5 +115,12 @@ export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): s
   // las de todas las piezas, sin que cada render de pieza tenga que conocer
   // el tema. No toca `{{content_blocks.${CTA-template}}}` del CTA interno:
   // resolveThemeVars exige el sufijo `_mail_general`.
-  return resolveThemeVars(html, themeVars(doc.global.tema))
+  //
+  // Con el fondo desactivado, se pisan bg_bannertono/bg_bannerimg ANTES de
+  // resolver — así el resto de las variables del tema (colores de texto, tags,
+  // etc.) se resuelven igual que siempre, solo estas 2 cambian.
+  const vars = fields.backgroundEnabled
+    ? themeVars(doc.global.tema)
+    : { ...themeVars(doc.global.tema), ...BANNER_BACKGROUND_OFF_VARS }
+  return resolveThemeVars(html, vars)
 }

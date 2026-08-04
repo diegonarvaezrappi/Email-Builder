@@ -94,4 +94,46 @@ describe('renderBannerSnippet', () => {
     expect(html).toContain('rgba(229,182,127,0.5)') // bg_tag_fondo_mail_general
     expect(html).toContain('rgba(0,0,0,0.0)') // bg_bannertono_mail_general
   })
+
+  describe('backgroundEnabled', () => {
+    it('by default (true) bakes the real theme tone/image — visible on a dark/premium theme', () => {
+      const d = doc({
+        global: { ...defaultEmailDocument.global, tema: 'darkturbo' },
+        banner: { ...defaultEmailDocument.banner, backgroundEnabled: true },
+      })
+      expect(renderBannerSnippet(d.banner, d)).toContain('rgba(0,58,52,0.4)') // bg_bannertono_mail_general de darkturbo
+    })
+
+    it('when false, forces the tone to fully transparent and the image to the master\'s own "blank" placeholder, on ANY theme', () => {
+      // rgba(42,43,43,1.0) (bg_bannertono de Pro) también es, por coincidencia
+      // de datos del tema, el valor de bg_tag_contenedor_mail_general (fondo
+      // de los TAGS) — así que la comparación va acotada al <div> contenedor
+      // del banner (background + max-width:480px, ver big-banner-*.html), no
+      // "en cualquier parte del html", para no confundir un valor legítimo de
+      // otra variable con el tono del banner sin desactivar.
+      for (const tema of ['darkturbo', 'pro', 'darkneon']) {
+        const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: ['a'] } }], {
+          global: { ...defaultEmailDocument.global, tema },
+          banner: { ...defaultEmailDocument.banner, backgroundEnabled: false },
+        })
+        const html = renderBannerSnippet(d.banner, d)
+        const container = html.match(/background:\s*[^;]*;\s*max-width:\s*480px[^>]*>/)?.[0]
+        expect(container, tema).toBeDefined()
+        expect(container, tema).toContain('rgba(0,0,0,0.0)')
+        expect(html, tema).toContain('https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A')
+        // El bg_bannerimg real del tema (solo Dark Neon lo trae) no sobrevive.
+        expect(html, tema).not.toContain('https://lh3.googleusercontent.com/d/1qzt')
+      }
+    })
+
+    it('turning it off does not disturb the theme resolution of unrelated variables', () => {
+      const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: ['a'] } }], {
+        global: { ...defaultEmailDocument.global, tema: 'beige100' },
+        banner: { ...defaultEmailDocument.banner, backgroundEnabled: false },
+      })
+      const html = renderBannerSnippet(d.banner, d)
+      expect(html).toContain('rgba(229,182,127,0.5)') // bg_tag_fondo_mail_general, sin tocar
+      expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
+    })
+  })
 })

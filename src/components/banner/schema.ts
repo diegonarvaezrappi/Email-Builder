@@ -49,6 +49,14 @@ export const bannerSchema = z.object({
    *  AQUIELLINKDELBANNER (href + originalsrc). Vacío = <a> sin destino. */
   link: z.string().default(''),
   items: z.array(bannerItemSchema).default([]),
+  /** El contenedor de banner trae, por tema, un tono sólido
+   *  (`bg_bannertono_mail_general`) y a veces una imagen (`bg_bannerimg_mail_general`)
+   *  — activos por defecto en oscuros/Pro/ProBlack, transparentes en pastel
+   *  (ver components/banner/render.ts). `true` = respetar lo que traiga el
+   *  tema activo (default); `false` = forzar el "apagado" que el propio
+   *  maestro documenta en un comentario dentro de big-banner-*.html, sin
+   *  importar el tema. */
+  backgroundEnabled: z.boolean().default(true),
 })
 export type BannerFields = z.infer<typeof bannerSchema>
 
