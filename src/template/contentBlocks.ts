@@ -32,3 +32,25 @@ export function wrapWithBannerItemMarkers(type: string, id: string, innerHtml: s
 
 export const BANNER_ITEM_OPEN_RE = /^\s*BITEM:([^:]+):(.+?)\s*$/
 export const BANNER_ITEM_CLOSE_RE = /^\s*\/BITEM:([^:]+):(.+?)\s*$/
+
+/**
+ * Mismo mecanismo, tercer prefijo DISTINTO ("DCARD") por la misma razón que
+ * BITEM no es BLOCK: una tarjeta de deal, un bloque de CONTENIDOS y una pieza de
+ * banner nunca deben confundirse entre sí en ui/Viewport.tsx.
+ *
+ * Dos diferencias con los otros dos, ambas a propósito:
+ *  - El primer campo es el id del BLOQUE dueño, no un tipo: las tarjetas de deal
+ *    son todas de la misma forma (no hay un `DealCardType` que distinguir), y en
+ *    cambio sí hace falta saber a qué instancia de DEALS pertenece cada una para
+ *    poder acotar el reordenamiento a su propio bloque.
+ *  - Una MISMA tarjeta emite 2 o 3 pares de estos marcadores, no uno: su HTML
+ *    vive repartido en las 3 filas del par (imágenes / textos / legales), que no
+ *    son contiguas. Quien mida tiene que unir los rects que compartan cardId —
+ *    ver mergeRectsById en ui/Viewport.tsx.
+ */
+export function wrapWithDealCardMarkers(blockId: string, cardId: string, innerHtml: string): string {
+  return `<!-- DCARD:${blockId}:${cardId} -->\n${innerHtml}\n<!-- /DCARD:${blockId}:${cardId} -->`
+}
+
+export const DEAL_CARD_OPEN_RE = /^\s*DCARD:([^:]+):(.+?)\s*$/
+export const DEAL_CARD_CLOSE_RE = /^\s*\/DCARD:([^:]+):(.+?)\s*$/

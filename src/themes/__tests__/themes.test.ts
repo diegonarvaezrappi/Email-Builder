@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { colorFooterForTheme, groupedThemes, parseThemes, PASTEL_THEME_SLUGS, THEMES, themeLabel, themeVars } from '../themes'
+import { colorFooterForTheme, groupedThemes, parseThemes, PASTEL_THEME_SLUGS, THEME_SLUGS, THEMES, themeLabel, themeVars } from '../themes'
 
 describe('parseThemes', () => {
   it('pairs each theme branch with the color_footer_mail_general inside it', () => {
@@ -93,6 +93,19 @@ describe('themeVars', () => {
     expect(themeVars('darkneon').bg_solid_generico100_mail_body).toBe('#000000')
     expect(themeVars('pro').bg_solid_generico100_mail_body).toBe('#000000')
     expect(themeVars('problack').bg_solid_generico100_mail_body).toBe('#FFFFFF')
+  })
+
+  it('also captures the 2 deal vars that break the naming convention, in all 11 themes', () => {
+    for (const slug of THEME_SLUGS) {
+      const vars = themeVars(slug)
+      // Sufijo _mail_body, como bg_solid_generico100_mail_body.
+      expect(vars.coronapro_mail_body, slug).toMatch(/^https:\/\//)
+      // El único nombre con GUIÓN de todo head-meta-tags.html — no lo captura
+      // ni el sufijo _mail_general ni una ampliación a _mail_body.
+      expect(vars['body_container_background_radius-peq'], slug).toBe(' 8px')
+    }
+    // Pro/ProBlack usan otra corona (la dorada), los otros 9 comparten una.
+    expect(themeVars('pro').coronapro_mail_body).not.toBe(themeVars('beige100').coronapro_mail_body)
   })
 })
 

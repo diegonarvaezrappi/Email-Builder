@@ -32,7 +32,21 @@ const THEME_BRANCH_RE = /tema_general_mail_general\s*==\s*'([^']+)'/g
  * necesita otra variable `_mail_body`, agregarla acá a mano, con el mismo
  * cuidado (confirmar que aparece exactamente 1 vez POR rama).
  */
-export const EXTRA_THEME_VAR_NAMES = ['bg_solid_generico100_mail_body']
+export const EXTRA_THEME_VAR_NAMES = [
+  'bg_solid_generico100_mail_body',
+  // Las 2 que consume el deal (components/deals/render.ts), verificadas con el
+  // mismo criterio: 1 assign por cada una de las 11 ramas, ninguno fuera de
+  // rama. `coronapro_mail_body` es el ícono de corona del badge de descuento
+  // (2 valores reales: uno para los 9 temas pastel/oscuros, el dorado para
+  // Pro/ProBlack). `body_container_background_radius-peq` es el radio chico del
+  // contenedor del deal — y es el único caso en todo el archivo con un GUIÓN en
+  // el nombre de la variable, así que no lo capturaría ni el sufijo
+  // `_mail_general` ni una ampliación a `_mail_body`: tiene que ir por nombre
+  // exacto. Hoy vale ' 8px' en los 11 temas, pero se lee del archivo igual (si
+  // el repo lo diferencia por tema, sale gratis).
+  'coronapro_mail_body',
+  'body_container_background_radius-peq',
+]
 const ASSIGN_RE = new RegExp(
   `\\{%\\s*assign\\s+([a-z_0-9]+_mail_general|${EXTRA_THEME_VAR_NAMES.join('|')})\\s*=\\s*'([^']*)'\\s*%\\}`,
   'g',

@@ -26,6 +26,15 @@
 //    archivo real (molecula_texto_pastilla.html) queda sin sincronizar porque
 //    todavía no se decidió si agregarlo como pieza — el warning de "archivo
 //    nuevo sin sincronizar" más abajo lo recuerda en cada corrida.
+// 3c. Copia NN-components/NN_content-modules/deals/deal_columnas.html →
+//    src/assets/templates/deals/ — ver src/components/deals/render.ts, que lo
+//    carga y arma con él los pares de tarjetas de deal. Los 2 archivos
+//    hermanos (deal-large.backup.html / deal-small.backup.html) quedan fuera a
+//    propósito: 02-components/README.md los declara retirados ("ya no se usan
+//    en el sistema... no están enlazados desde ningún template") y además
+//    modelan otra cosa (un deal único de motor de recomendación, con variables
+//    smalldeal_*/deal_recommendation_* y legales por país), no el par de
+//    tarjetas de copy manual que implementa la app.
 // 4. VALIDA el contrato antes de escribir nada:
 //    - Los marcadores `<!-- FOOTER -->` y `<!-- CIERRES -->` (los slots
 //      simples ya implementados) deben aparecer EXACTAMENTE una vez cada uno
@@ -51,6 +60,14 @@
 //      arriba) se validan igual: si el repo les cambia el `cta_alineado`
 //      fijo, el hardcode de items/render.ts (CTA_INTERNO) queda desactualizado
 //      en silencio si no se aborta acá.
+//    - deal_columnas.html debe traer cada una de sus ~25 anclas la cantidad
+//      exacta de veces que espera src/components/deals/render.ts (ver
+//      DEALS_ANCHOR_COUNTS). A diferencia del banner, el maestro NO marca las
+//      piezas opcionales del deal con `{% if %}`: solo las describe en
+//      comentarios ("si no hay texto se elimina la etiqueta completa"), así que
+//      el render las ubica por literal y las corta. Si el maestro renombra un
+//      `role="..."`, cambia un texto de ejemplo o duplica una celda, el render
+//      cortaría el elemento equivocado en silencio — por eso se cuenta acá.
 //    - Los 2 placeholders de NN-foundations deben aparecer AL MENOS una vez
 //      cada uno (no exactamente una: estructura_general.html duplicó por
 //      accidente el de global-styles.html — aparece una vez, correcto, en el
@@ -175,6 +192,7 @@ const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR
 const CIERRE_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'closing')
 const CTAS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'ctas')
 const BANNERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'banners')
+const CONTENT_MODULES_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'content-modules')
 
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
 const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
@@ -185,6 +203,10 @@ const BANNERS_DIR = BANNERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, BANNERS_SUB
 /** `banner_moleculas/` no lleva prefijo numérico (no es un NN_algo) — nombre fijo. */
 const BANNER_MOLECULAS_DIR_NAME = 'banner_moleculas'
 const BANNER_MOLECULAS_DIR = BANNERS_DIR && path.join(BANNERS_DIR, BANNER_MOLECULAS_DIR_NAME)
+const CONTENT_MODULES_DIR = CONTENT_MODULES_SUBDIR_NAME && path.join(COMPONENTS_DIR, CONTENT_MODULES_SUBDIR_NAME)
+/** `deals/` tampoco lleva prefijo numérico dentro de NN_content-modules/ — nombre fijo. */
+const DEALS_DIR_NAME = 'deals'
+const DEALS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, DEALS_DIR_NAME)
 
 /**
  * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
@@ -290,6 +312,68 @@ const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
 /** Discriminador de un pill de tag — se cuenta como texto simple (no con el
  *  regex real de la app) para que este script no dependa de src/. */
 const TAG_PILL_DISCRIMINATOR = '> tag 1 </h4>'
+
+/** El único archivo de deals/ que la app usa (ver la nota 3c del encabezado
+ *  sobre los 2 .backup.html excluidos). */
+const DEALS_FILE = 'deal_columnas.html'
+
+/**
+ * Cuántas veces debe aparecer cada ancla de deal_columnas.html, contando sobre
+ * el archivo SIN COMENTARIOS — que es exactamente lo que ve
+ * src/components/deals/render.ts (arranca con stripComments, igual que los
+ * renders de banner). La distinción importa: las URLs de ejemplo de la imagen
+ * de producto y del logo aparecen 4 veces en el archivo crudo (2 dentro de
+ * comentarios que explican "se puede reemplazar la imagen del ...", 2 en los
+ * atributos reales) y solo 2 al quitar los comentarios.
+ *
+ * El archivo trae las 2 celdas del par byte a byte iguales, así que casi todo
+ * va 2 veces (1 por celda); los 2 tags y su texto van 4 (2 por celda).
+ */
+const DEALS_COMMENT_RE = /<!--[\s\S]*?-->/g
+const DEALS_ANCHOR_COUNTS = {
+  // Aperturas/cierres de celda: components/deals/render.ts los usa para
+  // extraer las 3 plantillas de celda (imágenes / textos / legales). Los
+  // cierres son literales "atómicos" de 2 tags a propósito: la celda de
+  // imagen anida otra tabla, así que un `</td>` suelto cortaría en el interno.
+  '<td width="50%" style="width: 50%" >': 2,
+  '<td width="50%" style="width: 50%; vertical-align: top;': 2,
+  '<td width="50%" style="width: 50%;" >': 2,
+  '</table></td>': 2,
+  '</a></td>': 2,
+  // Link (token de relleno manual, no Liquid) — 1 por celda, cada tarjeta
+  // resuelve el suyo. No hay LINKDEAL1/LINKDEAL2 en el archivo real.
+  LINKDEAL: 2,
+  // Piezas de la celda de textos, en orden de aparición.
+  '{{deals_copy_1_promo}}': 2,
+  '{{deals_copy_2_promo}}': 2,
+  'role="MARKDOWN"': 2,
+  '{{coronapro_mail_body}}': 2,
+  '>$999</h4>': 2,
+  'role="COMPLEMENTO 1"': 2,
+  '>99% OFF</h5>': 2,
+  'role="COMPLEMENTO 2"': 2,
+  '$999</del>': 2,
+  'role="CATEGORIA"': 2,
+  '>Italiana</h5>': 2,
+  'role="RATING"': 2,
+  '&nbsp;4.9</h5>': 2,
+  'role="TIEMPO"': 2,
+  '&nbsp;xx min.</h5>': 2,
+  'role="molecula-tag"': 4,
+  '> tag 1 </h5>': 4,
+  '<strong>Pide ahora': 2,
+  // Celda de imagen.
+  'role="molecula-iconoL"': 2,
+  'https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png': 2,
+  'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j': 2,
+  // Íconos por defecto de TAG1 y TAG2 — distintos entre sí, y es justamente
+  // por eso que el render los usa para desambiguar cuál tag es cuál.
+  'https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa': 2,
+  'https://lh3.googleusercontent.com/d/19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn': 2,
+  // Celda de legales.
+  '<span role="molecula-texto" class="legal"': 2,
+  '>Aplican términos y condiciones | </span>': 2,
+}
 
 /** Debe quedar sincronizado con HEADER_BRAND_VALUES de src/components/header/schema.ts. */
 const HEADER_BRANDS = [
@@ -538,6 +622,42 @@ if (BANNER_MOLECULAS_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/deals/deal_columnas.html -----------------
+let dealsFileContent = ''
+if (DEALS_DIR) {
+  const fp = path.join(DEALS_DIR, DEALS_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}/${DEALS_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(DEALS_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(DEALS_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/deals/render.ts`)
+      }
+    }
+    dealsFileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que banner_moleculas/ — un archivo nuevo
+  // en deals/ que el script no conoce pasaría desapercibido.
+  const knownDealsFiles = new Set([DEALS_FILE, 'deal-large.backup.html', 'deal-small.backup.html'])
+  let actualDealsFiles = []
+  try {
+    actualDealsFiles = fs.readdirSync(DEALS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}: ${e.message}`)
+  }
+  const unknownDealsFiles = actualDealsFiles.filter((f) => !knownDealsFiles.has(f))
+  if (unknownDealsFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownDealsFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
@@ -613,6 +733,12 @@ for (const [name, content] of Object.entries(bannerMoleculaFileContents)) {
   fs.writeFileSync(path.join(BANNER_MOLECULAS_ASSETS_DIR, name), content, 'utf8')
 }
 
+if (dealsFileContent) {
+  const DEALS_ASSETS_DIR = path.join(ASSETS_DIR, DEALS_DIR_NAME)
+  fs.mkdirSync(DEALS_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(DEALS_ASSETS_DIR, DEALS_FILE), dealsFileContent, 'utf8')
+}
+
 const HEADERS_ASSETS_DIR = path.join(ASSETS_DIR, 'headers')
 fs.mkdirSync(HEADERS_ASSETS_DIR, { recursive: true })
 fs.writeFileSync(path.join(HEADERS_ASSETS_DIR, HEADER_WRAPPER_FILE), headerWrapperContent, 'utf8')
@@ -634,6 +760,9 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} ${Object.keys(bannerFileContents).length + Object.keys(bannerMoleculaFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}/ (${Object.keys(DEALS_ANCHOR_COUNTS).length} anclas OK)`,
 )
 if (themesMissingColorFooter.length === themeCount) {
   console.warn(

@@ -25,6 +25,11 @@ function App() {
   const removeBannerItem = useBuilder((s) => s.removeBannerItem)
   const updateBannerItemFields = useBuilder((s) => s.updateBannerItemFields)
   const setBannerImageModule = useBuilder((s) => s.setBannerImageModule)
+  const insertDealCard = useBuilder((s) => s.insertDealCard)
+  const duplicateDealCard = useBuilder((s) => s.duplicateDealCard)
+  const reorderDealCard = useBuilder((s) => s.reorderDealCard)
+  const removeDealCard = useBuilder((s) => s.removeDealCard)
+  const updateDealCardFields = useBuilder((s) => s.updateDealCardFields)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
@@ -105,6 +110,9 @@ function App() {
           onDuplicateBannerItem={duplicateBannerItem}
           onReorderBannerItem={reorderBannerItem}
           onRemoveBannerItem={removeBannerItem}
+          onDuplicateDealCard={duplicateDealCard}
+          onReorderDealCard={reorderDealCard}
+          onRemoveDealCard={removeDealCard}
         />
         <InspectorPanel
           document={doc}
@@ -116,6 +124,8 @@ function App() {
           onChangeGlobal={setGlobalFields}
           onInsertBannerItem={insertBannerItem}
           onSetBannerImageModule={setBannerImageModule}
+          onChangeDealCard={updateDealCardFields}
+          onInsertDealCard={insertDealCard}
         />
       </div>
     </div>

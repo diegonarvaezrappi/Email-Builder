@@ -4,6 +4,7 @@ import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
 import { stripBannerFieldAssigns } from '../components/banner/render'
+import { stripDealsFieldAssigns } from '../components/deals/render'
 
 /**
  * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
@@ -70,7 +71,12 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   // stripBannerFieldAssigns limpia además los 5 `{% assign banner_copy_*/
   // banner_img_* %}` de ejemplo que el maestro trae vivos (no comentados)
   // antes del doctype — ver la nota en components/banner/render.ts.
-  let html = stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)))
+  // stripDealsFieldAssigns hace lo mismo con los 4 `{% assign deals_copy_* %}`
+  // (+ su comentario "LÍMITE DE 2 LÍNEAS") que el maestro trae en el mismo
+  // lugar — ver la nota en components/deals/render.ts. Los 2 corren siempre,
+  // haya o no piezas de banner / bloques DEALS en el documento: el Liquid de
+  // ejemplo viene del maestro, no de lo que armó el usuario.
+  let html = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]

@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { useBuilder } from '../store'
 import { defaultCtaFields } from '../../components/cta/schema'
 import { defaultTagsFields } from '../../components/banner/items/schemas'
+import { defaultDealCardFields, type DealCardFields } from '../../components/deals/schema'
 import { richTextFromPlain } from '../../richText/model'
-import type { BannerItem, CtaBlock } from '../../model'
+import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock } from '../../model'
 
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
@@ -11,7 +12,7 @@ const ctaBlock = (id: string, text = id): CtaBlock => ({
   fields: { text, deeplink: '#', align: 'center' },
 })
 
-function setContenidos(blocks: CtaBlock[]) {
+function setContenidos(blocks: ContentBlock[]) {
   // Construye sobre el estado ACTUAL (no defaultEmailDocument): así no importa
   // en qué orden beforeEach llame a este helper y a setBannerItems, ninguno
   // pisa lo que el otro acaba de fijar (defaultEmailDocument.contenidos ya no
@@ -174,7 +175,10 @@ describe('updateContentBlockFields', () => {
     useBuilder.getState().updateContentBlockFields('a', { text: 'editado', deeplink: '#', align: 'left' })
     const contenidos = useBuilder.getState().document.contenidos
     expect(contenidos[0].fields).toEqual({ text: 'editado', deeplink: '#', align: 'left' })
-    expect(contenidos[1].fields.text).toBe('dos')
+    // El bloque entero, no solo su texto: ahora que ContentBlock es una unión
+    // (CTA | DEALS) hay que angostar para leer `fields.text`, y comparar el
+    // bloque completo dice lo mismo y más fuerte ("quedó intacto").
+    expect(contenidos[1]).toEqual(ctaBlock('b', 'dos'))
   })
 })
 
@@ -384,5 +388,126 @@ describe('updateBannerItemFields', () => {
     const items = useBuilder.getState().document.banner.items
     expect(items[0].fields).toEqual({ promoText: 'editado' })
     expect(items[1].fields).toEqual({ promoText: richTextFromPlain('dos'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') })
+  })
+})
+
+// --- Tarjetas de un bloque DEALS -------------------------------------------
+// A diferencia de las piezas de banner (doc.banner.items, un singleton), estas
+// viven 2 niveles adentro: doc.contenidos → el bloque DEALS → fields.items. Solo
+// insertDealCard recibe el id del bloque; el resto lo deduce del id de tarjeta.
+
+const dealCard = (id: string, over: Partial<DealCardFields> = {}): DealCard => ({
+  id,
+  fields: { ...defaultDealCardFields, ...over },
+})
+
+const dealsBlock = (id: string, cards: DealCard[]): DealsBlock => ({ id, type: 'DEALS', fields: { items: cards } })
+
+function setDealsBlock(cards: DealCard[], blockId = 'deals-1') {
+  useBuilder.setState((s) => ({ document: { ...s.document, contenidos: [dealsBlock(blockId, cards)] } }))
+}
+
+function dealCardIds(blockIndex = 0): string[] {
+  const block = useBuilder.getState().document.contenidos[blockIndex]
+  return block.type === 'DEALS' ? block.fields.items.map((c) => c.id) : []
+}
+
+describe('insertDealCard', () => {
+  it('inserta una tarjeta con sus campos por defecto en el índice pedido', () => {
+    setDealsBlock([dealCard('a'), dealCard('b')])
+    useBuilder.getState().insertDealCard('deals-1', 1)
+    const ids = dealCardIds()
+    expect(ids).toHaveLength(3)
+    expect(ids[0]).toBe('a')
+    expect(ids[2]).toBe('b')
+    const inserted = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[1]
+    expect(inserted.fields).toEqual(defaultDealCardFields)
+  })
+
+  it('no hace nada si el bloque ya llegó al tope de 4', () => {
+    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c'), dealCard('d')])
+    useBuilder.getState().insertDealCard('deals-1', 4)
+    expect(dealCardIds()).toEqual(['a', 'b', 'c', 'd'])
+  })
+
+  it('no hace nada si el bloque no existe o no es DEALS', () => {
+    setContenidos([ctaBlock('cta-1')])
+    useBuilder.getState().insertDealCard('cta-1', 0)
+    expect(useBuilder.getState().document.contenidos).toEqual([ctaBlock('cta-1')])
+  })
+})
+
+describe('duplicateDealCard', () => {
+  it('copia la tarjeta justo después, con un id nuevo y los mismos campos', () => {
+    setDealsBlock([dealCard('a', { copy1: 'Mi promo' }), dealCard('b')])
+    useBuilder.getState().duplicateDealCard('a')
+    const ids = dealCardIds()
+    expect(ids).toHaveLength(3)
+    expect(ids[0]).toBe('a')
+    expect(ids[2]).toBe('b')
+    expect(ids[1]).not.toBe('a')
+    const copy = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[1]
+    expect(copy.fields.copy1).toBe('Mi promo')
+  })
+
+  it('no hace nada si el bloque ya llegó al tope de 4', () => {
+    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c'), dealCard('d')])
+    useBuilder.getState().duplicateDealCard('a')
+    expect(dealCardIds()).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+describe('reorderDealCard', () => {
+  it('mueve una tarjeta hacia adelante (toIndex contra el array ANTES de sacarla)', () => {
+    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c')])
+    useBuilder.getState().reorderDealCard('a', 2)
+    expect(dealCardIds()).toEqual(['b', 'a', 'c'])
+  })
+
+  it('mueve una tarjeta hacia atrás', () => {
+    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c')])
+    useBuilder.getState().reorderDealCard('c', 0)
+    expect(dealCardIds()).toEqual(['c', 'a', 'b'])
+  })
+
+  it('ignora un id que no existe', () => {
+    setDealsBlock([dealCard('a'), dealCard('b')])
+    useBuilder.getState().reorderDealCard('zzz', 0)
+    expect(dealCardIds()).toEqual(['a', 'b'])
+  })
+})
+
+describe('removeDealCard', () => {
+  it('elimina solo la tarjeta apuntada', () => {
+    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c')])
+    useBuilder.getState().removeDealCard('b')
+    expect(dealCardIds()).toEqual(['a', 'c'])
+  })
+
+  it('puede dejar el bloque sin tarjetas (el bloque no se borra solo)', () => {
+    setDealsBlock([dealCard('a')])
+    useBuilder.getState().removeDealCard('a')
+    expect(dealCardIds()).toEqual([])
+    expect(useBuilder.getState().document.contenidos).toHaveLength(1)
+  })
+})
+
+describe('updateDealCardFields', () => {
+  it('actualiza solo la tarjeta apuntada, dejando las otras intactas', () => {
+    setDealsBlock([dealCard('a'), dealCard('b', { copy1: 'B original' })])
+    useBuilder.getState().updateDealCardFields('a', { ...defaultDealCardFields, copy1: 'A editada' })
+    const items = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items
+    expect(items[0].fields.copy1).toBe('A editada')
+    expect(items[1].fields.copy1).toBe('B original')
+  })
+
+  it('encuentra la tarjeta aunque el bloque DEALS no sea el primero de contenidos', () => {
+    useBuilder.setState((s) => ({
+      document: { ...s.document, contenidos: [ctaBlock('cta-1'), dealsBlock('deals-2', [dealCard('x')])] },
+    }))
+    useBuilder.getState().updateDealCardFields('x', { ...defaultDealCardFields, copy1: 'Editada' })
+    const block = useBuilder.getState().document.contenidos[1] as DealsBlock
+    expect(block.fields.items[0].fields.copy1).toBe('Editada')
+    expect(useBuilder.getState().document.contenidos[0]).toEqual(ctaBlock('cta-1'))
   })
 })

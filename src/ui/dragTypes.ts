@@ -23,3 +23,9 @@ export const BANNER_ITEM_DRAG_TYPE = 'application/x-email-banner-item'
 
 /** Reordenar una pieza de banner ya existente. Payload = el id de la instancia. */
 export const BANNER_ITEM_REORDER_DRAG_TYPE = 'application/x-email-banner-item-reorder'
+
+/** Reordenar una tarjeta de deal ya existente. Payload = el id de la tarjeta
+ *  (único en todo el documento, ver store/store.ts). No hay tipo "insertar
+ *  tarjeta nueva": las tarjetas de deal son todas de la misma forma, así que
+ *  agregar es un botón del inspector, no un catálogo arrastrable. */
+export const DEAL_CARD_REORDER_DRAG_TYPE = 'application/x-email-deal-card-reorder'

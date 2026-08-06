@@ -5,6 +5,19 @@ import type { GlobalFields } from './global/schema'
 import { defaultCtaFields, ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { renderCtaSnippet } from './components/cta/render'
 import { CtaPropertiesPanel } from './components/cta/PropertiesPanel'
+import { defaultDealsFields, dealsFieldsSchema, type DealsFields } from './components/deals/schema'
+import { renderDealsSnippet } from './components/deals/render'
+import { DealsPropertiesPanel } from './components/deals/panels'
+
+/**
+ * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
+ * propio id, y solo DEALS lo usa: sus tarjetas llevan marcadores
+ * `DCARD:<blockId>:<cardId>` para que ui/Viewport.tsx pueda medirlas y acotar el
+ * reordenamiento al bloque dueño. Mismo espíritu que `BannerItemRenderCtx`.
+ */
+export interface ContentBlockRenderCtx {
+  blockId: string
+}
 
 /**
  * Definición de un tipo de bloque de contenido — mismo espíritu que
@@ -19,7 +32,7 @@ export interface ContentBlockDef<TFields> {
   label: string
   schema: ZodType<TFields, ZodTypeDef, any>
   defaultFields: TFields
-  render: (fields: TFields, doc: EmailDocument) => string
+  render: (fields: TFields, doc: EmailDocument, ctx: ContentBlockRenderCtx) => string
   PropertiesPanel: ComponentType<{
     value: TFields
     onChange: (next: TFields) => void
@@ -37,9 +50,20 @@ const ctaBlockDef: ContentBlockDef<CtaFields> = {
   PropertiesPanel: CtaPropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy solo CTA; TITLE/DEALS/etc. se suman acá cuando se implementen. */
+const dealsBlockDef: ContentBlockDef<DealsFields> = {
+  type: 'DEALS',
+  label: 'Deals',
+  schema: dealsFieldsSchema,
+  defaultFields: defaultDealsFields,
+  render: renderDealsSnippet,
+  PropertiesPanel: DealsPropertiesPanel,
+}
+
+/** Tipos de bloque registrados — hoy CTA y DEALS; TITLE/LOGOS/etc. se suman acá
+ *  cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
+  DEALS: dealsBlockDef,
 }
 
 /**

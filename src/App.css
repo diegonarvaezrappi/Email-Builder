@@ -456,6 +456,33 @@
   color: var(--text);
 }
 
+/* Subtítulo que agrupa campos dentro de un panel largo (la tarjeta de deal
+   tiene ~24 campos repartidos en 9 secciones, ver components/deals/panels.tsx).
+   Los paneles cortos siguen sin usar nada de esto. */
+.field-group-label {
+  margin: 20px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.field-group-label:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* El input de una pieza opcional apagada: sigue visible (para ver qué texto
+   quedaría) pero claramente inerte. */
+.field input[type='text']:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* --- RichTextInput (modificadores de texto de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO) --- */
 .rich-text-input {
   display: flex;

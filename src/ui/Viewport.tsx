@@ -15,11 +15,16 @@
 // `role="paddedcontainer"`— y se dibujan capas clickeables encima, del lado de
 // la app. Medir requiere `allow-same-origin`; los scripts siguen bloqueados.
 //
-// Los bloques de CONTENIDOS (hoy solo CTA) se miden aparte: no tienen ningún
+// Los bloques de CONTENIDOS (hoy CTA y DEALS) se miden aparte: no tienen ningún
 // atributo propio que los distinga entre sí (el contenido real viene de un
 // content block sincronizado, intocable) — se ubican caminando los
 // comentarios `<!-- BLOCK:tipo:id -->` que la app misma agrega alrededor de
 // cada instancia, ver measureContentBlocks() y template/contentBlocks.ts.
+//
+// Las tarjetas de un bloque DEALS se miden con el mismo mecanismo pero con una
+// vuelta más: el HTML de una tarjeta NO es contiguo (vive en las 3 filas del par
+// de deals), así que emite varios pares de marcadores con el mismo id y hay que
+// unir sus rects — ver mergeRectsById().
 //
 // La pestaña "Código" muestra el HTML ensamblado (con el Liquid intacto), que
 // es lo que se copia/descarga — nunca pasa por LiquidJS.
@@ -32,15 +37,25 @@ import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { assembleEmailHtml } from '../template/assemble'
-import { BLOCK_CLOSE_RE, BLOCK_OPEN_RE, BANNER_ITEM_CLOSE_RE, BANNER_ITEM_OPEN_RE } from '../template/contentBlocks'
+import {
+  BLOCK_CLOSE_RE,
+  BLOCK_OPEN_RE,
+  BANNER_ITEM_CLOSE_RE,
+  BANNER_ITEM_OPEN_RE,
+  DEAL_CARD_CLOSE_RE,
+  DEAL_CARD_OPEN_RE,
+} from '../template/contentBlocks'
+import { findDealsBlockByCard } from '../components/deals/blocks'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
 import { CodeView } from './CodeView'
 import {
   isBannerItemSelected,
   isBlockSelected,
+  isDealCardSelected,
   isSlotSelected,
   selectBannerItem,
   selectBlock,
+  selectDealCard,
   selectSlot,
   type Selection,
 } from './selection'
@@ -51,6 +66,7 @@ import {
   BANNER_TYPE_DRAG_TYPE,
   BANNER_ITEM_DRAG_TYPE,
   BANNER_ITEM_REORDER_DRAG_TYPE,
+  DEAL_CARD_REORDER_DRAG_TYPE,
 } from './dragTypes'
 import { dropXInFrameSpace, dropYInFrameSpace, resolveDropIndex, resolveDropIndexReadingOrder, type DropRect } from './dropIndex'
 import {
@@ -75,6 +91,9 @@ interface ViewportProps {
   onDuplicateBannerItem: (id: string) => void
   onReorderBannerItem: (id: string, toIndex: number) => void
   onRemoveBannerItem: (id: string) => void
+  onDuplicateDealCard: (cardId: string) => void
+  onReorderDealCard: (cardId: string, toIndex: number) => void
+  onRemoveDealCard: (cardId: string) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -122,6 +141,9 @@ export function Viewport({
   onDuplicateBannerItem,
   onReorderBannerItem,
   onRemoveBannerItem,
+  onDuplicateDealCard,
+  onReorderDealCard,
+  onRemoveDealCard,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
@@ -269,6 +291,9 @@ export function Viewport({
             onDuplicateBannerItem={onDuplicateBannerItem}
             onReorderBannerItem={onReorderBannerItem}
             onRemoveBannerItem={onRemoveBannerItem}
+            onDuplicateDealCard={onDuplicateDealCard}
+            onReorderDealCard={onReorderDealCard}
+            onRemoveDealCard={onRemoveDealCard}
           />
         )
       ) : (
@@ -307,6 +332,9 @@ interface EmailFrameProps {
   onDuplicateBannerItem: (id: string) => void
   onReorderBannerItem: (id: string, toIndex: number) => void
   onRemoveBannerItem: (id: string) => void
+  onDuplicateDealCard: (cardId: string) => void
+  onReorderDealCard: (cardId: string, toIndex: number) => void
+  onRemoveDealCard: (cardId: string) => void
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -431,6 +459,37 @@ const measureBannerItems = (root: Document): MarkedBlockRect[] =>
   measureMarkedBlocks(root, BANNER_ITEM_OPEN_RE, BANNER_ITEM_CLOSE_RE)
 
 /**
+ * Une en un solo rect los que comparten `id`. Hace falta solo para las tarjetas
+ * de deal: a diferencia de un bloque de CONTENIDOS o una pieza de banner (un
+ * fragmento contiguo, un par de marcadores), el HTML de UNA tarjeta vive
+ * repartido en las 3 filas del par (imagen / textos / legales), que no son
+ * contiguas — así que emite 2 o 3 pares de marcadores con el mismo id y
+ * measureMarkedBlocks devuelve un rect por cada uno. El overlay tiene que
+ * cubrir la tarjeta completa, o sea la unión.
+ */
+function mergeRectsById(rects: MarkedBlockRect[]): MarkedBlockRect[] {
+  const byId = new Map<string, MarkedBlockRect>()
+  for (const rect of rects) {
+    const previous = byId.get(rect.id)
+    if (!previous) {
+      byId.set(rect.id, rect)
+      continue
+    }
+    const top = Math.min(previous.top, rect.top)
+    const left = Math.min(previous.left, rect.left)
+    const right = Math.max(previous.left + previous.width, rect.left + rect.width)
+    const bottom = Math.max(previous.top + previous.height, rect.top + rect.height)
+    byId.set(rect.id, { id: rect.id, type: previous.type, top, left, width: right - left, height: bottom - top })
+  }
+  return [...byId.values()]
+}
+
+/** `type` acá es el id del BLOQUE dueño, no un tipo de pieza — ver
+ *  wrapWithDealCardMarkers en template/contentBlocks.ts. */
+const measureDealCards = (root: Document): MarkedBlockRect[] =>
+  mergeRectsById(measureMarkedBlocks(root, DEAL_CARD_OPEN_RE, DEAL_CARD_CLOSE_RE))
+
+/**
  * El email completo en un iframe. Va con `allow-same-origin` (sin
  * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
  * desde acá su alto real y la posición de cada slot.
@@ -454,6 +513,9 @@ function EmailFrame({
   onDuplicateBannerItem,
   onReorderBannerItem,
   onRemoveBannerItem,
+  onDuplicateDealCard,
+  onReorderDealCard,
+  onRemoveDealCard,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
@@ -461,6 +523,7 @@ function EmailFrame({
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
   const [blockRects, setBlockRects] = useState<MarkedBlockRect[]>([])
   const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
+  const [dealCardRects, setDealCardRects] = useState<MarkedBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
@@ -471,6 +534,7 @@ function EmailFrame({
     setSlotRects(measureSlots(root))
     setBlockRects(measureContentBlocks(root))
     setBannerItemRects(measureBannerItems(root))
+    setDealCardRects(measureDealCards(root))
   }, [clientScheme])
 
   // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
@@ -511,6 +575,23 @@ function EmailFrame({
     return resolveDropIndexReadingOrder(order, rectsById, dropX, dropY)
   }
 
+  // Índice de destino para una tarjeta de deal. Igual que las piezas de banner
+  // usa el orden de lectura (los deals van de 2 en 2 por fila, así que 2
+  // tarjetas comparten banda Y y la X es la que decide), pero ACOTADO a las
+  // tarjetas del bloque dueño: podría haber más de un bloque DEALS en un
+  // documento viejo de localStorage, y reordenar entre bloques distintos no
+  // tiene sentido (cada bloque es su propia lista).
+  const resolveIndexForDealCardDrop = (e: React.DragEvent, cardId: string): number => {
+    const found = findDealsBlockByCard(contenidos, cardId)
+    if (!found || !frameElRef.current) return 0
+    const order = found.block.fields.items.map((card) => card.id)
+    const own = new Set(order)
+    const rectsById = new Map(dealCardRects.filter((r) => own.has(r.id)).map((r) => [r.id, r]))
+    const dropX = dropXInFrameSpace(e, frameElRef.current)
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    return resolveDropIndexReadingOrder(order, rectsById, dropX, dropY)
+  }
+
   return (
     <div className="viewport-canvas">
       <div
@@ -527,7 +608,7 @@ function EmailFrame({
         // despachan acá según qué dataTransfer type venga presente.
         onDragOver={(e) => {
           const types = e.dataTransfer.types
-          const reorderTypes = [CONTENT_BLOCK_REORDER_DRAG_TYPE, BANNER_ITEM_REORDER_DRAG_TYPE]
+          const reorderTypes = [CONTENT_BLOCK_REORDER_DRAG_TYPE, BANNER_ITEM_REORDER_DRAG_TYPE, DEAL_CARD_REORDER_DRAG_TYPE]
           const allTypes = [
             SLOT_DRAG_TYPE,
             CONTENT_BLOCK_DRAG_TYPE,
@@ -584,6 +665,13 @@ function EmailFrame({
           if (reorderBannerItemId) {
             e.preventDefault()
             onReorderBannerItem(reorderBannerItemId, resolveIndexForBannerDrop(e))
+            return
+          }
+
+          const reorderDealCardId = e.dataTransfer.getData(DEAL_CARD_REORDER_DRAG_TYPE)
+          if (reorderDealCardId) {
+            e.preventDefault()
+            onReorderDealCard(reorderDealCardId, resolveIndexForDealCardDrop(e, reorderDealCardId))
           }
         }}
       >
@@ -654,17 +742,22 @@ function EmailFrame({
             >
               <span className="slot-badge">{getContentBlockDef(type)?.label ?? type}</span>
             </button>
-            <button
-              type="button"
-              className="slot-duplicate"
-              aria-label="Duplicar"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicateBlock(id)
-              }}
-            >
-              ⧉
-            </button>
+            {/* DEALS no se duplica: el mail admite un solo bloque de deals
+                (máx. 4 en total, ver components/deals/blocks.ts) — duplicarlo
+                daría 8. Lo repetible ahí son sus tarjetas, no el bloque. */}
+            {type !== 'DEALS' && (
+              <button
+                type="button"
+                className="slot-duplicate"
+                aria-label="Duplicar"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDuplicateBlock(id)
+                }}
+              >
+                ⧉
+              </button>
+            )}
             <button
               type="button"
               className="slot-delete"
@@ -725,6 +818,77 @@ function EmailFrame({
             </button>
           </div>
         ))}
+        {/* Tarjetas de deal — DESPUÉS de blockRects por el mismo motivo que las
+            piezas de banner van después de slotRects: el overlay del bloque
+            DEALS las contiene geométricamente y taparía sus clicks. */}
+        {dealCardRects.map(({ id, top, left, width, height: h }) => (
+          <div
+            key={id}
+            className={`slot-hit block-hit${isDealCardSelected(selected, id) ? ' selected' : ''}`}
+            style={{ top, left, width, height: h }}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(DEAL_CARD_REORDER_DRAG_TYPE, id)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+          >
+            <button
+              type="button"
+              className="slot-select"
+              aria-label="Seleccionar deal"
+              aria-pressed={isDealCardSelected(selected, id)}
+              onClick={() => onSelect(selectDealCard(id))}
+            >
+              <span className="slot-badge">Deal</span>
+            </button>
+            <button
+              type="button"
+              className="slot-duplicate"
+              aria-label="Duplicar deal"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicateDealCard(id)
+              }}
+            >
+              ⧉
+            </button>
+            <button
+              type="button"
+              className="slot-delete"
+              aria-label="Eliminar deal"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemoveDealCard(id)
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {/* Y el badge del bloque DEALS redibujado al final, por la misma razón
+            que el del BANNER más abajo: sus tarjetas lo cubren por completo (la
+            primera arranca justo en la esquina del bloque), así que sin esta
+            copia encima de todo no habría forma de seleccionar el bloque para
+            llegar al botón "+ Agregar deal". */}
+        {blockRects
+          .filter((r) => r.type === 'DEALS')
+          .map(({ id, top, left, width, height: h }) => (
+            <div
+              key={`${id}-controls`}
+              className={`slot-hit-controls${isBlockSelected(selected, id) ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+            >
+              <button
+                type="button"
+                className="slot-badge slot-badge-button"
+                aria-label="Seleccionar Deals"
+                aria-pressed={isBlockSelected(selected, id)}
+                onClick={() => onSelect(selectBlock(id))}
+              >
+                Deals
+              </button>
+            </div>
+          ))}
         {/* BANNER es el único slot que puede tener piezas propias
             (bannerItemRects) exactamente encima de su badge de selección —
             sin esta copia redibujada AL FINAL (encima de todo), ese badge

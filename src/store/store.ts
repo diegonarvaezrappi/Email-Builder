@@ -4,9 +4,11 @@
 // ============================================================================
 import { create, useStore as useZustandStore } from 'zustand'
 import { temporal } from 'zundo'
-import type { BannerItem, ContentBlock, ContentBlockType, EmailDocument } from '../model'
+import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
+import { DEALS_MAX_CARDS, defaultDealCardFields, type DealCardFields } from '../components/deals/schema'
+import { findDealsBlockByCard } from '../components/deals/blocks'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType } from '../components/banner/exclusivity'
@@ -62,6 +64,34 @@ interface BuilderState {
    * las piezas del banner.
    */
   setBannerImageModule: (type: ImageModuleType) => void
+
+  /**
+   * Operaciones sobre las tarjetas de un bloque DEALS (doc.contenidos → el
+   * bloque de tipo DEALS → fields.items). Mismo espíritu que las de banner, dos
+   * niveles adentro, con 2 diferencias:
+   *  - Solo `insert` recibe el id del bloque: los ids de tarjeta son únicos en
+   *    todo el documento (newId()), así que las demás ubican su bloque dueño
+   *    buscando quién contiene esa tarjeta. Es lo que permite que Viewport pase
+   *    solo el cardId que leyó del marcador DCARD.
+   *  - `insert`/`duplicate` no hacen nada si el bloque ya llegó a
+   *    DEALS_MAX_CARDS. El tope va acá (no solo deshabilitando el botón) por el
+   *    mismo motivo que la exclusividad de imagen del banner vive en el store:
+   *    es una regla del maestro, no una decoración de la UI.
+   */
+  insertDealCard: (blockId: string, atIndex: number) => void
+  duplicateDealCard: (cardId: string) => void
+  reorderDealCard: (cardId: string, toIndex: number) => void
+  removeDealCard: (cardId: string) => void
+  updateDealCardFields: (cardId: string, fields: unknown) => void
+}
+
+/** Reescribe la lista de tarjetas de un bloque DEALS dejando el resto del
+ *  documento intacto — el patrón se repite en las 5 acciones. */
+function withDealCards(document: EmailDocument, blockIndex: number, items: DealCard[]): EmailDocument {
+  const block = document.contenidos[blockIndex] as DealsBlock
+  const contenidos = [...document.contenidos]
+  contenidos[blockIndex] = { ...block, fields: { ...block.fields, items } }
+  return { ...document, contenidos }
 }
 
 export const useBuilder = create<BuilderState>()(
@@ -198,6 +228,58 @@ export const useBuilder = create<BuilderState>()(
           else next[idx] = newItem
           const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
           return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
+        }),
+
+      insertDealCard: (blockId, atIndex) =>
+        set((s) => {
+          const index = s.document.contenidos.findIndex((b) => b.id === blockId && b.type === 'DEALS')
+          if (index === -1) return s
+          const block = s.document.contenidos[index] as DealsBlock
+          if (block.fields.items.length >= DEALS_MAX_CARDS) return s
+          const items = [...block.fields.items]
+          items.splice(Math.max(0, Math.min(atIndex, items.length)), 0, { id: newId(), fields: defaultDealCardFields })
+          return { document: withDealCards(s.document, index, items) }
+        }),
+
+      duplicateDealCard: (cardId) =>
+        set((s) => {
+          const found = findDealsBlockByCard(s.document.contenidos, cardId)
+          if (!found) return s
+          if (found.block.fields.items.length >= DEALS_MAX_CARDS) return s
+          const cardIndex = found.block.fields.items.findIndex((c) => c.id === cardId)
+          const items = [...found.block.fields.items]
+          items.splice(cardIndex + 1, 0, { ...items[cardIndex], id: newId() })
+          return { document: withDealCards(s.document, found.index, items) }
+        }),
+
+      /** `toIndex` se interpreta contra el array ANTES de sacar la tarjeta
+       *  arrastrada — misma convención que reorderContentBlock/reorderBannerItem. */
+      reorderDealCard: (cardId, toIndex) =>
+        set((s) => {
+          const found = findDealsBlockByCard(s.document.contenidos, cardId)
+          if (!found) return s
+          const from = found.block.fields.items.findIndex((c) => c.id === cardId)
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const items = [...found.block.fields.items]
+          const [moved] = items.splice(from, 1)
+          items.splice(Math.max(0, Math.min(adjusted, items.length)), 0, moved)
+          return { document: withDealCards(s.document, found.index, items) }
+        }),
+
+      removeDealCard: (cardId) =>
+        set((s) => {
+          const found = findDealsBlockByCard(s.document.contenidos, cardId)
+          if (!found) return s
+          const items = found.block.fields.items.filter((c) => c.id !== cardId)
+          return { document: withDealCards(s.document, found.index, items) }
+        }),
+
+      updateDealCardFields: (cardId, fields) =>
+        set((s) => {
+          const found = findDealsBlockByCard(s.document.contenidos, cardId)
+          if (!found) return s
+          const items = found.block.fields.items.map((c) => (c.id === cardId ? { ...c, fields: fields as DealCardFields } : c))
+          return { document: withDealCards(s.document, found.index, items) }
         }),
     }),
     {

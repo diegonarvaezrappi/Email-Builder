@@ -7,6 +7,7 @@ import { renderHeaderSnippet } from '../../components/header/render'
 import { renderCierreSnippet } from '../../components/cierre/render'
 import { renderContenidosSnippet } from '../../components/contenidos/render'
 import { renderBannerSnippet, stripBannerFieldAssigns } from '../../components/banner/render'
+import { stripDealsFieldAssigns } from '../../components/deals/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
 import type { CtaBlock } from '../../model'
@@ -118,7 +119,7 @@ describe('assembleEmailHtml', () => {
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
       contenidos: [ctaBlock('a', 'Uno')],
     }
-    const expected = stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global)))
+    const expected = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
       .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, () => renderHeaderSnippet(doc.header, 'beige100'))
       .replace(/<!--\s*BANNER\s*:[\s\S]*?-->/, () => renderBannerSnippet(doc.banner, doc))
       .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, () => renderContenidosSnippet(doc.contenidos, doc))

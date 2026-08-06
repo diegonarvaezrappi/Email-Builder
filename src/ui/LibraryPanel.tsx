@@ -7,8 +7,9 @@
 //
 // CONTENIDOS es distinto: no es un slot singleton (togglable visible/oculto),
 // es un contenedor libre y repetible — se muestra como una etiqueta de grupo
-// con los tipos de bloque de contenido posibles anidados debajo (hoy solo CTA
-// implementado; TITLE/DEALS/etc. se muestran "pendiente"). Esas filas son
+// con los tipos de bloque de contenido posibles anidados debajo (hoy CTA y
+// DEALS implementados; TITLE/LOGOS/etc. se muestran "pendiente"). DEALS además
+// se deshabilita si ya hay uno en el mail, ver más abajo. Esas filas son
 // solo origen de arrastre (no hay "la" instancia de CTA que seleccionar a
 // nivel de tipo — las instancias concretas se seleccionan haciendo click en
 // su overlay del Viewport).
@@ -29,6 +30,7 @@ import type { EmailDocument, SlotName } from '../model'
 import { SLOT_ORDER } from '../model'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
+import { hasDealsBlock } from '../components/deals/blocks'
 import { BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/schema'
 import { isSlotSelected, selectSlot, type Selection } from './selection'
 import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, BANNER_TYPE_DRAG_TYPE } from './dragTypes'
@@ -103,13 +105,19 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                   <ul className="lib-list lib-list-nested">
                     {CONTENT_BLOCK_LIBRARY_ITEMS.map(({ type, label }) => {
                       const implemented = getContentBlockDef(type) !== undefined
+                      // El tope de "max 4 deals por mail" se sostiene entre dos
+                      // reglas: hasta 4 tarjetas por bloque (store/store.ts) y
+                      // un solo bloque DEALS por mail, que es esto. Sin la
+                      // segunda, 2 bloques de 4 darían 8 deals.
+                      const alreadyUsed = type === 'DEALS' && hasDealsBlock(doc.contenidos)
+                      const enabled = implemented && !alreadyUsed
                       return (
                         <li key={type}>
                           <button
                             type="button"
                             className="lib-item"
-                            disabled={!implemented}
-                            draggable={implemented}
+                            disabled={!enabled}
+                            draggable={enabled}
                             onDragStart={(e) => {
                               e.dataTransfer.setData(CONTENT_BLOCK_DRAG_TYPE, type)
                               e.dataTransfer.effectAllowed = 'copy'
@@ -117,6 +125,7 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
                           >
                             <span className="lib-item-name">{label}</span>
                             {!implemented && <span className="lib-item-tag">pendiente</span>}
+                            {alreadyUsed && <span className="lib-item-tag">ya está en el mail (máx. 1)</span>}
                           </button>
                         </li>
                       )

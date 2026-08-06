@@ -1,0 +1,461 @@
+// ============================================================================
+// Genera el HTML de un bloque DEALS de CONTENIDOS a partir del archivo real
+// (02-components/04_content-modules/deals/deal_columnas.html, sincronizado).
+//
+// El archivo del maestro es UN PAR: una `<table role="module">` con 3 filas
+// (imágenes / textos / legales) y 2 celdas por fila. Acá se carga una copia por
+// cada par de tarjetas de `fields.items` y se rellenan sus 2 celdas; si la
+// última tarjeta queda sin compañera, la celda 2 se vacía pero NO se borra
+// ("se eliminan los elementos no la celda", comentario del maestro).
+//
+// La particularidad de deals frente al banner: el maestro NO marca las piezas
+// opcionales con `{% if %}`. Solo las describe en comentarios dirigidos a un
+// humano ("si no existe texto para esta linea se elimina toda la etiqueta"). Así
+// que cada pieza se ubica por un literal único y se corta o se rellena — misma
+// técnica que applyAhoraCell/applyDeReintegroCell en
+// components/banner/items/render.ts, acá generalizada porque son ~11 piezas por
+// celda en vez de 1. Todas las anclas se cuentan en scripts/sync-master.mjs
+// (DEALS_ANCHOR_COUNTS) antes de sincronizar, para que un cambio del maestro
+// aborte el sync en vez de hacer que el render corte el elemento equivocado.
+//
+// Los `{{xxx_mail_general}}` de tema que queden (img_overlay_1, color_texto,
+// padd_deal, bg_solid, body_container_background_radius-peq, color_descuento,
+// bg_descuento, coronapro_mail_body, bg_tag_fondo, color_acento2,
+// color_textos_legales) se resuelven todos de una sola pasada al final de
+// renderDealsSnippet — igual que components/banner/render.ts, y por el mismo
+// motivo: template/assemble.ts ya corrió inlineTheme() sobre el maestro ANTES
+// de insertar este snippet, así que lo que quede acá no se resolvería nunca.
+// ============================================================================
+import dealColumnasRaw from '../../assets/templates/deals/deal_columnas.html?raw'
+import type { EmailDocument } from '../../model'
+import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
+import { escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
+import { wrapWithDealCardMarkers } from '../../template/contentBlocks'
+import { resolveThemeVars } from '../../themes/inlineTheme'
+import { DEALS_CARDS_PER_PAIR, type DealCard, type DealCardFields, type DealsFields } from './schema'
+
+const FILE_NAME = 'deal_columnas.html'
+
+const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
+
+/** Los comentarios de autor del archivo real no pasan al output — mismo
+ *  criterio que los renders de banner/header/cierre/footer. */
+function stripComments(html: string): string {
+  return html.replace(HTML_COMMENT_RE, '')
+}
+
+// --- Utilidades de corte/reemplazo ------------------------------------------
+
+interface Bounds {
+  start: number
+  end: number
+}
+
+interface Edit extends Bounds {
+  replacement: string
+}
+
+/**
+ * Aplica una lista de ediciones calculadas TODAS sobre el mismo texto pristino,
+ * de atrás hacia adelante: así ningún reemplazo puede correr los índices de
+ * otro, ni hacer que el `indexOf` de una pieza caiga sobre texto que acabó de
+ * escribir el usuario en otra (un `copy1` que dijera literalmente `LINKDEAL` o
+ * `role="MARKDOWN"` no puede confundir a nadie).
+ *
+ * El chequeo de superposición es una red de seguridad real: cortar el `<h4>` del
+ * badge MARKDOWN y a la vez el `<img>` de la Corona Pro que vive adentro
+ * produciría HTML corrupto, así que la lógica de arriba nunca debe emitir las 2
+ * ediciones juntas — y si algún día lo hace, esto lo grita en vez de exportar un
+ * mail roto.
+ */
+function applyEdits(html: string, edits: Edit[]): string {
+  const sorted = [...edits].sort((a, b) => b.start - a.start)
+  let previousStart = html.length
+  let out = html
+  for (const edit of sorted) {
+    if (edit.end > previousStart) {
+      throw new Error(
+        `${FILE_NAME}: ediciones superpuestas (${edit.start}-${edit.end} contra ${previousStart}) — revisar components/deals/render.ts`,
+      )
+    }
+    out = out.slice(0, edit.start) + edit.replacement + out.slice(edit.end)
+    previousStart = edit.start
+  }
+  return out
+}
+
+/** Igual criterio que substituteOnce en components/banner/items/vars.ts: si el
+ *  maestro ya no trae el literal, falla ruidoso en vez de seguir de largo. */
+function indexOfOrThrow(html: string, literal: string, from = 0): number {
+  const index = html.indexOf(literal, from)
+  if (index === -1) {
+    throw new Error(`${FILE_NAME}: ya no contiene "${literal}" — revisar components/deals/render.ts`)
+  }
+  return index
+}
+
+/**
+ * Límites del elemento `<tag>` que contiene `anchorIndex`, contando anidamiento.
+ * El contador hace falta de verdad: el `<div role="molecula-tag">` de cada tag
+ * envuelve otro `<div>` (el pill), así que buscar el primer `</div>` cortaría en
+ * el cierre del hijo y dejaría un `</div>` huérfano en el mail exportado.
+ */
+function elementBounds(html: string, anchorIndex: number, tag: string): Bounds {
+  const open = `<${tag}`
+  const close = `</${tag}>`
+  const start = html.lastIndexOf(open, anchorIndex)
+  if (start === -1) {
+    throw new Error(`${FILE_NAME}: no se encontró la apertura ${open} antes de la posición ${anchorIndex} — revisar components/deals/render.ts`)
+  }
+
+  let depth = 0
+  let cursor = start
+  for (;;) {
+    const nextOpen = html.indexOf(open, cursor)
+    const nextClose = html.indexOf(close, cursor)
+    if (nextClose === -1) {
+      throw new Error(`${FILE_NAME}: no se encontró el cierre ${close} del elemento que abre en ${start} — revisar components/deals/render.ts`)
+    }
+    if (nextOpen !== -1 && nextOpen < nextClose) {
+      depth++
+      cursor = nextOpen + open.length
+    } else {
+      depth--
+      cursor = nextClose + close.length
+      if (depth === 0) return { start, end: cursor }
+    }
+  }
+}
+
+/** Elemento sin cierre (`<img>`): de su apertura hasta el `>` que la termina. */
+function voidElementBounds(html: string, anchorIndex: number, tag: string): Bounds {
+  const open = `<${tag}`
+  const start = html.lastIndexOf(open, anchorIndex)
+  if (start === -1) {
+    throw new Error(`${FILE_NAME}: no se encontró la apertura ${open} antes de la posición ${anchorIndex} — revisar components/deals/render.ts`)
+  }
+  const end = html.indexOf('>', anchorIndex)
+  if (end === -1) {
+    throw new Error(`${FILE_NAME}: no se encontró el cierre ">" de ${open} en ${start} — revisar components/deals/render.ts`)
+  }
+  return { start, end: end + 1 }
+}
+
+/**
+ * El texto que va inmediatamente antes del cierre de un elemento: desde el
+ * último `>` de su contenido hasta el `</tag>`. Reemplazar "todo el contenido"
+ * no serviría en las piezas que mezclan un `<img>` con texto (el badge
+ * MARKDOWN, RATING, TIEMPO, los pills de tag): borraría también el ícono.
+ */
+function textRunBounds(html: string, bounds: Bounds, tag: string): Bounds {
+  const closeStart = bounds.end - `</${tag}>`.length
+  const lastGt = html.lastIndexOf('>', closeStart - 1)
+  if (lastGt === -1 || lastGt < bounds.start) {
+    throw new Error(`${FILE_NAME}: no se encontró el texto de <${tag}> en ${bounds.start}-${bounds.end} — revisar components/deals/render.ts`)
+  }
+  return { start: lastGt + 1, end: closeStart }
+}
+
+/**
+ * El patrón que comparten casi todas las piezas: apagada se corta el elemento
+ * entero, prendida se reemplaza solo su texto. `textReplacement` va explícito
+ * (ya escapado) porque varias piezas conservan un separador del maestro que no
+ * es parte del dato — el `&nbsp;` entre el ícono y el número en RATING/TIEMPO,
+ * los espacios alrededor del texto en los pills de tag.
+ */
+function togglePiece(cell: string, anchor: string, tag: string, enabled: boolean, textReplacement: string): Edit[] {
+  const bounds = elementBounds(cell, indexOfOrThrow(cell, anchor), tag)
+  if (!enabled) return [{ ...bounds, replacement: '' }]
+  return [{ ...textRunBounds(cell, bounds, tag), replacement: textReplacement }]
+}
+
+/** Celda sin tarjeta: se conserva el `<td>` con sus atributos y se vacía el
+ *  contenido — "se eliminan los elementos no la celda" (maestro). */
+function emptyCell(cell: string): string {
+  const openEnd = indexOfOrThrow(cell, '>')
+  return `${cell.slice(0, openEnd + 1)}</td>`
+}
+
+// --- Celda de imagen --------------------------------------------------------
+
+const PRODUCT_IMAGE_PLACEHOLDER = 'https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png'
+const LOGO_ANCHOR = 'role="molecula-iconoL"'
+const LOGO_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'
+
+function renderImageCell(cell: string, fields: DealCardFields): string {
+  const edits: Edit[] = []
+
+  // El asset de producto va dentro de `background-image: url(...)` SIN comillas:
+  // cssUrlValue, no escapeHtmlAttr (un `)` cerraría el paréntesis antes de
+  // tiempo y el resto se leería como CSS suelto).
+  const productIndex = indexOfOrThrow(cell, PRODUCT_IMAGE_PLACEHOLDER)
+  edits.push({
+    start: productIndex,
+    end: productIndex + PRODUCT_IMAGE_PLACEHOLDER.length,
+    replacement: cssUrlValue(fields.productImageUrl),
+  })
+
+  const logoIndex = indexOfOrThrow(cell, LOGO_ANCHOR)
+  if (fields.logoUrl.trim() === '') {
+    // "si no hay url se debe eliminar la etiqueta de imagen por completo".
+    edits.push({ ...voidElementBounds(cell, logoIndex, 'img'), replacement: '' })
+  } else {
+    const urlIndex = indexOfOrThrow(cell, LOGO_PLACEHOLDER)
+    edits.push({ start: urlIndex, end: urlIndex + LOGO_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.logoUrl) })
+  }
+
+  // {{img_overlay_1_mail_general}} queda para la pasada de tema del final.
+  return applyEdits(cell, edits)
+}
+
+// --- Celda de textos --------------------------------------------------------
+
+const LINK_PLACEHOLDER = 'LINKDEAL'
+const COPY_1_VAR = '{{deals_copy_1_promo}}'
+const COPY_2_VAR = '{{deals_copy_2_promo}}'
+const MARKDOWN_ANCHOR = 'role="MARKDOWN"'
+const CORONA_PRO_VAR = '{{coronapro_mail_body}}'
+const COMPLEMENTO_1_ANCHOR = 'role="COMPLEMENTO 1"'
+const COMPLEMENTO_2_ANCHOR = 'role="COMPLEMENTO 2"'
+const CATEGORIA_ANCHOR = 'role="CATEGORIA"'
+const RATING_ANCHOR = 'role="RATING"'
+const TIEMPO_ANCHOR = 'role="TIEMPO"'
+const TAG_ROLE_ANCHOR = 'role="molecula-tag"'
+const TAG_1_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa'
+const TAG_2_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn'
+/** El llamado a la acción es el único texto de la celda sin `role` propio, así
+ *  que se ancla en su literal. No se incluye la flecha (⤍) a propósito: el texto
+ *  se reemplaza entero, alcanza con ubicar el `<strong>` que lo contiene. */
+const CTA_ANCHOR = '<strong>Pide ahora'
+/** Separador que el maestro pone entre el ícono y el número en RATING/TIEMPO —
+ *  es del maestro, no del dato, así que se repone al reemplazar el texto. */
+const ICON_TEXT_SEPARATOR = '&nbsp;'
+
+/** LINEA 1 y LINEA 2: el texto ES la variable Liquid, así que se ancla en ella
+ *  (única por celda). Anclar en `role="molecula-texto"` no serviría: el maestro
+ *  lo repite en la celda de legales. */
+function copyLineEdits(cell: string, liquidVar: string, text: string): Edit[] {
+  const index = indexOfOrThrow(cell, liquidVar)
+  if (text.trim() === '') {
+    // "si no existe texto para esta linea se elimina toda la etiqueta".
+    return [{ ...elementBounds(cell, index, 'h4'), replacement: '' }]
+  }
+  return [{ start: index, end: index + liquidVar.length, replacement: escapeHtmlText(text) }]
+}
+
+/** COMPLEMENTO 2: el maestro trae `| Antes <del>$999</del>`. Lo editable es el
+ *  monto; el prefijo "| Antes" y el `<del>` (tachado) quedan fijos, que es lo
+ *  que le da el sentido de "precio anterior". */
+function complemento2Edits(cell: string, fields: DealCardFields): Edit[] {
+  const bounds = elementBounds(cell, indexOfOrThrow(cell, COMPLEMENTO_2_ANCHOR), 'h5')
+  if (!fields.complemento2Enabled) return [{ ...bounds, replacement: '' }]
+  const delBounds = elementBounds(cell, indexOfOrThrow(cell, '<del>', bounds.start), 'del')
+  return [{ ...textRunBounds(cell, delBounds, 'del'), replacement: escapeHtmlText(fields.complemento2Text) }]
+}
+
+/**
+ * TAG1/TAG2. El `<div role="molecula-tag">` es el ABUELO del ícono (envuelve el
+ * pill, que envuelve el `<h5>` con el `<img>`), y ese role aparece 2 veces por
+ * celda — el ícono por defecto es lo único que distingue un tag del otro, así
+ * que se ubica el ícono y desde ahí se busca su role hacia atrás.
+ */
+function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, text: string): Edit[] {
+  const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
+  const roleIndex = cell.lastIndexOf(TAG_ROLE_ANCHOR, iconIndex)
+  if (roleIndex === -1) {
+    throw new Error(`${FILE_NAME}: no se encontró "${TAG_ROLE_ANCHOR}" antes del ícono "${iconPlaceholder}" — revisar components/deals/render.ts`)
+  }
+  const bounds = elementBounds(cell, roleIndex, 'div')
+  // "se debe poder cambiar o quitar el ícono, si se quita, se elimina la div
+  // completa" — sin ícono no hay pill, así que apagar el tag borra el <div>.
+  if (!enabled) return [{ ...bounds, replacement: '' }]
+
+  const labelBounds = textRunBounds(cell, elementBounds(cell, iconIndex, 'h5'), 'h5')
+  return [
+    { start: iconIndex, end: iconIndex + iconPlaceholder.length, replacement: escapeHtmlAttr(iconUrl) },
+    // Los espacios alrededor son del maestro (` tag 1 `), no del dato.
+    { ...labelBounds, replacement: ` ${escapeHtmlText(text)} ` },
+  ]
+}
+
+function ctaEdits(cell: string, fields: DealCardFields): Edit[] {
+  const anchorIndex = indexOfOrThrow(cell, CTA_ANCHOR)
+  if (!fields.ctaEnabled) return [{ ...elementBounds(cell, anchorIndex, 'h4'), replacement: '' }]
+  const strongBounds = elementBounds(cell, anchorIndex, 'strong')
+  return [{ ...textRunBounds(cell, strongBounds, 'strong'), replacement: escapeHtmlText(fields.ctaText) }]
+}
+
+function renderTextCell(cell: string, fields: DealCardFields): string {
+  const edits: Edit[] = []
+
+  // El link de ESTA celda (1 sola aparición por celda: el archivo real no usa
+  // la numeración LINKDEAL1/LINKDEAL2 que sugiere _contenidos_wrapper.html).
+  const linkIndex = indexOfOrThrow(cell, LINK_PLACEHOLDER)
+  edits.push({ start: linkIndex, end: linkIndex + LINK_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.link) })
+
+  edits.push(...copyLineEdits(cell, COPY_1_VAR, fields.copy1))
+  edits.push(...copyLineEdits(cell, COPY_2_VAR, fields.copy2))
+
+  // LINEA 3: badge de descuento (con su Corona Pro opcional) + 2 complementos.
+  const markdownBounds = elementBounds(cell, indexOfOrThrow(cell, MARKDOWN_ANCHOR), 'h4')
+  if (!fields.markdownEnabled) {
+    // Se corta el <h4> entero, y con él la Corona Pro que vive adentro — por eso
+    // la edición del ícono NO se emite en esta rama (ver applyEdits).
+    edits.push({ ...markdownBounds, replacement: '' })
+  } else {
+    edits.push({ ...textRunBounds(cell, markdownBounds, 'h4'), replacement: escapeHtmlText(fields.markdownText) })
+    if (!fields.coronaProEnabled) {
+      edits.push({ ...voidElementBounds(cell, indexOfOrThrow(cell, CORONA_PRO_VAR), 'img'), replacement: '' })
+    }
+  }
+  edits.push(...togglePiece(cell, COMPLEMENTO_1_ANCHOR, 'h5', fields.complemento1Enabled, escapeHtmlText(fields.complemento1Text)))
+  edits.push(...complemento2Edits(cell, fields))
+
+  // TEXTOS RATING: categoría / rating / tiempo. Los 2 íconos son fijos en el
+  // maestro (estrella y reloj), solo cambia el texto que va después.
+  edits.push(...togglePiece(cell, CATEGORIA_ANCHOR, 'h5', fields.categoriaEnabled, escapeHtmlText(fields.categoriaText)))
+  edits.push(
+    ...togglePiece(cell, RATING_ANCHOR, 'h5', fields.ratingEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.ratingText)}`),
+  )
+  edits.push(
+    ...togglePiece(cell, TIEMPO_ANCHOR, 'h5', fields.tiempoEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.tiempoText)}`),
+  )
+
+  edits.push(...tagEdits(cell, TAG_1_ICON_PLACEHOLDER, fields.tag1Enabled, fields.tag1IconUrl, fields.tag1Text))
+  edits.push(...tagEdits(cell, TAG_2_ICON_PLACEHOLDER, fields.tag2Enabled, fields.tag2IconUrl, fields.tag2Text))
+  edits.push(...ctaEdits(cell, fields))
+
+  return applyEdits(cell, edits)
+}
+
+// --- Celda de legales -------------------------------------------------------
+
+const LEGAL_ANCHOR = '<span role="molecula-texto" class="legal"'
+
+function renderLegalCell(cell: string, card: DealCard): string {
+  const bounds = elementBounds(cell, indexOfOrThrow(cell, LEGAL_ANCHOR), 'span')
+  // La fila de legales es del PAR, pero el toggle es por tarjeta: si esta no lo
+  // activó y su compañera sí, la celda queda con el <span> vacío. El maestro es
+  // explícito en que ahí se quita el contenido, nunca la celda.
+  const text = card.fields.legalEnabled ? escapeHtmlText(card.fields.legalText) : ''
+  return applyEdits(cell, [{ ...textRunBounds(cell, bounds, 'span'), replacement: text }])
+}
+
+// --- Armado del par ---------------------------------------------------------
+
+/**
+ * Las 3 plantillas de celda del archivo real. Los cierres son literales
+ * "atómicos" de 2 tags a propósito: la celda de imagen anida otra tabla y la de
+ * textos un `<a>`, así que un `</td>` suelto cortaría en el cierre interno.
+ * Las 2 celdas de cada fila son iguales salvo espacios en blanco, y cada una
+ * trae exactamente una copia de cada ancla (verificado, y contado en
+ * scripts/sync-master.mjs) — así que se extrae cada celda por separado y se
+ * rellena con los datos de su propia tarjeta.
+ */
+const IMAGE_CELL_RE = /<td width="50%" style="width: 50%" >[\s\S]*?<\/table><\/td>/g
+const TEXT_CELL_RE = /<td width="50%" style="width: 50%; vertical-align: top;[\s\S]*?<\/a><\/td>/g
+const LEGAL_CELL_RE = /<td width="50%" style="width: 50%;" >[\s\S]*?<\/div><\/td>/g
+
+/** Reemplaza las 2 celdas de una fila, de atrás hacia adelante para no
+ *  invalidar el índice de la primera. */
+function spliceRow(html: string, cellRe: RegExp, label: string, renderCell: (cell: string, slot: number) => string): string {
+  const matches = [...html.matchAll(cellRe)]
+  if (matches.length !== DEALS_CARDS_PER_PAIR) {
+    throw new Error(
+      `${FILE_NAME}: se esperaban ${DEALS_CARDS_PER_PAIR} celdas de ${label} y se encontraron ${matches.length} — revisar components/deals/render.ts`,
+    )
+  }
+  let out = html
+  for (let slot = matches.length - 1; slot >= 0; slot--) {
+    const match = matches[slot]
+    const start = match.index ?? indexOfOrThrow(html, match[0])
+    out = out.slice(0, start) + renderCell(match[0], slot) + out.slice(start + match[0].length)
+  }
+  return out
+}
+
+/** Saca la fila de legales entera (los 2 `<td>` y su `<tr>`) cuando ninguna de
+ *  las 2 tarjetas del par la activó — "viene desactivada por defecto". */
+function removeLegalRow(html: string): string {
+  const cellIndex = indexOfOrThrow(html, LEGAL_ANCHOR)
+  const rowStart = html.lastIndexOf('<tr', cellIndex)
+  if (rowStart === -1) {
+    throw new Error(`${FILE_NAME}: no se encontró el <tr> de la fila de legales — revisar components/deals/render.ts`)
+  }
+  const rowEnd = indexOfOrThrow(html, '</tr>', cellIndex) + '</tr>'.length
+  return html.slice(0, rowStart) + html.slice(rowEnd)
+}
+
+function renderDealPair(cards: (DealCard | undefined)[], blockId: string): string {
+  let html = stripComments(dealColumnasRaw)
+
+  // Cada celda que SÍ tiene tarjeta se envuelve en su par de comentarios
+  // DCARD — una tarjeta produce 2 o 3 pares (imagen, textos y, si aparece, su
+  // celda de legales), todos con el mismo id, porque su HTML vive repartido en
+  // 3 `<tr>` que no son contiguos. ui/Viewport.tsx los une en un solo rect.
+  const cellFor = (cell: string, slot: number, render: (card: DealCard) => string): string => {
+    const card = cards[slot]
+    if (!card) return emptyCell(cell)
+    return wrapWithDealCardMarkers(blockId, card.id, render(card))
+  }
+
+  html = spliceRow(html, IMAGE_CELL_RE, 'imagen', (cell, slot) => cellFor(cell, slot, (card) => renderImageCell(cell, card.fields)))
+  html = spliceRow(html, TEXT_CELL_RE, 'textos', (cell, slot) => cellFor(cell, slot, (card) => renderTextCell(cell, card.fields)))
+
+  const showLegal = cards.some((card) => card?.fields.legalEnabled === true)
+  html = showLegal
+    ? spliceRow(html, LEGAL_CELL_RE, 'legales', (cell, slot) => cellFor(cell, slot, (card) => renderLegalCell(cell, card)))
+    : removeLegalRow(html)
+
+  return html
+}
+
+// --- Liquid muerto del maestro ----------------------------------------------
+
+/**
+ * Los 4 `{% assign deals_copy_[12]_promo %}` de EJEMPLO que el maestro trae
+ * ANTES del doctype (2 con el texto de muestra, 2 aplicándole `| truncate: 50`)
+ * más el comentario que los explica. Es Liquid VIVO, no comentado, que hoy se
+ * cuela tal cual en todo HTML exportado — incluso sin usar DEALS, porque
+ * stripBannerFieldAssigns solo barre los `banner_(copy|img)_*`. La app hornea
+ * esos textos dentro de cada tarjeta, así que acá ya son Liquid muerto.
+ *
+ * El comentario título que los precede (`EJEMPLO DE DEFINICION DE CAMPOS PARA
+ * BANNER`, mal etiquetado en el maestro: es un copy-paste del bloque del banner
+ * que está justo arriba) ya lo barre el regex global de
+ * components/banner/render.ts, así que no se repite acá.
+ */
+const DEALS_LINE_LIMIT_COMMENT_RE = /[ \t]*<!--\s*LÍMITE DE 2 LÍNEAS[\s\S]*?-->[ \t]*\r?\n?/g
+const DEALS_FIELD_ASSIGN_RE = /[ \t]*\{%\s*assign\s+deals_copy_[12]_promo\s*=\s*.*?%\}[ \t]*\r?\n?/g
+
+export function stripDealsFieldAssigns(html: string): string {
+  return html.replace(DEALS_LINE_LIMIT_COMMENT_RE, '').replace(DEALS_FIELD_ASSIGN_RE, '')
+}
+
+// --- Entrada pública --------------------------------------------------------
+
+/** Agrupa las tarjetas de a 2, como las renderiza el maestro. La última puede
+ *  quedar sin compañera (`undefined`) — su celda se vacía sin borrarse. */
+function chunkPairs(items: DealCard[]): (DealCard | undefined)[][] {
+  const pairs: (DealCard | undefined)[][] = []
+  for (let i = 0; i < items.length; i += DEALS_CARDS_PER_PAIR) {
+    pairs.push([items[i], items[i + 1]])
+  }
+  return pairs
+}
+
+export interface DealsRenderCtx {
+  blockId: string
+}
+
+export function renderDealsSnippet(fields: DealsFields, doc: EmailDocument, ctx: DealsRenderCtx): string {
+  // Sin separador entre pares: "los deals tienen su propio aire"
+  // (05-docs/USO-DE-CADA-PARTE.md, repetido en COMO-ARMAR-UN-MAIL.md) — la
+  // misma razón por la que components/contenidos/render.ts tampoco pone
+  // separador antes ni después de un bloque DEALS.
+  const html = chunkPairs(fields.items)
+    .map((pair) => renderDealPair(pair, ctx.blockId))
+    .join('\n')
+
+  return resolveThemeVars(html, resolveGlobalVars(doc.global))
+}

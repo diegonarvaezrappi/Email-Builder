@@ -34,6 +34,20 @@ describe('resolveThemeVars', () => {
       '<table bgcolor="#FFFFFF">',
     )
   })
+
+  it('also resolves the 2 deal vars of EXTRA_THEME_VAR_NAMES, including the hyphenated one', () => {
+    expect(resolveThemeVars('<img src="{{coronapro_mail_body}}">', { coronapro_mail_body: 'https://x.test/c.png' })).toBe(
+      '<img src="https://x.test/c.png">',
+    )
+    // El guión del nombre tiene que sobrevivir la interpolación al regex —
+    // dentro de una alternancia es literal, pero es justo el tipo de cosa que
+    // se rompe en silencio si alguien mueve la variable a una clase de caracteres.
+    expect(
+      resolveThemeVars('<div style="border-radius: {{body_container_background_radius-peq}};">', {
+        'body_container_background_radius-peq': ' 8px',
+      }),
+    ).toBe('<div style="border-radius:  8px;">')
+  })
 })
 
 describe('stripThemeDefinitions', () => {
