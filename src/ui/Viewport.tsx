@@ -742,22 +742,22 @@ function EmailFrame({
             >
               <span className="slot-badge">{getContentBlockDef(type)?.label ?? type}</span>
             </button>
-            {/* DEALS no se duplica: el mail admite un solo bloque de deals
-                (máx. 4 en total, ver components/deals/blocks.ts) — duplicarlo
-                daría 8. Lo repetible ahí son sus tarjetas, no el bloque. */}
-            {type !== 'DEALS' && (
-              <button
-                type="button"
-                className="slot-duplicate"
-                aria-label="Duplicar"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDuplicateBlock(id)
-                }}
-              >
-                ⧉
-              </button>
-            )}
+            {/* Duplicar una fila de DEALS es una forma más de agregar otra
+                (junto con arrastrar "Deals" de nuevo desde la librería) — sin
+                tope, ver components/deals/schema.ts. contentBlockRegistry.ts's
+                cloneFields le asigna ids nuevos a las tarjetas copiadas, así
+                que la fila duplicada nunca comparte id con la original. */}
+            <button
+              type="button"
+              className="slot-duplicate"
+              aria-label="Duplicar"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDuplicateBlock(id)
+              }}
+            >
+              ⧉
+            </button>
             <button
               type="button"
               className="slot-delete"

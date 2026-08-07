@@ -23,15 +23,16 @@ export function DealsPropertiesPanel({ value }: DealsPropertiesPanelProps) {
   return (
     <div className="properties-panel">
       <p className="inspector-hint">
-        {value.items.length} de {DEALS_MAX_CARDS} deals. Se muestran de a dos por fila: hacé clic en un deal del lienzo para
-        editarlo, o arrastralo para reordenarlo.
+        Esta fila tiene {value.items.length} de {DEALS_MAX_CARDS} deals. Hacé clic en un deal del lienzo para editarlo, o
+        arrastralo para reordenarlo dentro de la fila.
       </p>
-      {value.items.length % 2 === 1 ? (
+      {value.items.length < DEALS_MAX_CARDS ? (
         <p className="inspector-hint">
-          El último deal queda solo en su fila (la celda de al lado se deja vacía, como indica el maestro). Agregá uno más para
-          completar el par.
+          La(s) celda(s) vacía(s) de esta fila quedan en blanco en el mail (no se borran). Usá "+ Agregar deal" para
+          volver a llenarlas.
         </p>
       ) : null}
+      <p className="inspector-hint">¿Necesitás otra fila de deals? Arrastrá "Deals" de nuevo desde el panel de componentes — podés agregar tantas como quieras, y ubicar otros bloques (ej. un CTA) entre una fila y otra.</p>
     </div>
   )
 }

@@ -24,10 +24,3 @@ export function findDealsBlockByCard(contenidos: ContentBlock[], cardId: string)
   if (index === -1) return null
   return { block: contenidos[index] as DealsBlock, index }
 }
-
-/** `true` si el documento ya tiene un bloque DEALS. Sostiene el tope de "max 4
- *  deals por MAIL" (05-docs/USO-DE-CADA-PARTE.md §11): el cap de 4 tarjetas por
- *  bloque solo alcanza si además no se pueden acumular bloques. */
-export function hasDealsBlock(contenidos: ContentBlock[]): boolean {
-  return contenidos.some((block) => block.type === 'DEALS')
-}

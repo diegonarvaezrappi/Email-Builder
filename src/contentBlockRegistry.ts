@@ -5,7 +5,7 @@ import type { GlobalFields } from './global/schema'
 import { defaultCtaFields, ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { renderCtaSnippet } from './components/cta/render'
 import { CtaPropertiesPanel } from './components/cta/PropertiesPanel'
-import { defaultDealsFields, dealsFieldsSchema, type DealsFields } from './components/deals/schema'
+import { cloneDealsFields, createDefaultDealsFields, defaultDealsFields, dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { renderDealsSnippet } from './components/deals/render'
 import { DealsPropertiesPanel } from './components/deals/panels'
 
@@ -32,6 +32,24 @@ export interface ContentBlockDef<TFields> {
   label: string
   schema: ZodType<TFields, ZodTypeDef, any>
   defaultFields: TFields
+  /**
+   * Fabrica el `fields` de una instancia NUEVA (usado por `insertContentBlock`
+   * en store.ts). Por defecto ninguno hace falta — reusar `defaultFields` tal
+   * cual alcanza para bloques sin ids propios adentro de `fields` (ej. CTA).
+   * DEALS lo sobreescribe: cada tarjeta trae su propio id, y 2 filas de deals
+   * (2 instancias del mismo tipo) no pueden compartirlos — ver la nota grande
+   * en components/deals/schema.ts sobre por qué ahora se pueden arrastrar
+   * varias filas.
+   */
+  createDefaultFields?: () => TFields
+  /**
+   * Clona un `fields` YA EXISTENTE para una instancia duplicada (usado por
+   * `duplicateContentBlock`), preservando los valores del usuario. Por
+   * defecto ninguno hace falta — reusar el mismo objeto alcanza si `fields` no
+   * tiene ids propios adentro. DEALS lo sobreescribe por el mismo motivo que
+   * `createDefaultFields`.
+   */
+  cloneFields?: (fields: TFields) => TFields
   render: (fields: TFields, doc: EmailDocument, ctx: ContentBlockRenderCtx) => string
   PropertiesPanel: ComponentType<{
     value: TFields
@@ -55,6 +73,8 @@ const dealsBlockDef: ContentBlockDef<DealsFields> = {
   label: 'Deals',
   schema: dealsFieldsSchema,
   defaultFields: defaultDealsFields,
+  createDefaultFields: createDefaultDealsFields,
+  cloneFields: cloneDealsFields,
   render: renderDealsSnippet,
   PropertiesPanel: DealsPropertiesPanel,
 }

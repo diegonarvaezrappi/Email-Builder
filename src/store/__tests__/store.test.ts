@@ -102,6 +102,26 @@ describe('insertContentBlock', () => {
     useBuilder.getState().insertContentBlock('NOPE', 0)
     expect(useBuilder.getState().document.contenidos).toHaveLength(0)
   })
+
+  it('DEALS: cada fila nueva trae ids de tarjeta frescos, nunca colisiona con una fila insertada antes', () => {
+    // Regresión real: el pedido de poder arrastrar "Deals" varias veces exige
+    // que 2 filas no compartan ids de tarjeta — si compartieran,
+    // findDealsBlockByCard (store.ts) encontraría siempre la 1ª fila y
+    // cualquier edición/eliminación de una tarjeta de la 2ª fila aplicaría por
+    // error sobre la 1ª. Ver createDefaultDealsFields en components/deals/schema.ts.
+    useBuilder.getState().insertContentBlock('DEALS', 0)
+    useBuilder.getState().insertContentBlock('DEALS', 1)
+    const contenidos = useBuilder.getState().document.contenidos as DealsBlock[]
+    expect(contenidos).toHaveLength(2)
+    const idsRow1 = contenidos[0].fields.items.map((c) => c.id)
+    const idsRow2 = contenidos[1].fields.items.map((c) => c.id)
+    expect(idsRow1).toHaveLength(2)
+    expect(idsRow2).toHaveLength(2)
+    for (const id of idsRow2) expect(idsRow1).not.toContain(id)
+    // Y cada fila sigue siendo una fila completa con sus valores por defecto.
+    expect(contenidos[1].fields).toEqual({ items: expect.any(Array) })
+    expect(contenidos[1].fields.items[0].fields).toEqual(defaultDealCardFields)
+  })
 })
 
 describe('duplicateContentBlock', () => {
@@ -119,6 +139,24 @@ describe('duplicateContentBlock', () => {
     setContenidos([ctaBlock('a')])
     useBuilder.getState().duplicateContentBlock('does-not-exist')
     expect(useBuilder.getState().document.contenidos).toHaveLength(1)
+  })
+
+  it('DEALS: la fila duplicada preserva los valores de las tarjetas pero con ids nuevos', () => {
+    useBuilder.setState((s) => ({
+      document: {
+        ...s.document,
+        contenidos: [{ id: 'row-1', type: 'DEALS', fields: { items: [dealCard('a', { copy1: 'Original' }), dealCard('b')] } }],
+      },
+    }))
+    useBuilder.getState().duplicateContentBlock('row-1')
+    const contenidos = useBuilder.getState().document.contenidos as DealsBlock[]
+    expect(contenidos).toHaveLength(2)
+    const originalIds = contenidos[0].fields.items.map((c) => c.id)
+    const copyIds = contenidos[1].fields.items.map((c) => c.id)
+    expect(originalIds).toEqual(['a', 'b'])
+    for (const id of copyIds) expect(originalIds).not.toContain(id)
+    // Los VALORES sí se preservan — es una copia, no una fila en blanco.
+    expect(contenidos[1].fields.items[0].fields.copy1).toBe('Original')
   })
 })
 
@@ -414,20 +452,21 @@ function dealCardIds(blockIndex = 0): string[] {
 
 describe('insertDealCard', () => {
   it('inserta una tarjeta con sus campos por defecto en el índice pedido', () => {
-    setDealsBlock([dealCard('a'), dealCard('b')])
-    useBuilder.getState().insertDealCard('deals-1', 1)
+    // Un bloque DEALS es una fila de hasta 2 (DEALS_MAX_CARDS) — se arranca
+    // con 1 sola tarjeta para poder insertar la 2ª sin chocar con el tope.
+    setDealsBlock([dealCard('a')])
+    useBuilder.getState().insertDealCard('deals-1', 0)
     const ids = dealCardIds()
-    expect(ids).toHaveLength(3)
-    expect(ids[0]).toBe('a')
-    expect(ids[2]).toBe('b')
-    const inserted = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[1]
+    expect(ids).toHaveLength(2)
+    expect(ids[1]).toBe('a')
+    const inserted = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[0]
     expect(inserted.fields).toEqual(defaultDealCardFields)
   })
 
-  it('no hace nada si el bloque ya llegó al tope de 4', () => {
-    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c'), dealCard('d')])
-    useBuilder.getState().insertDealCard('deals-1', 4)
-    expect(dealCardIds()).toEqual(['a', 'b', 'c', 'd'])
+  it('no hace nada si el bloque ya llegó al tope de 2 (una fila completa)', () => {
+    setDealsBlock([dealCard('a'), dealCard('b')])
+    useBuilder.getState().insertDealCard('deals-1', 2)
+    expect(dealCardIds()).toEqual(['a', 'b'])
   })
 
   it('no hace nada si el bloque no existe o no es DEALS', () => {
@@ -439,21 +478,22 @@ describe('insertDealCard', () => {
 
 describe('duplicateDealCard', () => {
   it('copia la tarjeta justo después, con un id nuevo y los mismos campos', () => {
-    setDealsBlock([dealCard('a', { copy1: 'Mi promo' }), dealCard('b')])
+    // Mismo motivo que arriba: arranca con 1 sola tarjeta para que la copia
+    // (la 2ª) no choque con el tope de la fila.
+    setDealsBlock([dealCard('a', { copy1: 'Mi promo' })])
     useBuilder.getState().duplicateDealCard('a')
     const ids = dealCardIds()
-    expect(ids).toHaveLength(3)
+    expect(ids).toHaveLength(2)
     expect(ids[0]).toBe('a')
-    expect(ids[2]).toBe('b')
     expect(ids[1]).not.toBe('a')
     const copy = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[1]
     expect(copy.fields.copy1).toBe('Mi promo')
   })
 
-  it('no hace nada si el bloque ya llegó al tope de 4', () => {
-    setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c'), dealCard('d')])
+  it('no hace nada si el bloque ya llegó al tope de 2 (una fila completa)', () => {
+    setDealsBlock([dealCard('a'), dealCard('b')])
     useBuilder.getState().duplicateDealCard('a')
-    expect(dealCardIds()).toEqual(['a', 'b', 'c', 'd'])
+    expect(dealCardIds()).toEqual(['a', 'b'])
   })
 })
 

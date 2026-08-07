@@ -4,28 +4,43 @@
 // El maestro (02-components/04_content-modules/deals/deal_columnas.html) arma
 // los deals SIEMPRE de a dos, en una sola `<table role="module">` con 3 filas
 // (imágenes / textos / legales) y 2 celdas por fila — una celda por tarjeta.
-// Acá el modelo NO es "un par": es una lista plana de tarjetas, y
-// components/deals/render.ts las agrupa de a 2 al renderizar. Así una tarjeta
-// se agrega/duplica/reordena/elimina sola, igual que una pieza de banner
-// (doc.banner.items), en vez de tener que pensar en pares.
 //
-// A diferencia del banner, acá hay UN solo tipo de molécula, así que no hay
-// unión discriminada: `type` no existe, alcanza con `{ id, fields }`.
+// Cada BLOQUE DEALS de CONTENIDOS es exactamente UNA fila (hasta 2 tarjetas) —
+// no una lista libre de tarjetas como en un primer diseño de esto. Pedido
+// explícito del usuario: poder arrastrar "Deals" desde la librería tantas
+// veces como quiera, cada arrastre agrega una fila nueva e independiente, así
+// se pueden intercalar otros bloques (ej. un CTA) ENTRE dos filas de deals —
+// exactamente el mismo patrón repetible que ya tiene CTA (components/cta/),
+// solo que acá una "instancia" son 2 tarjetas en vez de 1 texto. Reordenar
+// FILAS usa el mecanismo genérico de bloques de CONTENIDOS que ya existe
+// (CONTENT_BLOCK_REORDER_DRAG_TYPE); reordenar/editar/vaciar las 2 TARJETAS
+// dentro de una fila usa las acciones dedicadas de abajo.
+//
+// 05-docs/USO-DE-CADA-PARTE.md §11 documenta "deals (max 4)" como tope
+// recomendado por mail — ACÁ NO SE APLICA a propósito: el usuario pidió
+// explícitamente levantar ese límite para poder diseñar layouts con varias
+// filas de deals separadas por otros contenidos. Decisión de producto de este
+// proyecto, no del maestro.
+//
+// A diferencia del banner, acá hay UN solo tipo de molécula (la tarjeta), así
+// que no hay unión discriminada: `type` no existe, alcanza con `{ id, fields }`.
 // ============================================================================
 import { z } from 'zod'
+import { newId } from '../../ids'
 
 /** "los deeals vienen de a dos en celdas" (comentario de apertura del maestro):
- *  cada copia de deal_columnas.html renderiza 2 tarjetas, una por celda. */
+ *  cada copia de deal_columnas.html renderiza 2 tarjetas, una por celda — y
+ *  por lo mismo, cada bloque DEALS (una fila) nunca tiene más de 2. */
 export const DEALS_CARDS_PER_PAIR = 2
 
 /**
- * Tope documentado: "deals (max 4)" (05-docs/USO-DE-CADA-PARTE.md §11, "Orden
- * recomendado de uso") — justo 2 pares completos. Es por MAIL, no por bloque:
- * el bloque lo aplica sobre su propia lista (store/store.ts) y
- * ui/LibraryPanel.tsx impide insertar un 2º bloque DEALS, que es lo que cierra
- * la puerta a superarlo por acumulación.
+ * Tope POR BLOQUE (una fila = un par): coincide con DEALS_CARDS_PER_PAIR
+ * porque un bloque ES una fila, nunca más. El botón "+ Agregar deal" del
+ * panel solo tiene sentido para volver a llenar una celda vaciada — para más
+ * FILAS, se arrastra "Deals" de nuevo desde la librería (ver el comentario
+ * grande de arriba sobre por qué ya no hay un tope total por mail).
  */
-export const DEALS_MAX_CARDS = DEALS_CARDS_PER_PAIR * 2
+export const DEALS_MAX_CARDS = DEALS_CARDS_PER_PAIR
 
 /**
  * Límite de 2 líneas por celda: cada celda mide ~50% de 480px (≈230px) y el
@@ -130,12 +145,43 @@ export type DealsFields = z.infer<typeof dealsFieldsSchema>
  * Arranca con 2 tarjetas (un par completo) en vez de 1: el maestro renderiza de
  * a dos, así que con una sola el usuario vería media fila y una celda vacía sin
  * entender por qué. Ids fijos (no newId()) a propósito, igual que
- * defaultBannerFields: mantienen los tests deterministas, y duplicar una
- * tarjeta siempre genera un id nuevo.
+ * defaultBannerFields: mantienen `defaultDealsFields` en sí determinista para
+ * tests/documentación.
+ *
+ * OJO — este objeto NO es lo que usa la inserción real (ver
+ * createDefaultDealsFields más abajo): como ahora se pueden arrastrar varias
+ * filas de DEALS, reutilizar estos 2 ids fijos en cada fila nueva haría que 2
+ * bloques compartieran cards con el MISMO id — y findDealsBlockByCard (y las
+ * acciones de store.ts que dependen de ella) asumen que un id de tarjeta es
+ * único en TODO el documento. `defaultDealsFields` queda solo como valor de
+ * referencia (el `defaultFields` que pide ContentBlockDef); la inserción real
+ * pasa por `createDefaultDealsFields()`, que genera 2 ids frescos cada vez.
  */
 export const defaultDealsFields: DealsFields = {
   items: [
     { id: 'deals-card-1-default', fields: defaultDealCardFields },
     { id: 'deals-card-2-default', fields: defaultDealCardFields },
   ],
+}
+
+/** Usado por `insertContentBlock` (vía `ContentBlockDef.createDefaultFields`)
+ *  para CADA fila nueva que se arrastra desde la librería — 2 ids frescos, así
+ *  ninguna fila colisiona con otra ya existente en el documento. */
+export function createDefaultDealsFields(): DealsFields {
+  return {
+    items: [
+      { id: newId(), fields: defaultDealCardFields },
+      { id: newId(), fields: defaultDealCardFields },
+    ],
+  }
+}
+
+/**
+ * Usado por `duplicateContentBlock` (vía `ContentBlockDef.cloneFields`) para
+ * duplicar una fila EXISTENTE: preserva los valores que el usuario ya cargó en
+ * cada tarjeta, pero les asigna ids nuevos — mismo motivo que
+ * createDefaultDealsFields, la copia no puede compartir ids con el original.
+ */
+export function cloneDealsFields(fields: DealsFields): DealsFields {
+  return { items: fields.items.map((card) => ({ ...card, id: newId() })) }
 }

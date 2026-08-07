@@ -108,7 +108,13 @@ export const useBuilder = create<BuilderState>()(
         set((s) => {
           const def = contentBlockRegistry[type]
           if (!def) return s
-          const block = { id: newId(), type, fields: def.defaultFields } as ContentBlock
+          // createDefaultFields (si el tipo lo define, ver DEALS en
+          // contentBlockRegistry.ts) fabrica un `fields` fresco por instancia
+          // — necesario para tipos con ids propios adentro de `fields`, donde
+          // reusar el mismo `defaultFields` en 2 inserciones haría que ambas
+          // instancias compartieran esos ids.
+          const fields = def.createDefaultFields ? def.createDefaultFields() : def.defaultFields
+          const block = { id: newId(), type, fields } as ContentBlock
           const next = [...s.document.contenidos]
           next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, block)
           return { document: { ...s.document, contenidos: next } }
@@ -118,7 +124,14 @@ export const useBuilder = create<BuilderState>()(
         set((s) => {
           const idx = s.document.contenidos.findIndex((b) => b.id === id)
           if (idx === -1) return s
-          const copy = { ...s.document.contenidos[idx], id: newId() } as ContentBlock
+          const original = s.document.contenidos[idx]
+          const def = contentBlockRegistry[original.type]
+          // cloneFields (ver nota de arriba) preserva los valores del usuario
+          // pero regenera cualquier id propio adentro de `fields` — mismo
+          // motivo que createDefaultFields, la copia no puede compartirlos
+          // con el original.
+          const fields = def?.cloneFields ? def.cloneFields(original.fields) : original.fields
+          const copy = { ...original, id: newId(), fields } as ContentBlock
           const next = [...s.document.contenidos]
           next.splice(idx + 1, 0, copy)
           return { document: { ...s.document, contenidos: next } }
