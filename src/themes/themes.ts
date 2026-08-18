@@ -103,13 +103,21 @@ export function themeVars(slug: string): Record<string, string> {
 const PREMIUM_THEME_SLUGS = ['pro', 'problack']
 
 /**
- * Los 6 temas "pastel" — fondos siempre claros y suaves (ver GUIA-DE-TEMAS.md).
+ * Los 7 temas "pastel" — fondos siempre claros y suaves (ver GUIA-DE-TEMAS.md).
  * Exportado (a diferencia de PREMIUM_THEME_SLUGS) porque App.tsx también lo
  * necesita: al entrar a un tema pastel, el logo del header se resetea a su
  * versión de fondo claro — un logo "oscuro" (blanco) es casi invisible sobre
  * un fondo pastel.
+ *
+ * `gris100` se sumó en el pull del 2026-08-09: GUIA-DE-TEMAS.md y
+ * 01-foundations/README.md lo describen EXPLÍCITAMENTE como "séptimo tema
+ * pastel" (no es una inferencia de acá) — tono neutro sin dorado, "la vía
+ * media entre los pasteles de color y los premium". Confirmado también por
+ * cómo se comporta en head-meta-tags.html: `bg_bannertono_mail_general`
+ * transparente + `padd_banner_mail_general: '0px 0px'`, el mismo patrón de
+ * "fondo de banner apagado por defecto" que ya tienen los otros 6 pasteles.
  */
-export const PASTEL_THEME_SLUGS = ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100']
+export const PASTEL_THEME_SLUGS = ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100', 'gris100']
 
 /**
  * Los 3 temas "oscuros / invertidos" — fondo oscuro por defecto (ver
@@ -157,6 +165,7 @@ const THEME_LABELS: Record<string, string> = {
   purpura100: 'Púrpura 100',
   celeste100: 'Celeste 100',
   verde100: 'Verde 100',
+  gris100: 'Gris 100',
   darkneon: 'Dark neon',
   darkturbo: 'Dark Turbo',
   darkneutro: 'Dark Neutro',

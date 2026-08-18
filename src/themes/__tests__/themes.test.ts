@@ -39,7 +39,10 @@ describe('parseThemes', () => {
 })
 
 describe('THEMES (parsed from the real repo file)', () => {
-  it('finds the 11 themes documented in 06-docs/GUIA-DE-TEMAS.md', () => {
+  it('finds the 12 themes documented in 06-docs/GUIA-DE-TEMAS.md', () => {
+    // gris100 se sumó en el pull del 2026-08-09 ("nuevo tema, ajuste read me y
+    // tipografias") — 7º pastel, entre verde100 y los 3 oscuros/invertidos
+    // (mismo orden que las ramas de head-meta-tags.html).
     expect(THEMES.map((t) => t.slug)).toEqual([
       'beige100',
       'beige150',
@@ -47,6 +50,7 @@ describe('THEMES (parsed from the real repo file)', () => {
       'purpura100',
       'celeste100',
       'verde100',
+      'gris100',
       'darkneon',
       'darkturbo',
       'darkneutro',
@@ -123,9 +127,9 @@ describe('colorFooterForTheme', () => {
 })
 
 describe('PASTEL_THEME_SLUGS', () => {
-  it('lists exactly the 6 pastel themes documented in GUIA-DE-TEMAS.md, all real repo themes', () => {
+  it('lists exactly the 7 pastel themes documented in GUIA-DE-TEMAS.md, all real repo themes', () => {
     expect(PASTEL_THEME_SLUGS.sort()).toEqual(
-      ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100'].sort(),
+      ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100', 'gris100'].sort(),
     )
     for (const slug of PASTEL_THEME_SLUGS) {
       expect(THEMES.map((t) => t.slug), slug).toContain(slug)
@@ -142,5 +146,17 @@ describe('presentation helpers', () => {
   it('falls back to the raw slug when a theme has no friendly label', () => {
     expect(themeLabel('purpura100')).toBe('Púrpura 100')
     expect(themeLabel('tema-nuevo-sin-label')).toBe('tema-nuevo-sin-label')
+  })
+
+  it('gives EVERY real repo theme a proper label, never the raw slug', () => {
+    // Regresión real: gris100 (sumado en el pull del 2026-08-09) quedó en
+    // THEME_GROUPS/PASTEL_THEME_SLUGS pero SIN entrada en THEME_LABELS —
+    // groupedThemes() lo mostraba igual (nunca invisible, ver el test de
+    // arriba), pero el <select> del selector de tema mostraba literalmente
+    // "gris100" en vez de "Gris 100". El test de arriba no lo detectaba
+    // porque solo prueba un tema conocido de antes; este recorre TODOS.
+    for (const slug of THEME_SLUGS) {
+      expect(themeLabel(slug), slug).not.toBe(slug)
+    }
   })
 })
