@@ -3,7 +3,15 @@ import { defaultEmailDocument } from '../../../registry'
 import { THEME_SLUGS } from '../../../themes/themes'
 import type { EmailDocument } from '../../../model'
 import { renderDealsSnippet, stripDealsFieldAssigns } from '../render'
-import { defaultDealCardFields, type DealCard, type DealCardFields, type DealsFields } from '../schema'
+import {
+  DEAL_CARD_PIECE_TYPES,
+  defaultDealCardFields,
+  normalizePieceOrder,
+  type DealCard,
+  type DealCardFields,
+  type DealCardPieceType,
+  type DealsFields,
+} from '../schema'
 
 const BLOCK_ID = 'block-1'
 
@@ -263,6 +271,72 @@ describe('renderDealsSnippet · enlaces, escapado y limpieza', () => {
     expect(html).not.toContain('body_container_background_radius-peq')
     // El radio chico del contenedor del deal, con su valor real del tema.
     expect(html).toContain('border-radius:  8px')
+  })
+})
+
+describe('renderDealsSnippet · orden de piezas (pieceOrder)', () => {
+  it('el orden default (natural) marca las 7 piezas con DPIECE, balanceadas, sin cambiar nada más del HTML', () => {
+    const html = render(cards(card('a')))
+    for (const type of DEAL_CARD_PIECE_TYPES) {
+      // 2 = apertura + cierre (`/DPIECE:a:copy1` también contiene el literal
+      // "DPIECE:a:copy1" como substring, de ahí el 2 en vez de 1).
+      expect(count(html, `DPIECE:a:${type}`)).toBe(2)
+      expect(count(html, `<!-- DPIECE:a:${type} -->`)).toBe(1)
+      expect(count(html, `<!-- /DPIECE:a:${type} -->`)).toBe(1)
+    }
+    expect(count(html, 'DPIECE:')).toBe(count(html, '/DPIECE:') * 2)
+  })
+
+  it('un orden personalizado hace aparecer las piezas en ESE orden en el HTML', () => {
+    const custom: DealCardPieceType[] = ['cta', 'tag2', 'tag1', 'rating', 'precio', 'copy2', 'copy1']
+    const html = render(cards(card('a', { pieceOrder: custom })))
+    const positions = custom.map((type) => html.indexOf(`DPIECE:a:${type}`))
+    for (let i = 0; i < positions.length; i++) expect(positions[i]).toBeGreaterThan(-1)
+    for (let i = 0; i < positions.length - 1; i++) expect(positions[i]).toBeLessThan(positions[i + 1])
+    // El texto del CTA (ahora primero) aparece antes que "Promo especial" (copy1, ahora último).
+    expect(html.indexOf('Pide ahora')).toBeLessThan(html.indexOf('Promo especial'))
+  })
+
+  it('reordenar y desactivar piezas al mismo tiempo no deja tags huérfanos', () => {
+    const html = render(
+      cards(
+        card('a', {
+          pieceOrder: ['cta', 'copy1', 'tag1', 'copy2', 'precio', 'rating', 'tag2'],
+          tag1Enabled: false,
+          markdownEnabled: false,
+          coronaProEnabled: false,
+        }),
+      ),
+    )
+    expect(count(html, '<div')).toBe(count(html, '</div>'))
+    expect(count(html, '<h4')).toBe(count(html, '</h4>'))
+    expect(count(html, '<h5')).toBe(count(html, '</h5>'))
+    // tag1 apagado (borrado entero); tag2 sigue habilitado por default.
+    expect(count(html, 'role="molecula-tag"')).toBe(1)
+    expect(html).not.toContain('role="MARKDOWN"')
+  })
+
+  it('la fila de legales no se ve afectada por ningún pieceOrder', () => {
+    const custom: DealCardPieceType[] = [...DEAL_CARD_PIECE_TYPES].reverse()
+    const html = render(cards(card('a', { pieceOrder: custom, legalEnabled: true, legalText: 'Ley custom' }), card('b')))
+    expect(html).toContain('Ley custom')
+    expect(count(html, 'class="legal"')).toBe(2)
+  })
+
+  it('normalizePieceOrder resuelve un orden corrupto (falta un tipo, tiene un duplicado) a una permutación válida de 7', () => {
+    const corrupted = ['cta', 'cta', 'copy1'] as DealCardPieceType[]
+    const normalized = normalizePieceOrder(corrupted)
+    expect(normalized).toHaveLength(DEAL_CARD_PIECE_TYPES.length)
+    expect(new Set(normalized).size).toBe(DEAL_CARD_PIECE_TYPES.length)
+    for (const type of DEAL_CARD_PIECE_TYPES) expect(normalized).toContain(type)
+    // Los que sí venían en el input conservan su posición relativa al frente.
+    expect(normalized[0]).toBe('cta')
+    expect(normalized[1]).toBe('copy1')
+  })
+
+  it('un pieceOrder corrupto en el render no rompe ni pierde piezas (normalizePieceOrder corre también acá)', () => {
+    const html = render(cards(card('a', { pieceOrder: ['cta', 'cta'] as DealCardPieceType[] })))
+    for (const type of DEAL_CARD_PIECE_TYPES) expect(html).toContain(`DPIECE:a:${type}`)
   })
 })
 

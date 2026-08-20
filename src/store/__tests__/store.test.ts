@@ -517,6 +517,43 @@ describe('reorderDealCard', () => {
   })
 })
 
+function pieceOrderOf(cardId: string, blockIndex = 0): string[] {
+  const block = useBuilder.getState().document.contenidos[blockIndex]
+  if (block.type !== 'DEALS') return []
+  return block.fields.items.find((c) => c.id === cardId)?.fields.pieceOrder ?? []
+}
+
+describe('reorderDealCardPiece', () => {
+  it('mueve una pieza hacia adelante dentro de pieceOrder (toIndex contra el array ANTES de sacarla)', () => {
+    setDealsBlock([dealCard('a'), dealCard('b')])
+    useBuilder.getState().reorderDealCardPiece('a', 'copy1', 2)
+    expect(pieceOrderOf('a')).toEqual(['copy2', 'copy1', 'precio', 'rating', 'tag1', 'tag2', 'cta'])
+    // La tarjeta 'b' (y el resto del documento) queda intacta.
+    expect(pieceOrderOf('b')).toEqual(['copy1', 'copy2', 'precio', 'rating', 'tag1', 'tag2', 'cta'])
+  })
+
+  it('mueve una pieza hacia atrás', () => {
+    setDealsBlock([dealCard('a')])
+    useBuilder.getState().reorderDealCardPiece('a', 'cta', 0)
+    expect(pieceOrderOf('a')).toEqual(['cta', 'copy1', 'copy2', 'precio', 'rating', 'tag1', 'tag2'])
+  })
+
+  it('ignora un cardId que no existe', () => {
+    setDealsBlock([dealCard('a')])
+    const before = pieceOrderOf('a')
+    useBuilder.getState().reorderDealCardPiece('zzz', 'cta', 0)
+    expect(pieceOrderOf('a')).toEqual(before)
+  })
+
+  it('ignora un pieceType que no está en el pieceOrder actual de la tarjeta', () => {
+    setDealsBlock([dealCard('a', { pieceOrder: ['copy1', 'copy2', 'precio', 'rating', 'tag1', 'tag2', 'cta'] })])
+    const before = pieceOrderOf('a')
+    // @ts-expect-error -- probando defensivamente un tipo que no existe en el array actual
+    useBuilder.getState().reorderDealCardPiece('a', 'inexistente', 0)
+    expect(pieceOrderOf('a')).toEqual(before)
+  })
+})
+
 describe('removeDealCard', () => {
   it('elimina solo la tarjeta apuntada', () => {
     setDealsBlock([dealCard('a'), dealCard('b'), dealCard('c')])

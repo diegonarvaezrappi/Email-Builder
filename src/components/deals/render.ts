@@ -18,6 +18,17 @@
 // (DEALS_ANCHOR_COUNTS) antes de sincronizar, para que un cambio del maestro
 // aborte el sync en vez de hacer que el render corte el elemento equivocado.
 //
+// Las 7 piezas de la celda de textos (línea 1, línea 2, precio, rating,
+// tag1, tag2, cta) se pueden reordenar arrastrando en el lienzo (pedido
+// explícito del usuario, igual que las piezas de banner) — así que
+// renderTextCell ya no aplica todos sus edits en un solo pase sobre la celda
+// completa: mide los límites de cada pieza en la celda PRÍSTINA, calcula los
+// edits de cada una contra su propio fragmento recortado, y recién ahí las
+// reensambla en el orden de `fields.pieceOrder` (ver pieceBounds/pieceEdits
+// más abajo). Con el orden natural (el default), la salida es byte a byte
+// igual a la de antes de este cambio — se logra reusando el whitespace
+// original entre piezas como separador al reensamblar, no uno fijo.
+//
 // Los `{{xxx_mail_general}}` de tema que queden (img_overlay_1, color_texto,
 // padd_deal, bg_solid, body_container_background_radius-peq, color_descuento,
 // bg_descuento, coronapro_mail_body, bg_tag_fondo, color_acento2,
@@ -30,9 +41,17 @@ import dealColumnasRaw from '../../assets/templates/deals/deal_columnas.html?raw
 import type { EmailDocument } from '../../model'
 import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
 import { escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
-import { wrapWithDealCardMarkers } from '../../template/contentBlocks'
+import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
-import { DEALS_CARDS_PER_PAIR, type DealCard, type DealCardFields, type DealsFields } from './schema'
+import {
+  DEAL_CARD_PIECE_TYPES,
+  DEALS_CARDS_PER_PAIR,
+  normalizePieceOrder,
+  type DealCard,
+  type DealCardFields,
+  type DealCardPieceType,
+  type DealsFields,
+} from './schema'
 
 const FILE_NAME = 'deal_columnas.html'
 
@@ -220,6 +239,10 @@ const COMPLEMENTO_2_ANCHOR = 'role="COMPLEMENTO 2"'
 const CATEGORIA_ANCHOR = 'role="CATEGORIA"'
 const RATING_ANCHOR = 'role="RATING"'
 const TIEMPO_ANCHOR = 'role="TIEMPO"'
+/** El `<div>` que agrupa categoría/rating/tiempo en una sola pieza movible
+ *  ("rating") — el typo ("TESTOS" en vez de "TEXTOS") es real del maestro,
+ *  no un error de este archivo. */
+const RATING_GROUP_ANCHOR = 'role="TESTOS RATING"'
 const TAG_ROLE_ANCHOR = 'role="molecula-tag"'
 const TAG_1_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa'
 const TAG_2_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn'
@@ -253,22 +276,32 @@ function complemento2Edits(cell: string, fields: DealCardFields): Edit[] {
   return [{ ...textRunBounds(cell, delBounds, 'del'), replacement: escapeHtmlText(fields.complemento2Text) }]
 }
 
-/**
- * TAG1/TAG2. El `<div role="molecula-tag">` es el ABUELO del ícono (envuelve el
- * pill, que envuelve el `<h5>` con el `<img>`), y ese role aparece 2 veces por
- * celda — el ícono por defecto es lo único que distingue un tag del otro, así
- * que se ubica el ícono y desde ahí se busca su role hacia atrás.
- */
-function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, text: string): Edit[] {
+/** Límites del `<div role="molecula-tag">` — el ABUELO del ícono (envuelve el
+ *  pill, que envuelve el `<h5>` con el `<img>`), y ese role aparece 2 veces
+ *  por celda — el ícono por defecto es lo único que distingue un tag del
+ *  otro, así que se ubica el ícono y desde ahí se busca su role hacia atrás.
+ *  Extraído aparte de tagEdits para que pieceBounds pueda reusarlo. */
+function tagGroupBounds(cell: string, iconPlaceholder: string): Bounds {
   const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
   const roleIndex = cell.lastIndexOf(TAG_ROLE_ANCHOR, iconIndex)
   if (roleIndex === -1) {
     throw new Error(`${FILE_NAME}: no se encontró "${TAG_ROLE_ANCHOR}" antes del ícono "${iconPlaceholder}" — revisar components/deals/render.ts`)
   }
-  const bounds = elementBounds(cell, roleIndex, 'div')
+  return elementBounds(cell, roleIndex, 'div')
+}
+
+/**
+ * TAG1/TAG2. `cell` acá es siempre el FRAGMENTO ya recortado de la pieza
+ * (ver pieceBounds/pieceEdits), así que `tagGroupBounds` devuelve los
+ * límites de todo el fragmento — el toggle apagado no borra nada (el
+ * fragmento entero desaparece del reensamblado si `enabled` es false, ver
+ * renderTextCell), lo que hace falta acá es solo el reemplazo de texto/ícono.
+ */
+function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, text: string): Edit[] {
+  const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
   // "se debe poder cambiar o quitar el ícono, si se quita, se elimina la div
   // completa" — sin ícono no hay pill, así que apagar el tag borra el <div>.
-  if (!enabled) return [{ ...bounds, replacement: '' }]
+  if (!enabled) return [{ ...tagGroupBounds(cell, iconPlaceholder), replacement: '' }]
 
   const labelBounds = textRunBounds(cell, elementBounds(cell, iconIndex, 'h5'), 'h5')
   return [
@@ -285,47 +318,150 @@ function ctaEdits(cell: string, fields: DealCardFields): Edit[] {
   return [{ ...textRunBounds(cell, strongBounds, 'strong'), replacement: escapeHtmlText(fields.ctaText) }]
 }
 
-function renderTextCell(cell: string, fields: DealCardFields): string {
+/** LINEA 3 completa: badge de descuento (+ Corona Pro opcional) + 2
+ *  complementos — las 3 piezas de la fila original del maestro, ahora
+ *  reunidas como los edits de la pieza movible "precio". Misma lógica que
+ *  antes vivía inline en renderTextCell, corriendo acá contra el fragmento
+ *  ya recortado de esta pieza en vez de la celda completa. */
+function precioFragmentEdits(fragment: string, fields: DealCardFields): Edit[] {
   const edits: Edit[] = []
-
-  // El link de ESTA celda (1 sola aparición por celda: el archivo real no usa
-  // la numeración LINKDEAL1/LINKDEAL2 que sugiere _contenidos_wrapper.html).
-  const linkIndex = indexOfOrThrow(cell, LINK_PLACEHOLDER)
-  edits.push({ start: linkIndex, end: linkIndex + LINK_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.link) })
-
-  edits.push(...copyLineEdits(cell, COPY_1_VAR, fields.copy1))
-  edits.push(...copyLineEdits(cell, COPY_2_VAR, fields.copy2))
-
-  // LINEA 3: badge de descuento (con su Corona Pro opcional) + 2 complementos.
-  const markdownBounds = elementBounds(cell, indexOfOrThrow(cell, MARKDOWN_ANCHOR), 'h4')
+  const markdownBounds = elementBounds(fragment, indexOfOrThrow(fragment, MARKDOWN_ANCHOR), 'h4')
   if (!fields.markdownEnabled) {
     // Se corta el <h4> entero, y con él la Corona Pro que vive adentro — por eso
     // la edición del ícono NO se emite en esta rama (ver applyEdits).
     edits.push({ ...markdownBounds, replacement: '' })
   } else {
-    edits.push({ ...textRunBounds(cell, markdownBounds, 'h4'), replacement: escapeHtmlText(fields.markdownText) })
+    edits.push({ ...textRunBounds(fragment, markdownBounds, 'h4'), replacement: escapeHtmlText(fields.markdownText) })
     if (!fields.coronaProEnabled) {
-      edits.push({ ...voidElementBounds(cell, indexOfOrThrow(cell, CORONA_PRO_VAR), 'img'), replacement: '' })
+      edits.push({ ...voidElementBounds(fragment, indexOfOrThrow(fragment, CORONA_PRO_VAR), 'img'), replacement: '' })
     }
   }
-  edits.push(...togglePiece(cell, COMPLEMENTO_1_ANCHOR, 'h5', fields.complemento1Enabled, escapeHtmlText(fields.complemento1Text)))
-  edits.push(...complemento2Edits(cell, fields))
+  edits.push(...togglePiece(fragment, COMPLEMENTO_1_ANCHOR, 'h5', fields.complemento1Enabled, escapeHtmlText(fields.complemento1Text)))
+  edits.push(...complemento2Edits(fragment, fields))
+  return edits
+}
 
-  // TEXTOS RATING: categoría / rating / tiempo. Los 2 íconos son fijos en el
-  // maestro (estrella y reloj), solo cambia el texto que va después.
-  edits.push(...togglePiece(cell, CATEGORIA_ANCHOR, 'h5', fields.categoriaEnabled, escapeHtmlText(fields.categoriaText)))
-  edits.push(
-    ...togglePiece(cell, RATING_ANCHOR, 'h5', fields.ratingEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.ratingText)}`),
-  )
-  edits.push(
-    ...togglePiece(cell, TIEMPO_ANCHOR, 'h5', fields.tiempoEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.tiempoText)}`),
-  )
+/** TEXTOS RATING completa: categoría / rating / tiempo — la pieza movible
+ *  "rating". Los 2 íconos (estrella y reloj) son fijos en el maestro, solo
+ *  cambia el texto que va después de cada uno. */
+function ratingGroupFragmentEdits(fragment: string, fields: DealCardFields): Edit[] {
+  return [
+    ...togglePiece(fragment, CATEGORIA_ANCHOR, 'h5', fields.categoriaEnabled, escapeHtmlText(fields.categoriaText)),
+    ...togglePiece(fragment, RATING_ANCHOR, 'h5', fields.ratingEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.ratingText)}`),
+    ...togglePiece(fragment, TIEMPO_ANCHOR, 'h5', fields.tiempoEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.tiempoText)}`),
+  ]
+}
 
-  edits.push(...tagEdits(cell, TAG_1_ICON_PLACEHOLDER, fields.tag1Enabled, fields.tag1IconUrl, fields.tag1Text))
-  edits.push(...tagEdits(cell, TAG_2_ICON_PLACEHOLDER, fields.tag2Enabled, fields.tag2IconUrl, fields.tag2Text))
-  edits.push(...ctaEdits(cell, fields))
+/**
+ * Límites de UNA pieza movible en la celda PRÍSTINA (antes de aplicar ningún
+ * edit) — cada anchor aparece exactamente una vez dentro de los límites de
+ * su propia pieza (verificado contra deal_columnas.html), así que ubicarlos
+ * sobre la celda completa es seguro incluso antes de haber recortado nada.
+ */
+function pieceBounds(cell: string, type: DealCardPieceType): Bounds {
+  switch (type) {
+    case 'copy1':
+      return elementBounds(cell, indexOfOrThrow(cell, COPY_1_VAR), 'h4')
+    case 'copy2':
+      return elementBounds(cell, indexOfOrThrow(cell, COPY_2_VAR), 'h4')
+    case 'precio':
+      return elementBounds(cell, indexOfOrThrow(cell, MARKDOWN_ANCHOR), 'div')
+    case 'rating':
+      return elementBounds(cell, indexOfOrThrow(cell, RATING_GROUP_ANCHOR), 'div')
+    case 'tag1':
+      return tagGroupBounds(cell, TAG_1_ICON_PLACEHOLDER)
+    case 'tag2':
+      return tagGroupBounds(cell, TAG_2_ICON_PLACEHOLDER)
+    case 'cta':
+      return elementBounds(cell, indexOfOrThrow(cell, CTA_ANCHOR), 'h4')
+  }
+}
 
-  return applyEdits(cell, edits)
+/** Los edits propios de una pieza, calculados contra SU PROPIO fragmento (no
+ *  la celda completa) — todas las funciones de abajo ya son anchor-search
+ *  puras sobre un string cualquiera, así que corren igual sobre un fragmento
+ *  chico que sobre la celda entera. */
+function pieceEdits(fragment: string, type: DealCardPieceType, fields: DealCardFields): Edit[] {
+  switch (type) {
+    case 'copy1':
+      return copyLineEdits(fragment, COPY_1_VAR, fields.copy1)
+    case 'copy2':
+      return copyLineEdits(fragment, COPY_2_VAR, fields.copy2)
+    case 'precio':
+      return precioFragmentEdits(fragment, fields)
+    case 'rating':
+      return ratingGroupFragmentEdits(fragment, fields)
+    case 'tag1':
+      return tagEdits(fragment, TAG_1_ICON_PLACEHOLDER, fields.tag1Enabled, fields.tag1IconUrl, fields.tag1Text)
+    case 'tag2':
+      return tagEdits(fragment, TAG_2_ICON_PLACEHOLDER, fields.tag2Enabled, fields.tag2IconUrl, fields.tag2Text)
+    case 'cta':
+      return ctaEdits(fragment, fields)
+  }
+}
+
+/**
+ * Red de seguridad (throw-loud, mismo criterio que el resto del archivo):
+ * las 7 piezas deben ser hermanas CONTIGUAS en su orden natural (solo
+ * whitespace entre una y la siguiente) — verificado hoy contra
+ * deal_columnas.html, pero si un futuro pull del maestro intercalara algo
+ * entre ellas, reensamblar en un orden custom se comería ese contenido en
+ * silencio. Mejor romper el build/render ruidosamente que exportar un mail
+ * con contenido perdido.
+ */
+function assertPiecesContiguous(cell: string, ordered: { type: DealCardPieceType; bounds: Bounds }[]): void {
+  for (let i = 0; i < ordered.length - 1; i++) {
+    const between = cell.slice(ordered[i].bounds.end, ordered[i + 1].bounds.start)
+    if (between.trim() !== '') {
+      throw new Error(
+        `${FILE_NAME}: contenido inesperado entre "${ordered[i].type}" y "${ordered[i + 1].type}" ("${between.trim()}") — ¿cambió el maestro? revisar components/deals/render.ts`,
+      )
+    }
+  }
+}
+
+function renderTextCell(cell: string, card: DealCard): string {
+  const fields = card.fields
+
+  // El link de ESTA celda (1 sola aparición por celda: el archivo real no usa
+  // la numeración LINKDEAL1/LINKDEAL2 que sugiere _contenidos_wrapper.html) —
+  // se resuelve PRIMERO, sobre la celda completa: no se superpone con los
+  // límites de ninguna pieza (vive en el <a> que las envuelve a todas), así
+  // que medirlas después de este paso es seguro.
+  const linkIndex = indexOfOrThrow(cell, LINK_PLACEHOLDER)
+  const withLink = applyEdits(cell, [
+    { start: linkIndex, end: linkIndex + LINK_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.link) },
+  ])
+
+  // Límites de las 7 piezas en orden NATURAL (el literal del maestro) —
+  // reordenar pasa por el ARMADO final, no por cómo se miden acá.
+  const naturalBounds = DEAL_CARD_PIECE_TYPES.map((type) => ({ type, bounds: pieceBounds(withLink, type) }))
+  assertPiecesContiguous(withLink, naturalBounds)
+
+  const shellBefore = withLink.slice(0, naturalBounds[0].bounds.start)
+  const shellAfter = withLink.slice(naturalBounds[naturalBounds.length - 1].bounds.end)
+
+  // Fragmento editado de cada pieza (envuelto en sus propios marcadores para
+  // que ui/Viewport.tsx pueda medirla y arrastrarla) + el whitespace ORIGINAL
+  // que el maestro traía después de ella — se reusa como "pegamento" al
+  // reensamblar en el orden pedido, así el orden natural da una salida BYTE A
+  // BYTE IGUAL a la de antes de este cambio.
+  const fragmentByType = {} as Record<DealCardPieceType, string>
+  const gapAfterType: Partial<Record<DealCardPieceType, string>> = {}
+  for (let i = 0; i < naturalBounds.length; i++) {
+    const { type, bounds } = naturalBounds[i]
+    const raw = withLink.slice(bounds.start, bounds.end)
+    const edited = applyEdits(raw, pieceEdits(raw, type, fields))
+    fragmentByType[type] = wrapWithDealCardPieceMarkers(card.id, type, edited)
+    if (i < naturalBounds.length - 1) {
+      gapAfterType[type] = withLink.slice(bounds.end, naturalBounds[i + 1].bounds.start)
+    }
+  }
+
+  const order = normalizePieceOrder(fields.pieceOrder)
+  const middle = order.map((type, i) => fragmentByType[type] + (i < order.length - 1 ? gapAfterType[type] ?? '\n' : '')).join('')
+
+  return shellBefore + middle + shellAfter
 }
 
 // --- Celda de legales -------------------------------------------------------
@@ -400,7 +536,7 @@ function renderDealPair(cards: (DealCard | undefined)[], blockId: string): strin
   }
 
   html = spliceRow(html, IMAGE_CELL_RE, 'imagen', (cell, slot) => cellFor(cell, slot, (card) => renderImageCell(cell, card.fields)))
-  html = spliceRow(html, TEXT_CELL_RE, 'textos', (cell, slot) => cellFor(cell, slot, (card) => renderTextCell(cell, card.fields)))
+  html = spliceRow(html, TEXT_CELL_RE, 'textos', (cell, slot) => cellFor(cell, slot, (card) => renderTextCell(cell, card)))
 
   const showLegal = cards.some((card) => card?.fields.legalEnabled === true)
   html = showLegal

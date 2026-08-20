@@ -29,3 +29,15 @@ export const BANNER_ITEM_REORDER_DRAG_TYPE = 'application/x-email-banner-item-re
  *  tarjeta nueva": las tarjetas de deal son todas de la misma forma, así que
  *  agregar es un botón del inspector, no un catálogo arrastrable. */
 export const DEAL_CARD_REORDER_DRAG_TYPE = 'application/x-email-deal-card-reorder'
+
+/**
+ * Reordenar una PIEZA (una de las 7 moléculas fijas de abajo de la imagen)
+ * dentro de una tarjeta de deal. Payload = `${cardId}:${pieceType}` — a
+ * diferencia de una pieza de banner o una tarjeta de deal, una pieza de
+ * tarjeta no tiene id propio (son 7 tipos fijos, uno de cada por tarjeta),
+ * así que hace falta codificar AMBOS datos: qué tarjeta es la dueña (para
+ * acotar el reorden a sus propias 7 piezas) y qué tipo es. Separar por ":"
+ * es seguro: los ids de tarjeta salen de newId() (uuid, ver ids.ts), que
+ * nunca contiene ":".
+ */
+export const DEAL_CARD_PIECE_REORDER_DRAG_TYPE = 'application/x-email-deal-card-piece-reorder'

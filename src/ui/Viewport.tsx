@@ -33,6 +33,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ContentBlockType, EmailDocument, SlotName } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
+import type { DealCardPieceType } from '../components/deals/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
@@ -44,6 +45,8 @@ import {
   BANNER_ITEM_OPEN_RE,
   DEAL_CARD_CLOSE_RE,
   DEAL_CARD_OPEN_RE,
+  DEAL_CARD_PIECE_CLOSE_RE,
+  DEAL_CARD_PIECE_OPEN_RE,
 } from '../template/contentBlocks'
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
@@ -67,6 +70,7 @@ import {
   BANNER_ITEM_DRAG_TYPE,
   BANNER_ITEM_REORDER_DRAG_TYPE,
   DEAL_CARD_REORDER_DRAG_TYPE,
+  DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
 } from './dragTypes'
 import { dropXInFrameSpace, dropYInFrameSpace, resolveDropIndex, resolveDropIndexReadingOrder, type DropRect } from './dropIndex'
 import {
@@ -94,6 +98,7 @@ interface ViewportProps {
   onDuplicateDealCard: (cardId: string) => void
   onReorderDealCard: (cardId: string, toIndex: number) => void
   onRemoveDealCard: (cardId: string) => void
+  onReorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -144,6 +149,7 @@ export function Viewport({
   onDuplicateDealCard,
   onReorderDealCard,
   onRemoveDealCard,
+  onReorderDealCardPiece,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
@@ -294,6 +300,7 @@ export function Viewport({
             onDuplicateDealCard={onDuplicateDealCard}
             onReorderDealCard={onReorderDealCard}
             onRemoveDealCard={onRemoveDealCard}
+            onReorderDealCardPiece={onReorderDealCardPiece}
           />
         )
       ) : (
@@ -335,6 +342,7 @@ interface EmailFrameProps {
   onDuplicateDealCard: (cardId: string) => void
   onReorderDealCard: (cardId: string, toIndex: number) => void
   onRemoveDealCard: (cardId: string) => void
+  onReorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -489,6 +497,14 @@ function mergeRectsById(rects: MarkedBlockRect[]): MarkedBlockRect[] {
 const measureDealCards = (root: Document): MarkedBlockRect[] =>
   mergeRectsById(measureMarkedBlocks(root, DEAL_CARD_OPEN_RE, DEAL_CARD_CLOSE_RE))
 
+/** `type` acá es el id de la TARJETA dueña, `id` es el tipo de pieza — ver
+ *  wrapWithDealCardPieceMarkers en template/contentBlocks.ts (convención
+ *  invertida respecto a measureDealCards, mismo motivo: ahí `type` es el id
+ *  del bloque dueño). Sin merge por id, a diferencia de measureDealCards:
+ *  cada pieza es un fragmento único y contiguo, nunca repetido. */
+const measureDealCardPieces = (root: Document): MarkedBlockRect[] =>
+  measureMarkedBlocks(root, DEAL_CARD_PIECE_OPEN_RE, DEAL_CARD_PIECE_CLOSE_RE)
+
 /**
  * El email completo en un iframe. Va con `allow-same-origin` (sin
  * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
@@ -516,6 +532,7 @@ function EmailFrame({
   onDuplicateDealCard,
   onReorderDealCard,
   onRemoveDealCard,
+  onReorderDealCardPiece,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
@@ -524,6 +541,7 @@ function EmailFrame({
   const [blockRects, setBlockRects] = useState<MarkedBlockRect[]>([])
   const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
   const [dealCardRects, setDealCardRects] = useState<MarkedBlockRect[]>([])
+  const [dealCardPieceRects, setDealCardPieceRects] = useState<MarkedBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
@@ -535,6 +553,7 @@ function EmailFrame({
     setBlockRects(measureContentBlocks(root))
     setBannerItemRects(measureBannerItems(root))
     setDealCardRects(measureDealCards(root))
+    setDealCardPieceRects(measureDealCardPieces(root))
   }, [clientScheme])
 
   // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
@@ -592,6 +611,22 @@ function EmailFrame({
     return resolveDropIndexReadingOrder(order, rectsById, dropX, dropY)
   }
 
+  // Índice de destino para una pieza dentro de una tarjeta. A diferencia de
+  // piezas de banner o pares de deal, las 7 piezas se apilan en una sola
+  // columna angosta (la celda de textos, ~230px) sin ambigüedad de X, así que
+  // alcanza la variante vertical (no "reading order"). Acotado a las propias
+  // 7 piezas de la tarjeta DUEÑA de la pieza arrastrada (no la que esté bajo
+  // el cursor) — no hay forma de mover una pieza a otra tarjeta por error.
+  const resolveIndexForDealCardPieceDrop = (e: React.DragEvent, cardId: string): number => {
+    const found = findDealsBlockByCard(contenidos, cardId)
+    const card = found?.block.fields.items.find((c) => c.id === cardId)
+    if (!card || !frameElRef.current) return 0
+    const order = card.fields.pieceOrder
+    const rectsById = new Map(dealCardPieceRects.filter((r) => r.type === cardId).map((r) => [r.id, r]))
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    return resolveDropIndex(order, rectsById, dropY)
+  }
+
   return (
     <div className="viewport-canvas">
       <div
@@ -608,7 +643,12 @@ function EmailFrame({
         // despachan acá según qué dataTransfer type venga presente.
         onDragOver={(e) => {
           const types = e.dataTransfer.types
-          const reorderTypes = [CONTENT_BLOCK_REORDER_DRAG_TYPE, BANNER_ITEM_REORDER_DRAG_TYPE, DEAL_CARD_REORDER_DRAG_TYPE]
+          const reorderTypes = [
+            CONTENT_BLOCK_REORDER_DRAG_TYPE,
+            BANNER_ITEM_REORDER_DRAG_TYPE,
+            DEAL_CARD_REORDER_DRAG_TYPE,
+            DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
+          ]
           const allTypes = [
             SLOT_DRAG_TYPE,
             CONTENT_BLOCK_DRAG_TYPE,
@@ -672,6 +712,16 @@ function EmailFrame({
           if (reorderDealCardId) {
             e.preventDefault()
             onReorderDealCard(reorderDealCardId, resolveIndexForDealCardDrop(e, reorderDealCardId))
+            return
+          }
+
+          const reorderPieceRaw = e.dataTransfer.getData(DEAL_CARD_PIECE_REORDER_DRAG_TYPE)
+          if (reorderPieceRaw) {
+            e.preventDefault()
+            const sep = reorderPieceRaw.indexOf(':')
+            const cardId = reorderPieceRaw.slice(0, sep)
+            const pieceType = reorderPieceRaw.slice(sep + 1) as DealCardPieceType
+            onReorderDealCardPiece(cardId, pieceType, resolveIndexForDealCardPieceDrop(e, cardId))
           }
         }}
       >
@@ -863,6 +913,35 @@ function EmailFrame({
             >
               ×
             </button>
+          </div>
+        ))}
+        {/* Piezas de tarjeta de deal — DESPUÉS de dealCardRects para quedar
+            arriba del overlay de la tarjeta DENTRO de la celda de textos.
+            Solo cubren esa celda: la de IMAGEN y la de LEGALES quedan afuera
+            de estos rects, así que ahí la tarjeta sigue totalmente
+            seleccionable/arrastrable/duplicable/eliminable como siempre — no
+            hace falta una capa de "controles" redibujada como la de
+            BANNER/DEALS más abajo. Sin badge ni botones propios: clickear
+            una pieza selecciona la TARJETA dueña (no existe una selección de
+            pieza independiente). */}
+        {dealCardPieceRects.map(({ id: pieceType, type: cardId, top, left, width, height: h }) => (
+          <div
+            key={`${cardId}-${pieceType}`}
+            className="slot-hit piece-hit"
+            style={{ top, left, width, height: h }}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData(DEAL_CARD_PIECE_REORDER_DRAG_TYPE, `${cardId}:${pieceType}`)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+          >
+            <button
+              type="button"
+              className="slot-select"
+              aria-label="Seleccionar deal"
+              aria-pressed={isDealCardSelected(selected, cardId)}
+              onClick={() => onSelect(selectDealCard(cardId))}
+            />
           </div>
         ))}
         {/* Y el badge del bloque DEALS redibujado al final, por la misma razón

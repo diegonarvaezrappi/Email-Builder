@@ -856,6 +856,19 @@
   cursor: grabbing;
 }
 
+/* Piezas de tarjeta de deal — sin badge ni botones propios (no son
+   seleccionables/duplicables/eliminables por separado, ver ui/Viewport.tsx:
+   clickear una selecciona la tarjeta dueña). El indicio visual al pasar el
+   mouse ya lo da gratis .slot-hit:hover .slot-select (el borde que también
+   usan header/footer/etc.) — acá solo hace falta el cursor de "agarrar". */
+.piece-hit {
+  cursor: grab;
+}
+
+.piece-hit:active {
+  cursor: grabbing;
+}
+
 .preview-error {
   margin: 24px;
   color: var(--danger);

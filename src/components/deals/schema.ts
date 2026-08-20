@@ -24,6 +24,12 @@
 //
 // A diferencia del banner, acá hay UN solo tipo de molécula (la tarjeta), así
 // que no hay unión discriminada: `type` no existe, alcanza con `{ id, fields }`.
+// Las 7 piezas FIJAS que trae cada tarjeta debajo de la imagen (líneas de
+// texto, precio, rating, tags, CTA) sí tienen un orden propio e independiente
+// (`fields.pieceOrder`, pedido explícito del usuario para poder reordenarlas
+// arrastrando en el lienzo, igual que las piezas de banner) — pero siguen
+// siendo campos individuales de `dealCardFieldsSchema`, no una colección de
+// objetos tipados: ver DEAL_CARD_PIECE_TYPES más abajo.
 // ============================================================================
 import { z } from 'zod'
 import { newId } from '../../ids'
@@ -52,6 +58,47 @@ export const DEALS_MAX_CARDS = DEALS_CARDS_PER_PAIR
  * truncate de Liquid, el corte tiene que estar acá.
  */
 export const DEALS_COPY_MAX_LENGTH = 50
+
+/**
+ * Las 7 "moléculas" fijas que van debajo de la imagen del producto, en el
+ * orden LITERAL del maestro (deal_columnas.html) — este array ES el orden
+ * natural/default, no uno separado. "precio" agrupa markdown/coronaPro/
+ * complemento1/complemento2 en una sola pieza movible (esos 4 campos siguen
+ * editándose por separado en el panel, solo su bloque de HTML se mueve como
+ * unidad); "rating" agrupa categoria/rating/tiempo de la misma forma. Pedido
+ * explícito del usuario: poder reordenar estas piezas arrastrando en el
+ * lienzo, igual que las piezas de banner — ver components/deals/render.ts
+ * para cómo se ubican los límites de cada una en el HTML real, y
+ * ui/Viewport.tsx para el drag-and-drop. La fila de "Legales" queda AFUERA
+ * de este reorden a propósito: es una fila del PAR (compartida entre las 2
+ * tarjetas), no de una tarjeta individual como estas 7.
+ */
+export const DEAL_CARD_PIECE_TYPES = ['copy1', 'copy2', 'precio', 'rating', 'tag1', 'tag2', 'cta'] as const
+export type DealCardPieceType = (typeof DEAL_CARD_PIECE_TYPES)[number]
+
+/**
+ * Devuelve una permutación válida de los 7 tipos: descarta duplicados/tipos
+ * inválidos y agrega al final, en orden natural, los que falten. Defensivo
+ * contra un `pieceOrder` corrupto (localStorage viejo editado a mano, o un
+ * bug futuro en el reducer) — a propósito NO se valida esto con un
+ * `.refine()` en el schema: si el parse fallara, persistence.ts descartaría
+ * el DOCUMENTO ENTERO (ver loadDocument), no solo esta tarjeta. Mejor
+ * degradar acá que resetear el mail completo.
+ */
+export function normalizePieceOrder(order: readonly DealCardPieceType[]): DealCardPieceType[] {
+  const seen = new Set<DealCardPieceType>()
+  const clean: DealCardPieceType[] = []
+  for (const type of order) {
+    if (DEAL_CARD_PIECE_TYPES.includes(type) && !seen.has(type)) {
+      seen.add(type)
+      clean.push(type)
+    }
+  }
+  for (const type of DEAL_CARD_PIECE_TYPES) {
+    if (!seen.has(type)) clean.push(type)
+  }
+  return clean
+}
 
 export const dealCardFieldsSchema = z.object({
   /** Va dentro de `background-image: url(...)` de la celda de imagen (no en un
@@ -114,6 +161,14 @@ export const dealCardFieldsSchema = z.object({
   /** LLAMADO A LA ACCION — texto plano dentro de un `<strong>`, sin botón. */
   ctaEnabled: z.boolean().default(true),
   ctaText: z.string().default('Pide ahora ⤍'),
+
+  /** Orden en que las 7 piezas de arriba se pintan en el lienzo (y en el HTML
+   *  exportado) — arranca en el orden literal del maestro (DEAL_CARD_PIECE_TYPES).
+   *  Se reordena arrastrando cada pieza en el lienzo (ui/Viewport.tsx), igual
+   *  que las piezas de banner; no hay UI de reorden en este panel. Un
+   *  documento viejo de localStorage sin este campo recibe este mismo default
+   *  al parsear (zod), retrocompatible sin más cambios. */
+  pieceOrder: z.array(z.enum(DEAL_CARD_PIECE_TYPES)).default([...DEAL_CARD_PIECE_TYPES]),
 
   /**
    * Fila de legales: "viene desactivada por defecto" (maestro), de ahí el

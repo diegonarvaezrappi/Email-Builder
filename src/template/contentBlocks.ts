@@ -54,3 +54,25 @@ export function wrapWithDealCardMarkers(blockId: string, cardId: string, innerHt
 
 export const DEAL_CARD_OPEN_RE = /^\s*DCARD:([^:]+):(.+?)\s*$/
 export const DEAL_CARD_CLOSE_RE = /^\s*\/DCARD:([^:]+):(.+?)\s*$/
+
+/**
+ * Cuarto prefijo distinto ("DPIECE") por la misma razón que BITEM/DCARD no
+ * son BLOCK: una pieza de tarjeta de deal nunca debe confundirse con un
+ * bloque de CONTENIDOS, una pieza de banner o una tarjeta de deal completa
+ * en ui/Viewport.tsx.
+ *
+ * El primer campo es el id de la TARJETA dueña, no un tipo — mismo criterio
+ * que DCARD usa el id del BLOQUE dueño: las 7 piezas son fijas (no hay una
+ * lista libre de piezas por tarjeta como los items de banner), así que lo
+ * que hace falta es saber de qué tarjeta es cada una, para acotar su
+ * reordenamiento a las 7 piezas de ESA tarjeta. A diferencia de DCARD, una
+ * pieza SÍ es un fragmento contiguo único (una sola pareja de marcadores por
+ * pieza, nunca repetida) — no hace falta un mergeRectsById en
+ * ui/Viewport.tsx.
+ */
+export function wrapWithDealCardPieceMarkers(cardId: string, pieceType: string, innerHtml: string): string {
+  return `<!-- DPIECE:${cardId}:${pieceType} -->\n${innerHtml}\n<!-- /DPIECE:${cardId}:${pieceType} -->`
+}
+
+export const DEAL_CARD_PIECE_OPEN_RE = /^\s*DPIECE:([^:]+):(.+?)\s*$/
+export const DEAL_CARD_PIECE_CLOSE_RE = /^\s*\/DPIECE:([^:]+):(.+?)\s*$/

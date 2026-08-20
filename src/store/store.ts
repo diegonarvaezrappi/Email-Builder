@@ -7,7 +7,7 @@ import { temporal } from 'zundo'
 import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
-import { DEALS_MAX_CARDS, defaultDealCardFields, type DealCardFields } from '../components/deals/schema'
+import { DEALS_MAX_CARDS, defaultDealCardFields, type DealCardFields, type DealCardPieceType } from '../components/deals/schema'
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
@@ -83,6 +83,14 @@ interface BuilderState {
   reorderDealCard: (cardId: string, toIndex: number) => void
   removeDealCard: (cardId: string) => void
   updateDealCardFields: (cardId: string, fields: unknown) => void
+
+  /**
+   * Reordena las 7 piezas fijas de UNA tarjeta (fields.pieceOrder) — mismo
+   * espíritu que reorderDealCard, un nivel más adentro. `pieceType` identifica
+   * la pieza arrastrada (no tiene id propio, a diferencia de una tarjeta o de
+   * una pieza de banner: son 7 tipos fijos, uno de cada por tarjeta).
+   */
+  reorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
 }
 
 /** Reescribe la lista de tarjetas de un bloque DEALS dejando el resto del
@@ -292,6 +300,27 @@ export const useBuilder = create<BuilderState>()(
           const found = findDealsBlockByCard(s.document.contenidos, cardId)
           if (!found) return s
           const items = found.block.fields.items.map((c) => (c.id === cardId ? { ...c, fields: fields as DealCardFields } : c))
+          return { document: withDealCards(s.document, found.index, items) }
+        }),
+
+      /** `toIndex` se interpreta contra `pieceOrder` ANTES de sacar la pieza
+       *  arrastrada — misma convención que reorderDealCard/reorderBannerItem. */
+      reorderDealCardPiece: (cardId, pieceType, toIndex) =>
+        set((s) => {
+          const found = findDealsBlockByCard(s.document.contenidos, cardId)
+          if (!found) return s
+          const card = found.block.fields.items.find((c) => c.id === cardId)
+          if (!card) return s
+          const order = card.fields.pieceOrder
+          const from = order.indexOf(pieceType)
+          if (from === -1) return s
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const nextOrder = [...order]
+          const [moved] = nextOrder.splice(from, 1)
+          nextOrder.splice(Math.max(0, Math.min(adjusted, nextOrder.length)), 0, moved)
+          const items = found.block.fields.items.map((c) =>
+            c.id === cardId ? { ...c, fields: { ...c.fields, pieceOrder: nextOrder } } : c,
+          )
           return { document: withDealCards(s.document, found.index, items) }
         }),
     }),
