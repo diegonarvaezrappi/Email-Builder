@@ -35,10 +35,27 @@ export type HeaderLogoBackground = (typeof HEADER_LOGO_BACKGROUND_VALUES)[number
 export const COBRANDING_SIZE_VALUES = ['s', 'm', 'l'] as const
 export type CobrandingSize = (typeof COBRANDING_SIZE_VALUES)[number]
 
+/**
+ * Tamaño del logo de MARCA (no el de cobranding, que tiene su propio
+ * selector). A diferencia de cobranding, los 40 maestros no traen 3 variantes
+ * horneadas para este logo — 's'/'l' se calculan en render.ts como un
+ * porcentaje del alto original que traiga el maestro para esa marca. 'm' es
+ * el tamaño original, sin cambios (default, no-op).
+ */
+export const HEADER_LOGO_SIZE_VALUES = ['s', 'm', 'l'] as const
+export type HeaderLogoSize = (typeof HEADER_LOGO_SIZE_VALUES)[number]
+
 export const headerSchema = z.object({
   brand: z.enum(HEADER_BRAND_VALUES).default('rappi'),
   layout: z.enum(HEADER_LAYOUT_VALUES).default('centrado'),
   logoBackground: z.enum(HEADER_LOGO_BACKGROUND_VALUES).default('claro'),
+  /** URL propia para reemplazar el logo de marca. Vacío (default) = se
+   *  conserva el asset del maestro para la marca/logoBackground elegidos. */
+  logoUrl: z.string().default(''),
+  /** Tamaño del logo de marca — ver HEADER_LOGO_SIZE_VALUES arriba. Se aplica
+   *  también cuando logoUrl está vacío (afecta el logo original, no solo un
+   *  reemplazo custom). */
+  logoSize: z.enum(HEADER_LOGO_SIZE_VALUES).default('m'),
   cobranding: z.boolean().default(false),
   cobrandingSize: z.enum(COBRANDING_SIZE_VALUES).default('m'),
   /** Default = la URL placeholder que traen los 40 archivos de header
@@ -83,5 +100,11 @@ export const HEADER_LOGO_BACKGROUND_LABELS: Record<HeaderLogoBackground, string>
 export const COBRANDING_SIZE_LABELS: Record<CobrandingSize, string> = {
   s: 'Pequeño',
   m: 'Mediano',
+  l: 'Grande',
+}
+
+export const HEADER_LOGO_SIZE_LABELS: Record<HeaderLogoSize, string> = {
+  s: 'Pequeño',
+  m: 'Mediano (original)',
   l: 'Grande',
 }

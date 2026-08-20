@@ -6,6 +6,8 @@ import {
   HEADER_LAYOUT_LABELS,
   HEADER_LOGO_BACKGROUND_VALUES,
   HEADER_LOGO_BACKGROUND_LABELS,
+  HEADER_LOGO_SIZE_VALUES,
+  HEADER_LOGO_SIZE_LABELS,
   COBRANDING_SIZE_VALUES,
   COBRANDING_SIZE_LABELS,
 } from './schema'
@@ -57,6 +59,30 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
           {HEADER_LOGO_BACKGROUND_VALUES.map((bg) => (
             <option key={bg} value={bg}>
               {HEADER_LOGO_BACKGROUND_LABELS[bg]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="field">
+        <span>URL del logo (opcional)</span>
+        <input
+          type="text"
+          placeholder="Dejar vacío para usar el logo original de la marca"
+          value={value.logoUrl}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set('logoUrl', e.target.value)}
+        />
+      </label>
+
+      <label className="field">
+        <span>Tamaño del logo</span>
+        <select
+          value={value.logoSize}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoSize', e.target.value as HeaderFields['logoSize'])}
+        >
+          {HEADER_LOGO_SIZE_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {HEADER_LOGO_SIZE_LABELS[s]}
             </option>
           ))}
         </select>

@@ -29,6 +29,26 @@ const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 const BG_HEADER_VAR_RE = /\{\{\s*bg_header_mail_general\s*\}\}/g
 const COBRANDING_IMG_RE = /<img class="cobranding-[sml]"[^>]*>/g
 
+/**
+ * La <img> del logo de MARCA es siempre la primera del <tr> — antes del
+ * separador y de las 3 variantes de cobranding, que vienen después de
+ * COBRANDING_ANCHOR (verificado en los 40 maestros) — así que un match no-
+ * global sobre todo el <tr> siempre cae en ella, sin necesidad de acotar por
+ * el ancla.
+ */
+const MAIN_LOGO_IMG_RE = /<img[^>]*>/
+const IMG_SRC_RE = /src="[^"]*"/
+
+/** Mismo alto en height/max-height/min-height en los 40 maestros (verificado).
+ *  's'/'l' escalan ese valor; 'm' lo deja intacto (no-op a propósito, para
+ *  que el default no cambie ni un byte del output actual). */
+const LOGO_HEIGHT_PROP_RE = /(height|max-height|min-height):\s*(\d+)px/g
+const LOGO_SIZE_MULTIPLIER: Record<HeaderFields['logoSize'], number> = {
+  s: 0.8,
+  m: 1,
+  l: 1.25,
+}
+
 /** La URL placeholder que traen los 40 archivos (idéntica en los 3 tamaños de
  *  cada uno — verificado). Debe coincidir con el default de cobrandingImageUrl
  *  en schema.ts, que es lo que este placeholder termina reemplazando. */
@@ -47,6 +67,37 @@ function headerTrRaw(fields: HeaderFields): string {
     throw new Error(`No se encontró el header ${fields.brand}/${fields.layout}-${fields.logoBackground}.html`)
   }
   return rawHeaderFiles[path]
+}
+
+/** Escala el height/max-height/min-height de la <img> del logo de marca según
+ *  logoSize. 'm' es un no-op (multiplier 1) — el replace nunca se ejecuta,
+ *  así el output no cambia para nadie que no haya tocado este campo. */
+function resizeLogoImg(imgTag: string, size: HeaderFields['logoSize']): string {
+  const multiplier = LOGO_SIZE_MULTIPLIER[size]
+  if (multiplier === 1) return imgTag
+  return imgTag.replace(LOGO_HEIGHT_PROP_RE, (_match, prop: string, px: string) => {
+    const next = Math.round(Number(px) * multiplier)
+    return `${prop}: ${next}px`
+  })
+}
+
+/**
+ * Reemplaza el `src` del logo de marca por logoUrl (si el usuario puso algo;
+ * vacío = se conserva el asset del maestro) y aplica logoSize. Opera sobre la
+ * <img> completa como una unidad para no interferir con applyCobranding, que
+ * trabaja sobre el resto del <tr> a partir de COBRANDING_ANCHOR.
+ */
+function applyLogoOverrides(trHtml: string, fields: HeaderFields): string {
+  const match = trHtml.match(MAIN_LOGO_IMG_RE)
+  if (!match || match.index === undefined) return trHtml
+
+  let img = match[0]
+  if (fields.logoUrl.trim() !== '') {
+    img = img.replace(IMG_SRC_RE, `src="${escapeHtmlAttr(fields.logoUrl)}"`)
+  }
+  img = resizeLogoImg(img, fields.logoSize)
+
+  return trHtml.slice(0, match.index) + img + trHtml.slice(match.index + match[0].length)
 }
 
 /**
@@ -116,6 +167,7 @@ function resolveHeaderThemeVars(trHtml: string, tema: string): string {
  */
 export function renderHeaderSnippet(fields: HeaderFields, tema: string): string {
   let tr = headerTrRaw(fields)
+  tr = applyLogoOverrides(tr, fields)
   tr = applyCobranding(tr, fields)
   tr = resolveHeaderThemeVars(tr, tema)
   tr = tr.replace(HTML_COMMENT_RE, '')

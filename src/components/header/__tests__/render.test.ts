@@ -120,6 +120,62 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).toContain('border-radius: 10px')
   })
 
+  it('keeps the master logo asset untouched when logoUrl is empty (default)', () => {
+    const withDefault = renderHeaderSnippet(defaultHeaderFields, 'beige100')
+    expect(withDefault).toContain('src="https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf"')
+  })
+
+  it('replaces the brand logo src with the URL the user chose', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoUrl: 'https://example.com/mi-logo.png' }, 'beige100')
+    expect(snippet).toContain('src="https://example.com/mi-logo.png"')
+    expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf')
+    // El logo de cobranding (deshabilitado por default) no se ve afectado.
+    expect(snippet).not.toContain('cobranding-')
+  })
+
+  it('escapes special characters in a user-provided logo URL', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoUrl: 'https://example.com/a"b&c' }, 'beige100')
+    expect(snippet).toContain('src="https://example.com/a&quot;b&amp;c"')
+  })
+
+  it('leaves the brand logo height untouched when logoSize is "m" (default, no-op)', () => {
+    const snippet = renderHeaderSnippet(defaultHeaderFields, 'beige100')
+    const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    expect(img).toContain('height: 30px; max-height: 30px; min-height: 30px')
+  })
+
+  it('shrinks the brand logo height when logoSize is "s"', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoSize: 's' }, 'beige100')
+    const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    // 30 * 0.8 = 24
+    expect(img).toContain('height: 24px; max-height: 24px; min-height: 24px')
+  })
+
+  it('grows the brand logo height when logoSize is "l"', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoSize: 'l' }, 'beige100')
+    const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    // 30 * 1.25 = 37.5 -> redondeado a 38
+    expect(img).toContain('height: 38px; max-height: 38px; min-height: 38px')
+  })
+
+  it('resizing the brand logo does not touch the separator logo or the cobranding images', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, logoSize: 'l', cobranding: true },
+      'beige100',
+    )
+    // El separador (alt="|") sigue con el alto original del maestro, sin escalar.
+    const separator = snippet.match(/<img class="logo-base1"[^>]*alt="\|"[^>]*>/)?.[0]
+    expect(separator).toBeDefined()
+    expect(separator).toContain('height: 30px; max-height: 30px; min-height: 30px')
+    // El cobranding-m tampoco cambia (su propio tamaño se controla aparte).
+    const cobrandingImg = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]
+    expect(cobrandingImg).toBeDefined()
+    expect(cobrandingImg).toContain('height: 36px; max-height: 36px; min-height: 36px')
+  })
+
   it('escapes special characters in a user-provided cobranding URL', () => {
     const snippet = renderHeaderSnippet(
       { ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: 'https://example.com/a"b&c' },
