@@ -150,9 +150,12 @@ export const tagsFieldsSchema = z.object({ tags: z.array(z.string()).min(1).max(
 export type TagsFields = z.infer<typeof tagsFieldsSchema>
 export const defaultTagsFields: TagsFields = tagsFieldsSchema.parse({})
 
-/** `cta_alineado` NO es campo: es fijo por orientación del banner ('left'
- *  horizontal / 'center' vertical, hardcodeado en el maestro). El color/estilo
- *  sale de doc.global.ctaStyle, compartido con el CTA libre de CONTENIDOS. */
+/** `cta_alineado` NO es un campo propio de esta pieza: sigue el selector de
+ *  alineado de moléculas del banner que lo contiene — bannerSchema.
+ *  moleculeAlign en vertical, bannerSchema.horizontalMoleculeAlign en
+ *  horizontal — ver renderCtaInternoSnippet en items/render.ts. El
+ *  color/estilo sale de doc.global.ctaStyle, compartido con el CTA libre de
+ *  CONTENIDOS. */
 export const ctaInternoFieldsSchema = z.object({
   text: z.string().default('Súper completo en 10 min'),
   deeplink: z.string().default(''),

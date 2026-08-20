@@ -1,5 +1,11 @@
 import type { ChangeEvent } from 'react'
-import { BANNER_TYPE_LABELS } from './schema'
+import {
+  BANNER_HORIZONTAL_MOLECULE_ALIGN_LABELS,
+  BANNER_HORIZONTAL_MOLECULE_ALIGN_VALUES,
+  BANNER_MOLECULE_ALIGN_LABELS,
+  BANNER_MOLECULE_ALIGN_VALUES,
+  BANNER_TYPE_LABELS,
+} from './schema'
 import type { BannerFields } from './schema'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 
@@ -49,6 +55,40 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
         />
         <span>Fondo del banner (color/imagen por defecto del tema)</span>
       </label>
+
+      {value.bannerType === 'vertical' && (
+        <label className="field">
+          <span>Alineado de las moléculas</span>
+          <select
+            value={value.moleculeAlign}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => set('moleculeAlign', e.target.value as BannerFields['moleculeAlign'])}
+          >
+            {BANNER_MOLECULE_ALIGN_VALUES.map((a) => (
+              <option key={a} value={a}>
+                {BANNER_MOLECULE_ALIGN_LABELS[a]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {value.bannerType === 'horizontal' && (
+        <label className="field">
+          <span>Alineado de las moléculas</span>
+          <select
+            value={value.horizontalMoleculeAlign}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              set('horizontalMoleculeAlign', e.target.value as BannerFields['horizontalMoleculeAlign'])
+            }
+          >
+            {BANNER_HORIZONTAL_MOLECULE_ALIGN_VALUES.map((a) => (
+              <option key={a} value={a}>
+                {BANNER_HORIZONTAL_MOLECULE_ALIGN_LABELS[a]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {hiddenItems.length > 0 && (
         <div className="field">

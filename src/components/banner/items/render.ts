@@ -364,9 +364,18 @@ export function renderTagsSnippet(fields: TagsFields, _doc: EmailDocument, ctx: 
 // hornear), igual que Footer y el CTA libre de CONTENIDOS. Reusa
 // renderCtaSnippet tal cual para que doc.global.ctaStyle siga siendo UN solo
 // control global — cambiar el color de un CTA cambia TODOS, también el de un
-// banner. `cta_alineado` es fijo por orientación (hardcodeado en el maestro:
-// 'left' en el banner horizontal, 'center' en el vertical) — no es un campo.
+// banner. `cta_alineado` no es un campo propio de CTA_INTERNO: sigue la misma
+// pieza de UI que alinea al resto de las moléculas de su columna —
+// ctx.moleculeAlign en vertical (bannerSchema.moleculeAlign), ctx.
+// horizontalMoleculeAlign en horizontal (bannerSchema.horizontalMoleculeAlign)
+// — en vez de los valores fijos ('center'/'left' respectivamente) que tenía
+// antes de que el usuario pidiera este control. Ambos ctx.*Align pueden
+// faltar (varios tests invocan este render suelto, sin pasar por
+// renderBannerSnippet): tratarlos como el default de cada orientación
+// ('center' vertical, 'left' horizontal) preserva el comportamiento de
+// siempre para esos call sites.
 
 export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
-  return renderCtaSnippet({ ...fields, align: ctx.bannerType === 'horizontal' ? 'left' : 'center' }, doc.global.ctaStyle)
+  const align = ctx.bannerType === 'horizontal' ? (ctx.horizontalMoleculeAlign ?? 'left') : (ctx.moleculeAlign ?? 'center')
+  return renderCtaSnippet({ ...fields, align }, doc.global.ctaStyle)
 }

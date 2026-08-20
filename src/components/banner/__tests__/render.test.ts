@@ -227,6 +227,153 @@ describe('renderBannerSnippet', () => {
     })
   })
 
+  describe('moleculeAlign (vertical only)', () => {
+    it('by default (center), leaves every piece\'s own centering margin untouched', () => {
+      const d = withItems([promo('a'), textom('b')])
+      const html = renderBannerSnippet(d.banner, d)
+      expect((html.match(/margin:\s*0\s*auto\s*;/g) ?? []).length).toBeGreaterThan(0)
+    })
+
+    it('"left" strips the "auto" from every piece\'s own centering margin, without touching the banner shell\'s own centering', () => {
+      const d = withItems([promo('a'), textom('b')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const promoHtml = html.slice(html.indexOf('BITEM:PROMO:a'), html.indexOf('/BITEM:PROMO:a'))
+      const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
+      expect(promoHtml).not.toMatch(/margin:\s*0\s*auto\s*;/)
+      expect(textomHtml).not.toMatch(/margin:\s*0\s*auto\s*;/)
+      // El propio shell del banner (BANNER_VERTICAL, la tabla "MODULO
+      // MOLECULAS") sigue centrado — moleculeAlign solo toca las piezas.
+      expect(html).toContain('margin:0 auto;') // <table id="BANNER_VERTICAL">
+      expect(html).toContain('margin: 0 auto;') // tabla "MODULO MOLECULAS"
+    })
+
+    it('"left" also strips TAGS\' own centering margin (MODULO-zone piece, included per explicit user request)', () => {
+      const d = withItems([promo('a'), tags('t')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const tagsMarkerIdx = html.indexOf('BITEM:TAGS:t')
+      const tagsCloseIdx = html.indexOf('/BITEM:TAGS:t')
+      const tagsHtml = html.slice(tagsMarkerIdx, tagsCloseIdx === -1 ? undefined : tagsCloseIdx)
+      expect(tagsHtml).not.toMatch(/margin:\s*0\s*auto\s*;/)
+    })
+
+    it('"left" also flips the content cell\'s text-align (margin alone is invisible once text wraps to multiple lines)', () => {
+      // Regresión real reportada por el usuario en vivo: con texto largo (2+
+      // líneas), la tabla `width: auto` no puede shrink-wrappearse a la línea
+      // más larga y termina ocupando todo el ancho disponible — ahí el margin
+      // ya no mueve nada, lo que realmente centra cada línea es el
+      // text-align: center del <td>. PROMO ("$14.000", 1 línea corta) no
+      // exhibía el bug porque su <td> ya mide justo lo que mide el texto.
+      const d = withItems([textom('b')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
+      expect(textomHtml).not.toMatch(/text-align:\s*center/)
+      expect(textomHtml).toContain('text-align: left')
+    })
+
+    it('"left" does NOT flip PROMO\'s vertical "Ahora" label cell (writing-mode: vertical-rl — text-align there is vertical centering, not horizontal)', () => {
+      const d = withItems([promo('a')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const promoHtml = html.slice(html.indexOf('BITEM:PROMO:a'), html.indexOf('/BITEM:PROMO:a'))
+      // La celda "Ahora" (writing-mode: vertical-rl) conserva su text-align:
+      // center intacto...
+      const ahoraTd = promoHtml.match(/<td[^>]*>\s*<div[^>]*writing-mode:\s*vertical-rl[\s\S]*?<\/td>/)?.[0]
+      expect(ahoraTd).toBeDefined()
+      expect(ahoraTd).toContain('text-align: center')
+      // ...mientras que la celda del monto sí pasa a la izquierda.
+      expect(promoHtml).toMatch(/<td style="vertical-align: middle; text-align: left; ">/)
+    })
+
+    it('"left" is a harmless no-op on IMG_FIJA (its logo is already left-aligned by the master, no "margin: 0 auto" with real visual effect)', () => {
+      const centered = withItems([imgFija('img')])
+      const left = withItems([imgFija('img')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      const htmlCentered = renderBannerSnippet(centered.banner, centered)
+      const htmlLeft = renderBannerSnippet(left.banner, left)
+      const bodyCentered = htmlCentered.slice(htmlCentered.indexOf('BITEM:IMG_FIJA:img'), htmlCentered.indexOf('/BITEM:IMG_FIJA:img'))
+      const bodyLeft = htmlLeft.slice(htmlLeft.indexOf('BITEM:IMG_FIJA:img'), htmlLeft.indexOf('/BITEM:IMG_FIJA:img'))
+      expect(bodyCentered.replace(/margin:\s*0\s*auto\s*;/g, 'margin: 0;')).toBe(bodyLeft)
+    })
+
+    it('has no effect on a horizontal banner, even if the field is set to "left"', () => {
+      const d = withItems([promo('a')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', moleculeAlign: 'left' },
+      })
+      expect(() => renderBannerSnippet(d.banner, d)).not.toThrow()
+      expect(renderBannerSnippet(d.banner, d)).toContain('BITEM:PROMO:a')
+    })
+
+    it('CTA_INTERNO follows moleculeAlign in vertical (default center, "left" when set)', () => {
+      const vertCenter = withItems([ctaInterno('c')])
+      const vertLeft = withItems([ctaInterno('c')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
+      expect(renderBannerSnippet(vertCenter.banner, vertCenter)).toContain("cta_alineado = 'center'")
+      expect(renderBannerSnippet(vertLeft.banner, vertLeft)).toContain("cta_alineado = 'left'")
+    })
+  })
+
+  describe('horizontalMoleculeAlign (horizontal only)', () => {
+    it('by default (left), leaves every piece\'s markup byte-identical to the master (no margin/text-align inserted)', () => {
+      const withDefault = withItems([promo('a'), textom('b')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal' } })
+      const withExplicitLeft = withItems([promo('a'), textom('b')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'left' },
+      })
+      expect(renderBannerSnippet(withDefault.banner, withDefault)).toBe(renderBannerSnippet(withExplicitLeft.banner, withExplicitLeft))
+      const html = renderBannerSnippet(withDefault.banner, withDefault)
+      const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
+      expect(textomHtml).not.toMatch(/margin:\s*0\s*auto\s*;/)
+      expect(textomHtml).toContain('text-align: left')
+    })
+
+    it('"center" inserts margin: 0 auto and flips text-align to center on wrapping-text pieces (TEXTOM)', () => {
+      const d = withItems([textom('b')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
+      expect(textomHtml).toMatch(/margin:\s*0\s*auto\s*;\s*margin-bottom:\s*7px;/)
+      expect(textomHtml).not.toMatch(/text-align:\s*left/)
+      expect(textomHtml).toContain('text-align: center')
+    })
+
+    it('"center" centers IMG_AUTOMATICA_MOLECULA via its own <img> margin (its outer table is already width:100%)', () => {
+      const d = withItems([{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } }], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
+      })
+      const html = renderBannerSnippet(d.banner, d)
+      const imgHtml = html.slice(html.indexOf('BITEM:IMG_AUTOMATICA_MOLECULA:i'), html.indexOf('/BITEM:IMG_AUTOMATICA_MOLECULA:i'))
+      expect(imgHtml).toMatch(/<img[^>]*margin:\s*0\s*auto;[^>]*>/)
+    })
+
+    it('"center" does not touch MODULO-zone pieces: TAGS keeps its own float:right, IMG_FIJA is unaffected', () => {
+      const d = withItems([promo('a'), tags('t'), imgFija('img')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
+      })
+      const dLeft = withItems([promo('a'), tags('t'), imgFija('img')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'left' },
+      })
+      const html = renderBannerSnippet(d.banner, d)
+      const htmlLeft = renderBannerSnippet(dLeft.banner, dLeft)
+      const tagsHtml = html.slice(html.indexOf('BITEM:TAGS:t'), html.indexOf('/BITEM:TAGS:t'))
+      const tagsHtmlLeft = htmlLeft.slice(htmlLeft.indexOf('BITEM:TAGS:t'), htmlLeft.indexOf('/BITEM:TAGS:t'))
+      const imgFijaHtml = html.slice(html.indexOf('BITEM:IMG_FIJA:img'), html.indexOf('/BITEM:IMG_FIJA:img'))
+      const imgFijaHtmlLeft = htmlLeft.slice(htmlLeft.indexOf('BITEM:IMG_FIJA:img'), htmlLeft.indexOf('/BITEM:IMG_FIJA:img'))
+      expect(tagsHtml).toBe(tagsHtmlLeft)
+      expect(tagsHtml).toContain('float: right')
+      expect(imgFijaHtml).toBe(imgFijaHtmlLeft)
+    })
+
+    it('has no effect on a vertical banner, even if the field is set to "center"', () => {
+      const d = withItems([promo('a')], { banner: { ...defaultEmailDocument.banner, horizontalMoleculeAlign: 'center' } })
+      expect(() => renderBannerSnippet(d.banner, d)).not.toThrow()
+      expect(renderBannerSnippet(d.banner, d)).toContain('BITEM:PROMO:a')
+    })
+
+    it('CTA_INTERNO follows horizontalMoleculeAlign (default left, "center" when set)', () => {
+      const horizLeft = withItems([ctaInterno('c')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal' } })
+      const horizCenter = withItems([ctaInterno('c')], {
+        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
+      })
+      expect(renderBannerSnippet(horizLeft.banner, horizLeft)).toContain("cta_alineado = 'left'")
+      expect(renderBannerSnippet(horizCenter.banner, horizCenter)).toContain("cta_alineado = 'center'")
+    })
+  })
+
   describe('horizontal item order (defensive re-check, see horizontalOrder.ts)', () => {
     it('a stored order that would only be valid in vertical (TAGS before the image) renders reordered when bannerType is horizontal', () => {
       // Este orden nunca debería poder guardarse vía las acciones del store

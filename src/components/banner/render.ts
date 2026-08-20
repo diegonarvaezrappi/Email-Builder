@@ -89,6 +89,101 @@ interface ItemGroup {
 }
 
 /**
+ * Cada pieza vertical (MOLECULA o MODULO — PROMO/CREDITOS/TEXTOXL/TEXTOM/
+ * TEXTO_COMPLEMENTARIO/IMG_AUTOMATICA_MOLECULA/TAGS) se centra sola vía
+ * `margin: 0 auto` en su propio archivo _vertical.html — no hay un wrapper
+ * común que las centre desde afuera (mismo mecanismo que documenta
+ * 02-components/README.md para TAGS). Alinearlas a la izquierda es entonces,
+ * pieza por pieza, quitarle el "auto" a su propio margin: deja intacto el
+ * resto de sus estilos (padding, colores, tamaños). Pedido explícito del
+ * usuario tras probar la primera versión de este selector ("Los textos,
+ * imagenes, todas las moleculas deberia poder alinearse a la izquierda"):
+ * inicialmente solo tocaba zona MOLECULA (interpretando "moléculas" en el
+ * sentido estricto del código); el usuario aclaró que quiere TODO lo del
+ * banner vertical, MODULO incluido. IMG_FIJA (el otro MODULO) no tiene este
+ * literal con efecto visual real — su logo ya viene `text-align: left` del
+ * propio maestro — así que el replace ahí es un no-op inofensivo, igual que
+ * en CTA_INTERNO (que tampoco trae este literal: su alineado ya se resuelve
+ * vía ctx.moleculeAlign en items/render.ts, antes de llegar acá).
+ */
+const MOLECULE_CENTER_MARGIN_RE = /margin:\s*0\s*auto\s*;/g
+
+/**
+ * El margin solo no alcanza para PROMO/CREDITOS/TEXTOXL/TEXTOM/
+ * TEXTO_COMPLEMENTARIO cuando el texto es lo bastante largo para partirse en
+ * varias líneas — reportado por el usuario en vivo ("Los textos siguen
+ * alineados al centro"): con `width: auto` en la tabla, un texto que no
+ * entra en una sola línea fuerza a la tabla a ocupar todo el ancho
+ * disponible (el navegador no puede shrink-wrappearla a la línea más larga
+ * cuando hay wrap), así que el margin de esa tabla deja de tener efecto
+ * visual — lo que realmente centra cada línea es el `text-align: center` del
+ * <td> que envuelve el texto. Con texto corto (ej. "$14.000", que entra en 1
+ * línea) el bug no se nota: ahí la tabla SÍ se shrink-wrappea al contenido,
+ * así que ancho del <td> == ancho del texto y text-align no cambia nada
+ * visualmente — por eso el primer pase de este fix (solo margin) pareció
+ * andar bien en la verificación con PROMO pero fallaba para TEXTOM/TEXTO
+ * COMPLEMENTARIO.
+ *
+ * El único `text-align: center` que NO hay que tocar es la celda vertical
+ * "Ahora" de PROMO (`writing-mode: vertical-rl`): ahí text-align controla la
+ * posición VERTICAL de la palabra rotada dentro de su caja de 70px de alto,
+ * no una alineación horizontal — cambiarlo la movería de su centro vertical
+ * hacia arriba, una regresión no pedida. Se distingue sin acoplarse a PROMO
+ * específicamente: todas las celdas de CONTENIDO real envuelven su texto en
+ * <span>/<h2>; la celda "Ahora" envuelve el suyo en <div> — el lookahead
+ * alcanza para excluirla.
+ */
+const MOLECULE_CONTENT_CELL_CENTER_RE = /<td\b[^>]*?text-align:\s*center;?[^>]*>(?=<(?:span|h2)\b)/g
+
+function alignMoleculeLeft(html: string): string {
+  const withoutAutoMargin = html.replace(MOLECULE_CENTER_MARGIN_RE, 'margin: 0;')
+  return withoutAutoMargin.replace(MOLECULE_CONTENT_CELL_CENTER_RE, (tdOpenTag) =>
+    tdOpenTag.replace(/text-align:\s*center/, 'text-align: left'),
+  )
+}
+
+/**
+ * Contraparte de `alignMoleculeLeft`, para el banner HORIZONTAL: ahí las
+ * piezas de zona MOLECULA (PROMO/CREDITOS/TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO/
+ * IMG_AUTOMATICA_MOLECULA) vienen alineadas a la izquierda por defecto — sus
+ * archivos _horizontal.html NUNCA traen `margin: 0 auto` (a diferencia de
+ * _vertical.html) — así que centrarlas es CONSTRUIR el mismo mecanismo que
+ * _vertical.html ya trae de fábrica, no quitárselo. Mismos 2 pasos que
+ * alignMoleculeLeft, invertidos:
+ *
+ * 1. Insertar `margin: 0 auto;` junto al `margin-bottom: 7px;` que las 5
+ *    piezas de texto comparten literalmente — reproduce exactamente el
+ *    mismo par de declaraciones que ya usa cada _vertical.html (ver
+ *    MOLECULE_CENTER_MARGIN_RE arriba). IMG_AUTOMATICA_MOLECULA es la
+ *    excepción: su tabla exterior es `width:100%` (el insert ahí es un
+ *    no-op inofensivo, igual que en IMG_FIJA), lo que realmente centra esa
+ *    pieza es el propio <img> — mismo elemento donde molecula_img_automatica_
+ *    _vertical.html ya trae `margin: 0 auto` junto a `max-width: 480px`;
+ *    acá se inserta ahí también.
+ * 2. Flip de `text-align: left` → `center` en el <td> de contenido real —
+ *    mismo lookahead <span>/<h2> que alignMoleculeLeft usa para EXCLUIR la
+ *    celda vertical "Ahora" de PROMO (acá esa celda ya trae `text-align:
+ *    center` de fábrica en horizontal — copy-paste histórico del vertical,
+ *    ver molecula_promo_horizontal.html — así que no hay nada que tocar ahí
+ *    de por sí: el regex de left→center simplemente no encuentra nada que
+ *    matchear en esa celda).
+ *
+ * MODULOS (IMG_FIJA, TAGS) quedan afuera a propósito, no por descuido: en
+ * horizontal no comparten columna con las moléculas (ver
+ * bannerSchema.horizontalMoleculeAlign) — este transform ni se les aplica
+ * (ver el gate por `def.zone` en groupBannerItems).
+ */
+const MOLECULE_ADD_CENTER_MARGIN_RE = /margin-bottom:\s*7px;/g
+const IMG_AUTOMATICA_MOLECULA_HEIGHT_MAXWIDTH_RE = /(height:\s*auto;\s*)(max-width:\s*480px;)/
+const MOLECULE_CONTENT_CELL_LEFT_RE = /<td\b[^>]*?text-align:\s*left;?[^>]*>(?=<(?:span|h2)\b)/g
+
+function alignMoleculeCenter(html: string): string {
+  let out = html.replace(MOLECULE_ADD_CENTER_MARGIN_RE, 'margin: 0 auto; margin-bottom: 7px;')
+  out = out.replace(IMG_AUTOMATICA_MOLECULA_HEIGHT_MAXWIDTH_RE, '$1margin: 0 auto; $2')
+  return out.replace(MOLECULE_CONTENT_CELL_LEFT_RE, (tdOpenTag) => tdOpenTag.replace(/text-align:\s*left/, 'text-align: center'))
+}
+
+/**
  * Recorre `items` en orden y arma los grupos a insertar: cada corrida
  * CONSECUTIVA de piezas de zona MOLECULA se envuelve en UNA sola copia de la
  * tabla "MODULO MOLECULAS" (reproduce la estructura real del maestro: 240px
@@ -115,7 +210,13 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
     const def = getBannerItemDef(item.type)
     if (!def || !def.orientations.includes(ctx.bannerType)) continue
 
-    const html = wrapWithBannerItemMarkers(item.type, item.id, def.render(item.fields, doc, ctx))
+    let itemHtml = def.render(item.fields, doc, ctx)
+    if (ctx.bannerType === 'vertical' && ctx.moleculeAlign === 'left') {
+      itemHtml = alignMoleculeLeft(itemHtml)
+    } else if (ctx.bannerType === 'horizontal' && def.zone === 'MOLECULA' && ctx.horizontalMoleculeAlign === 'center') {
+      itemHtml = alignMoleculeCenter(itemHtml)
+    }
+    const html = wrapWithBannerItemMarkers(item.type, item.id, itemHtml)
     const last = groups[groups.length - 1]
     if (def.zone === 'MOLECULA' && last?.zone === 'MOLECULA') {
       last.html += `\n${html}`
@@ -128,7 +229,11 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
 
 export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): string {
   const { shell, moleculeTable } = bannerShell(fields.bannerType)
-  const ctx: BannerItemRenderCtx = { bannerType: fields.bannerType }
+  const ctx: BannerItemRenderCtx = {
+    bannerType: fields.bannerType,
+    moleculeAlign: fields.moleculeAlign,
+    horizontalMoleculeAlign: fields.horizontalMoleculeAlign,
+  }
 
   const body = groupBannerItems(fields.items, doc, ctx)
     .map((group) => (group.zone === 'MOLECULA' ? moleculeTable.replace(MOLECULAS_MARKER, () => group.html) : group.html))
