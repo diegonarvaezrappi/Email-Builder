@@ -240,3 +240,123 @@ export function createDefaultDealsFields(): DealsFields {
 export function cloneDealsFields(fields: DealsFields): DealsFields {
   return { items: fields.items.map((card) => ({ ...card, id: newId() })) }
 }
+
+// ============================================================================
+// Panel scoped por LÍNEA (pedido explícito del usuario, inspirado en cómo
+// selecciona/edita/elimina una pieza de banner): tocar una de las 7 piezas de
+// la tarjeta en el lienzo abre un panel con SOLO los campos de esa línea, no
+// el mega-panel de la tarjeta entera. Las 3 funciones de abajo son la lógica
+// de datos que ese panel scoped (components/deals/panels.tsx) y el catálogo de
+// "piezas ocultas" del panel de la tarjeta necesitan — ninguna es una acción
+// del store, devuelven el DealCardFields completo listo para
+// updateDealCardFields, mismo criterio que cloneDealsFields de arriba.
+// ============================================================================
+
+/** Etiqueta legible de cada pieza — badge del lienzo (ui/Viewport.tsx) y
+ *  título del panel scoped de esa pieza. */
+export const DEAL_CARD_PIECE_LABELS: Record<DealCardPieceType, string> = {
+  copy1: 'Línea 1',
+  copy2: 'Línea 2',
+  precio: 'Precio',
+  rating: 'Categoría y rating',
+  tag1: 'Tag 1',
+  tag2: 'Tag 2',
+  cta: 'Llamado a la acción',
+}
+
+/**
+ * Si una pieza está oculta (no imprime nada en el HTML exportado) — mismo
+ * criterio que components/deals/render.ts usa para cortar el elemento entero:
+ * copy1/copy2 vacíos borran su `<h4>`, precio/rating desaparecen solo si
+ * NINGUNO de sus sub-campos está prendido (agrupan varios toggles en una sola
+ * pieza movible, ver el comentario de DEAL_CARD_PIECE_TYPES), tag1/tag2/cta
+ * tienen su propio enabled. Usado por el catálogo de "piezas ocultas" del
+ * panel de la tarjeta (mismo patrón que `hiddenItems` en
+ * components/banner/PropertiesPanel.tsx) — si esta lógica se desincroniza de
+ * render.ts el catálogo mentiría sobre qué está realmente oculto, así que
+ * cualquier cambio ahí debe reflejarse acá también.
+ */
+export function isDealCardPieceHidden(fields: DealCardFields, type: DealCardPieceType): boolean {
+  switch (type) {
+    case 'copy1':
+      return fields.copy1.trim() === ''
+    case 'copy2':
+      return fields.copy2.trim() === ''
+    case 'precio':
+      return !fields.markdownEnabled && !fields.complemento1Enabled && !fields.complemento2Enabled
+    case 'rating':
+      return !fields.categoriaEnabled && !fields.ratingEnabled && !fields.tiempoEnabled
+    case 'tag1':
+      return !fields.tag1Enabled
+    case 'tag2':
+      return !fields.tag2Enabled
+    case 'cta':
+      return !fields.ctaEnabled
+  }
+}
+
+/** "Eliminar esta línea" del panel scoped — apaga/vacía la pieza sin tocar
+ *  las demás. Cada tipo de pieza fija se apaga distinto (ver arriba), así que
+ *  no hay un solo booleano `enabled` genérico que tocar. */
+export function hideDealCardPiece(fields: DealCardFields, type: DealCardPieceType): DealCardFields {
+  switch (type) {
+    case 'copy1':
+      return { ...fields, copy1: '' }
+    case 'copy2':
+      return { ...fields, copy2: '' }
+    case 'precio':
+      return { ...fields, markdownEnabled: false, complemento1Enabled: false, complemento2Enabled: false }
+    case 'rating':
+      return { ...fields, categoriaEnabled: false, ratingEnabled: false, tiempoEnabled: false }
+    case 'tag1':
+      return { ...fields, tag1Enabled: false }
+    case 'tag2':
+      return { ...fields, tag2Enabled: false }
+    case 'cta':
+      return { ...fields, ctaEnabled: false }
+  }
+}
+
+/**
+ * Contrario de hideDealCardPiece — "+ Restablecer" del catálogo de piezas
+ * ocultas: vuelve la pieza a sus valores DE FÁBRICA (defaultDealCardFields),
+ * no a lo que tenía antes de ocultarla (esa memoria no se conserva — mismo
+ * criterio que arrastrar una pieza de banner nueva, que no recuerda una
+ * anterior ya borrada).
+ */
+export function restoreDealCardPiece(fields: DealCardFields, type: DealCardPieceType): DealCardFields {
+  const d = defaultDealCardFields
+  switch (type) {
+    case 'copy1':
+      return { ...fields, copy1: d.copy1 }
+    case 'copy2':
+      return { ...fields, copy2: d.copy2 }
+    case 'precio':
+      return {
+        ...fields,
+        markdownEnabled: d.markdownEnabled,
+        markdownText: d.markdownText,
+        coronaProEnabled: d.coronaProEnabled,
+        complemento1Enabled: d.complemento1Enabled,
+        complemento1Text: d.complemento1Text,
+        complemento2Enabled: d.complemento2Enabled,
+        complemento2Text: d.complemento2Text,
+      }
+    case 'rating':
+      return {
+        ...fields,
+        categoriaEnabled: d.categoriaEnabled,
+        categoriaText: d.categoriaText,
+        ratingEnabled: d.ratingEnabled,
+        ratingText: d.ratingText,
+        tiempoEnabled: d.tiempoEnabled,
+        tiempoText: d.tiempoText,
+      }
+    case 'tag1':
+      return { ...fields, tag1Enabled: d.tag1Enabled, tag1IconUrl: d.tag1IconUrl, tag1Text: d.tag1Text }
+    case 'tag2':
+      return { ...fields, tag2Enabled: d.tag2Enabled, tag2IconUrl: d.tag2IconUrl, tag2Text: d.tag2Text }
+    case 'cta':
+      return { ...fields, ctaEnabled: d.ctaEnabled, ctaText: d.ctaText }
+  }
+}

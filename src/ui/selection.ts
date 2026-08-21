@@ -1,4 +1,5 @@
 import type { SlotName } from '../model'
+import type { DealCardPieceType } from '../components/deals/schema'
 
 /**
  * Qué está seleccionado en el Inspector/Viewport. `blockId` solo tiene
@@ -17,12 +18,23 @@ export interface Selection {
    *  todo el documento, así que el bloque dueño se deduce de doc.contenidos
    *  (mismo criterio que las acciones de tarjeta en store/store.ts). */
   dealCardId?: string
+  /** Solo tiene sentido junto a `dealCardId` — identifica cuál de las 7 líneas
+   *  movibles de esa tarjeta está seleccionada (un nivel más adentro, mismo
+   *  patrón que `bannerItemId` respecto de `slot === 'BANNER'`): selecciona la
+   *  LÍNEA, no toda la tarjeta (isDealCardSelected exige que esto sea
+   *  undefined, igual que isSlotSelected exige bannerItemId undefined). */
+  dealCardPieceType?: DealCardPieceType
 }
 
 export const selectSlot = (slot: SlotName): Selection => ({ slot })
 export const selectBlock = (blockId: string): Selection => ({ slot: 'CONTENIDOS', blockId })
 export const selectBannerItem = (bannerItemId: string): Selection => ({ slot: 'BANNER', bannerItemId })
 export const selectDealCard = (dealCardId: string): Selection => ({ slot: 'CONTENIDOS', dealCardId })
+export const selectDealCardPiece = (dealCardId: string, dealCardPieceType: DealCardPieceType): Selection => ({
+  slot: 'CONTENIDOS',
+  dealCardId,
+  dealCardPieceType,
+})
 
 export function isSlotSelected(selected: Selection | null, slot: SlotName): boolean {
   return (
@@ -38,7 +50,15 @@ export function isBlockSelected(selected: Selection | null, blockId: string): bo
 }
 
 export function isDealCardSelected(selected: Selection | null, dealCardId: string): boolean {
-  return selected?.slot === 'CONTENIDOS' && selected.dealCardId === dealCardId
+  return selected?.slot === 'CONTENIDOS' && selected.dealCardId === dealCardId && selected.dealCardPieceType === undefined
+}
+
+export function isDealCardPieceSelected(
+  selected: Selection | null,
+  dealCardId: string,
+  pieceType: DealCardPieceType,
+): boolean {
+  return selected?.slot === 'CONTENIDOS' && selected.dealCardId === dealCardId && selected.dealCardPieceType === pieceType
 }
 
 export function isBannerItemSelected(selected: Selection | null, bannerItemId: string): boolean {

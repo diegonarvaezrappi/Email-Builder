@@ -33,7 +33,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ContentBlockType, EmailDocument, SlotName } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
-import type { DealCardPieceType } from '../components/deals/schema'
+import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
@@ -54,11 +54,13 @@ import { CodeView } from './CodeView'
 import {
   isBannerItemSelected,
   isBlockSelected,
+  isDealCardPieceSelected,
   isDealCardSelected,
   isSlotSelected,
   selectBannerItem,
   selectBlock,
   selectDealCard,
+  selectDealCardPiece,
   selectSlot,
   type Selection,
 } from './selection'
@@ -99,6 +101,10 @@ interface ViewportProps {
   onReorderDealCard: (cardId: string, toIndex: number) => void
   onRemoveDealCard: (cardId: string) => void
   onReorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
+  /** Reutilizado acá para el botón "×" inline de una línea de deal en el
+   *  lienzo (oculta esa pieza puntual) — misma acción del store que ya usa
+   *  ui/InspectorPanel.tsx (onChangeDealCard ahí), ver DealCardPiecePropertiesPanel. */
+  onChangeDealCard: (cardId: string, fields: unknown) => void
 }
 
 type Tab = 'preview' | 'code'
@@ -150,6 +156,7 @@ export function Viewport({
   onReorderDealCard,
   onRemoveDealCard,
   onReorderDealCardPiece,
+  onChangeDealCard,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
@@ -301,6 +308,7 @@ export function Viewport({
             onReorderDealCard={onReorderDealCard}
             onRemoveDealCard={onRemoveDealCard}
             onReorderDealCardPiece={onReorderDealCardPiece}
+            onChangeDealCard={onChangeDealCard}
           />
         )
       ) : (
@@ -343,6 +351,7 @@ interface EmailFrameProps {
   onReorderDealCard: (cardId: string, toIndex: number) => void
   onRemoveDealCard: (cardId: string) => void
   onReorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
+  onChangeDealCard: (cardId: string, fields: unknown) => void
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -533,6 +542,7 @@ function EmailFrame({
   onReorderDealCard,
   onRemoveDealCard,
   onReorderDealCardPiece,
+  onChangeDealCard,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
@@ -921,29 +931,50 @@ function EmailFrame({
             de estos rects, así que ahí la tarjeta sigue totalmente
             seleccionable/arrastrable/duplicable/eliminable como siempre — no
             hace falta una capa de "controles" redibujada como la de
-            BANNER/DEALS más abajo. Sin badge ni botones propios: clickear
-            una pieza selecciona la TARJETA dueña (no existe una selección de
-            pieza independiente). */}
-        {dealCardPieceRects.map(({ id: pieceType, type: cardId, top, left, width, height: h }) => (
-          <div
-            key={`${cardId}-${pieceType}`}
-            className="slot-hit piece-hit"
-            style={{ top, left, width, height: h }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(DEAL_CARD_PIECE_REORDER_DRAG_TYPE, `${cardId}:${pieceType}`)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
-          >
-            <button
-              type="button"
-              className="slot-select"
-              aria-label="Seleccionar deal"
-              aria-pressed={isDealCardSelected(selected, cardId)}
-              onClick={() => onSelect(selectDealCard(cardId))}
-            />
-          </div>
-        ))}
+            BANNER/DEALS más abajo. Cada pieza SÍ es seleccionable por
+            separado (pedido explícito del usuario: ver solo las opciones de
+            esa línea, no las de toda la tarjeta) — mismo tratamiento visual
+            que bannerItemRects (badge + borde de selección), con un botón de
+            eliminar propio (oculta la pieza) pero SIN duplicar: cada una de
+            las 7 es un slot fijo del maestro, no una lista libre. */}
+        {dealCardPieceRects.map(({ id: pieceTypeRaw, type: cardId, top, left, width, height: h }) => {
+          const pieceType = pieceTypeRaw as DealCardPieceType
+          return (
+            <div
+              key={`${cardId}-${pieceType}`}
+              className={`slot-hit piece-hit${isDealCardPieceSelected(selected, cardId, pieceType) ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(DEAL_CARD_PIECE_REORDER_DRAG_TYPE, `${cardId}:${pieceType}`)
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+            >
+              <button
+                type="button"
+                className="slot-select"
+                aria-label={`Seleccionar ${DEAL_CARD_PIECE_LABELS[pieceType]}`}
+                aria-pressed={isDealCardPieceSelected(selected, cardId, pieceType)}
+                onClick={() => onSelect(selectDealCardPiece(cardId, pieceType))}
+              >
+                <span className="slot-badge">{DEAL_CARD_PIECE_LABELS[pieceType]}</span>
+              </button>
+              <button
+                type="button"
+                className="slot-delete"
+                aria-label={`Eliminar ${DEAL_CARD_PIECE_LABELS[pieceType]}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const found = findDealsBlockByCard(contenidos, cardId)
+                  const card = found?.block.fields.items.find((c) => c.id === cardId)
+                  if (card) onChangeDealCard(cardId, hideDealCardPiece(card.fields, pieceType))
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
         {/* Y el badge del bloque DEALS redibujado al final, por la misma razón
             que el del BANNER más abajo: sus tarjetas lo cubren por completo (la
             primera arranca justo en la esquina del bloque), así que sin esta

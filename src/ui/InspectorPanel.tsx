@@ -25,14 +25,14 @@ import type { GlobalFields } from '../global/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
-import { selectBlock, selectSlot, type Selection } from './selection'
+import { selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
 import { BannerImageTypeSelector } from '../components/banner/ImageTypeSelector'
 import { BannerItemCatalog } from '../components/banner/ItemCatalog'
 import { IMAGE_MODULE_TYPES, type ImageModuleType } from '../components/banner/exclusivity'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import { findDealsBlockByCard } from '../components/deals/blocks'
-import { DealCardPropertiesPanel } from '../components/deals/panels'
-import { DEALS_MAX_CARDS } from '../components/deals/schema'
+import { DealCardPiecePropertiesPanel, DealCardPropertiesPanel } from '../components/deals/panels'
+import { DEAL_CARD_PIECE_LABELS, DEALS_MAX_CARDS } from '../components/deals/schema'
 
 interface InspectorPanelProps {
   document: EmailDocument
@@ -83,6 +83,26 @@ export function InspectorPanel({
     if (!found || !card) {
       return <EmptyHint text="Selecciona un deal para ver sus opciones." />
     }
+
+    // Una línea puntual DENTRO de la tarjeta (copy1, precio, tag1, etc.) — se
+    // resuelve ANTES que la vista general de la tarjeta, mismo criterio que
+    // la tarjeta se resuelve antes que el bloque DEALS genérico.
+    if (selected.dealCardPieceType) {
+      return (
+        <aside className="panel-inspector">
+          <button type="button" className="inspector-back" onClick={() => onSelect(selectDealCard(card.id))}>
+            ← Volver al deal
+          </button>
+          <h2>{DEAL_CARD_PIECE_LABELS[selected.dealCardPieceType]}</h2>
+          <DealCardPiecePropertiesPanel
+            pieceType={selected.dealCardPieceType}
+            value={card.fields}
+            onChange={(next) => onChangeDealCard(card.id, next)}
+          />
+        </aside>
+      )
+    }
+
     const position = found.block.fields.items.indexOf(card) + 1
     return (
       <aside className="panel-inspector">

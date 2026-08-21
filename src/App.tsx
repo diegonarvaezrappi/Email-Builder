@@ -115,6 +115,7 @@ function App() {
           onReorderDealCard={reorderDealCard}
           onRemoveDealCard={removeDealCard}
           onReorderDealCardPiece={reorderDealCardPiece}
+          onChangeDealCard={updateDealCardFields}
         />
         <InspectorPanel
           document={doc}

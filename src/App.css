@@ -856,11 +856,12 @@
   cursor: grabbing;
 }
 
-/* Piezas de tarjeta de deal — sin badge ni botones propios (no son
-   seleccionables/duplicables/eliminables por separado, ver ui/Viewport.tsx:
-   clickear una selecciona la tarjeta dueña). El indicio visual al pasar el
-   mouse ya lo da gratis .slot-hit:hover .slot-select (el borde que también
-   usan header/footer/etc.) — acá solo hace falta el cursor de "agarrar". */
+/* Piezas de tarjeta de deal — seleccionables/eliminables por separado (badge
+   y botón "×" son los mismos .slot-badge/.slot-delete de arriba, ver
+   ui/Viewport.tsx), pero SIN .slot-duplicate: cada una de las 7 es un slot
+   fijo del maestro, no una lista libre como los items de banner. Acá solo
+   hace falta sumar el cursor de "agarrar" (el resto ya lo dan gratis las
+   reglas .slot-hit de arriba). */
 .piece-hit {
   cursor: grab;
 }
