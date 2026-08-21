@@ -151,10 +151,16 @@ function alignMoleculeLeft(html: string): string {
  * _vertical.html ya trae de fábrica, no quitárselo. Mismos 2 pasos que
  * alignMoleculeLeft, invertidos:
  *
- * 1. Insertar `margin: 0 auto;` junto al `margin-bottom: 7px;` que las 5
- *    piezas de texto comparten literalmente — reproduce exactamente el
+ * 1. Insertar `margin: 0 auto;` junto al `(margin|padding)-bottom: 7px;` que
+ *    las 5 piezas de texto comparten literalmente — reproduce exactamente el
  *    mismo par de declaraciones que ya usa cada _vertical.html (ver
- *    MOLECULE_CENTER_MARGIN_RE arriba). IMG_AUTOMATICA_MOLECULA es la
+ *    MOLECULE_CENTER_MARGIN_RE arriba). Hasta el pull 2026-08-09 era siempre
+ *    `margin-bottom`; el pull 2026-08-21 (bd9f4a5) lo cambió a `padding-bottom`
+ *    en las 17 moléculas de banner ("el margin no se aplicaba consistente en
+ *    clientes de mail", CHANGELOG v0.7.0) — el regex matchea cualquiera de
+ *    las 2 y el reemplazo conserva la que haya (no la pisa por `margin-bottom`
+ *    a mano), para no deshacer ese mismo fix de compatibilidad en las piezas
+ *    centradas. IMG_AUTOMATICA_MOLECULA es la
  *    excepción: su tabla exterior es `width:100%` (el insert ahí es un
  *    no-op inofensivo, igual que en IMG_FIJA), lo que realmente centra esa
  *    pieza es el propio <img> — mismo elemento donde molecula_img_automatica_
@@ -173,12 +179,12 @@ function alignMoleculeLeft(html: string): string {
  * bannerSchema.horizontalMoleculeAlign) — este transform ni se les aplica
  * (ver el gate por `def.zone` en groupBannerItems).
  */
-const MOLECULE_ADD_CENTER_MARGIN_RE = /margin-bottom:\s*7px;/g
+const MOLECULE_ADD_CENTER_MARGIN_RE = /((?:margin|padding)-bottom:\s*7px;)/g
 const IMG_AUTOMATICA_MOLECULA_HEIGHT_MAXWIDTH_RE = /(height:\s*auto;\s*)(max-width:\s*480px;)/
 const MOLECULE_CONTENT_CELL_LEFT_RE = /<td\b[^>]*?text-align:\s*left;?[^>]*>(?=<(?:span|h2)\b)/g
 
 function alignMoleculeCenter(html: string): string {
-  let out = html.replace(MOLECULE_ADD_CENTER_MARGIN_RE, 'margin: 0 auto; margin-bottom: 7px;')
+  let out = html.replace(MOLECULE_ADD_CENTER_MARGIN_RE, 'margin: 0 auto; $1')
   out = out.replace(IMG_AUTOMATICA_MOLECULA_HEIGHT_MAXWIDTH_RE, '$1margin: 0 auto; $2')
   return out.replace(MOLECULE_CONTENT_CELL_LEFT_RE, (tdOpenTag) => tdOpenTag.replace(/text-align:\s*left/, 'text-align: center'))
 }

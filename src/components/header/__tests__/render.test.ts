@@ -61,6 +61,18 @@ describe('renderHeaderSnippet', () => {
     }
   })
 
+  // Regresión: el maestro agregó una 4ta variante ("cobranding-xl") en el pull
+  // 2026-08-21 que COBRANDING_IMG_RE no matcheaba — quedaba siempre presente
+  // sin importar el tamaño elegido (un logo duplicado). No está expuesta como
+  // tamaño seleccionable (COBRANDING_SIZE_VALUES sigue en s/m/l), así que debe
+  // desaparecer siempre, para los 3 tamaños reales.
+  it('never leaks the not-yet-exposed "cobranding-xl" master variant', () => {
+    for (const size of ['s', 'm', 'l'] as const) {
+      const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true, cobrandingSize: size }, 'beige100')
+      expect(snippet).not.toContain('cobranding-xl')
+    }
+  })
+
   it('replaces the cobranding image src with the URL the user chose', () => {
     const snippet = renderHeaderSnippet(
       { ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: 'https://example.com/mi-logo.png' },

@@ -326,7 +326,8 @@ describe('renderBannerSnippet', () => {
       const d = withItems([textom('b')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } })
       const html = renderBannerSnippet(d.banner, d)
       const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
-      expect(textomHtml).toMatch(/margin:\s*0\s*auto\s*;\s*margin-bottom:\s*7px;/)
+      // padding-bottom desde el pull 2026-08-21 (bd9f4a5) — antes era margin-bottom.
+      expect(textomHtml).toMatch(/margin:\s*0\s*auto\s*;\s*padding-bottom:\s*7px;/)
       expect(textomHtml).not.toMatch(/text-align:\s*left/)
       expect(textomHtml).toContain('text-align: center')
     })

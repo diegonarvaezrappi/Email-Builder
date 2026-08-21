@@ -68,17 +68,34 @@
 //      el render las ubica por literal y las corta. Si el maestro renombra un
 //      `role="..."`, cambia un texto de ejemplo o duplica una celda, el render
 //      cortaría el elemento equivocado en silencio — por eso se cuenta acá.
-//    - Los 2 placeholders de NN-foundations deben aparecer AL MENOS una vez
-//      cada uno (no exactamente una: estructura_general.html duplicó por
-//      accidente el de global-styles.html — aparece una vez, correcto, en el
-//      <head>, y una segunda vez suelto dentro del <td> del header wrapper.
-//      String.replace() sin flag global solo toca la primera —la del
-//      <head>—, así que la segunda queda como comentario HTML inerte en el
-//      export: ruido cosmético, no una rotura funcional. Como es un typo del
-//      repo y no podemos tocarlo, se tolera en vez de bloquear el sync).
-//    - El `{% assign tema_general_mail_general = '...' %}` del maestro debe
-//      aparecer EXACTAMENTE una vez (template/assemble.ts lo reescribe con el
-//      tema elegido).
+//    - El placeholder de global-styles.html debe aparecer AL MENOS una vez (no
+//      exactamente una: estructura_general.html duplicó por accidente el de
+//      global-styles.html — aparece una vez, correcto, en el <head>, y una
+//      segunda vez suelto dentro del <td> del header wrapper. String.replace()
+//      sin flag global solo toca la primera —la del <head>—, así que la
+//      segunda queda como comentario HTML inerte en el export: ruido
+//      cosmético, no una rotura funcional. Como es un typo del repo y no
+//      podemos tocarlo, se tolera en vez de bloquear el sync).
+//    - El placeholder de head-meta-tags.html, en cambio, ya NO se exige (pull
+//      2026-08-21, bd9f4a5): el repo borró de estructura_general.html todo el
+//      bloque de apertura que lo traía (junto con los `{% assign %}` de
+//      EJEMPLO que lo precedían, ver más abajo) — accidente de limpieza, no
+//      rediseño (el CHANGELOG de ese pull no lo menciona). Verificado que no
+//      hace falta para nada: los valores de tema que de verdad usa la app
+//      salen de la copia SUELTA de head-meta-tags.html (src/themes/themes.ts,
+//      independiente de si se inyecta acá), y el bloque de temas que SÍ se
+//      inyectaba quedaba de todos modos completamente borrado por
+//      stripThemeDefinitions (themes/inlineTheme.ts) antes de exportar — así
+//      que perder la inyección no cambia ni un byte del HTML final. Si el
+//      placeholder no aparece, solo se avisa por consola y esa inyección en
+//      particular se salta (ver el loop de más abajo).
+//    - El `{% assign tema_general_mail_general = '...' %}` de
+//      estructura_general.html YA NO se exige tampoco, por el mismo accidente
+//      de limpieza de arriba: era una copia redundante de la misma línea que
+//      ya trae head-meta-tags.html (que sigue intacta ahí). No es una anchor
+//      funcional real — inlineTheme.ts la borra si está, tolera si no
+//      (`.replace()` sobre 0 matches es un no-op) — así que perderla del todo
+//      solo se avisa, no aborta.
 //    - head-meta-tags.html debe declarar al menos un tema. Antes también se
 //      exigía que cada tema definiera `color_footer_mail_general` (de ahí
 //      salía el font_style_look del footer), pero el repo lo borró de las 11
@@ -362,10 +379,23 @@ const DEALS_ANCHOR_COUNTS = {
   'role="molecula-tag"': 4,
   '> tag 1 </h5>': 4,
   '<strong>Pide ahora': 2,
-  // Celda de imagen.
-  'role="molecula-iconoL"': 2,
+  // Celda de imagen. Desde el pull 2026-08-21 (bd9f4a5) cada celda trae 2
+  // <img role="molecula-iconoL">, no 1: el "Logo 1:1" de siempre + un nuevo
+  // "Logo pastilla" (pill, 23px alto) que la app todavía no expone como campo
+  // editable — components/deals/render.ts lo oculta explícitamente para
+  // preservar el comportamiento visual de un solo logo (mismo criterio que
+  // molecula_texto_pastilla.html en banners: pieza nueva del maestro, flagueada
+  // pero no construida todavía). Por eso el ancla del role se duplicó a 4 (2
+  // por celda) pero la URL del logo 1:1 de siempre se mantiene en 2 — son
+  // <img> distintos, cada uno con su propia URL única.
+  'role="molecula-iconoL"': 4,
   'https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png': 2,
   'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j': 2,
+  // El nuevo "Logo pastilla" — mismo criterio de conteo que el resto: si el
+  // maestro cambia esta URL o deja de traerla 2 veces, sync-master aborta en
+  // vez de dejar que components/deals/render.ts oculte el elemento equivocado
+  // en silencio.
+  'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe': 2,
   // Íconos por defecto de TAG1 y TAG2 — distintos entre sí, y es justamente
   // por eso que el render los usa para desambiguar cuál tag es cuál.
   'https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa': 2,
@@ -404,10 +434,16 @@ const FOUNDATIONS_INJECTIONS = [
   {
     file: 'head-meta-tags.html',
     placeholder: '<!-- primero se llama: head-meta-tags.html con todos los temas en liquid  -->',
+    // Ya no requerido desde el pull 2026-08-21 — ver la nota grande del
+    // encabezado. La copia SUELTA (más abajo, "3. Copia head-meta-tags.html
+    // SUELTO") sigue siendo obligatoria: esta bandera solo afecta si se exige
+    // el placeholder de INYECCIÓN dentro de template_base.html.
+    required: false,
   },
   {
     file: 'global-styles.html',
     placeholder: '<!--en este espacio se llama: global-styles.html con todo el head y css   -->',
+    required: true,
   },
 ]
 
@@ -432,10 +468,14 @@ if (!templateBasePath) {
     }
   }
 
+  // Ya NO aborta si falta (ver la nota grande del encabezado, pull
+  // 2026-08-21): es una copia redundante de la misma línea que head-meta-tags.html
+  // ya trae, no una anchor funcional real. Se avisa igual por si el conteo
+  // cambia a algo raro (>1, por ejemplo), pero solo como warning.
   const temaAssigns = templateBaseHtml.match(TEMA_ASSIGN_RE) ?? []
-  if (temaAssigns.length !== 1) {
-    fail(
-      `El {% assign tema_general_mail_general = '...' %} aparece ${temaAssigns.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+  if (temaAssigns.length > 1) {
+    console.warn(
+      `${DIM}⚠ El {% assign tema_general_mail_general = '...' %} aparece ${temaAssigns.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 0 o 1).${RESET}`,
     )
   }
 
@@ -464,7 +504,7 @@ if (!templateBasePath) {
 // --- NN-foundations/global-styles: leer + validar placeholders -----------------
 const foundationsFileContents = {}
 if (templateBaseHtml && FOUNDATIONS_DIR) {
-  for (const { file, placeholder } of FOUNDATIONS_INJECTIONS) {
+  for (const { file, placeholder, required } of FOUNDATIONS_INJECTIONS) {
     const fp = path.join(FOUNDATIONS_DIR, file)
     if (!fs.existsSync(fp)) {
       fail(`No se encontró ${FOUNDATIONS_DIR_NAME}/global-styles/${file}`)
@@ -476,7 +516,16 @@ if (templateBaseHtml && FOUNDATIONS_DIR) {
     // sobre el placeholder de global-styles.html duplicado por accidente.
     const count = templateBaseHtml.split(placeholder).length - 1
     if (count < 1) {
-      fail(`El placeholder de ${file} no aparece en ${TEMPLATE_BASE_SOURCE} (se esperaba al menos 1)`)
+      const message = `El placeholder de ${file} no aparece en ${TEMPLATE_BASE_SOURCE} (se esperaba al menos 1)`
+      if (required) {
+        fail(message)
+      } else {
+        // head-meta-tags.html: ya no es obligatorio, ver la nota grande del
+        // encabezado (pull 2026-08-21) — se avisa y esa inyección puntual se
+        // salta más abajo (el `.replace()` sobre un placeholder ausente ya es
+        // un no-op seguro de por sí).
+        console.warn(`${DIM}⚠ ${message} — se omite esa inyección puntual (no afecta el HTML final, ver nota).${RESET}`)
+      }
     }
   }
 }

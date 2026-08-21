@@ -200,6 +200,18 @@ function emptyCell(cell: string): string {
 const PRODUCT_IMAGE_PLACEHOLDER = 'https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png'
 const LOGO_ANCHOR = 'role="molecula-iconoL"'
 const LOGO_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'
+/**
+ * "Logo pastilla" — 2da variante de logo que el pull 2026-08-21 (bd9f4a5)
+ * agregó junto al "Logo 1:1" de siempre (mismo `role="molecula-iconoL"`, otra
+ * URL/tamaño/forma), sin `{% if %}` que la apague: el maestro la deja SIEMPRE
+ * presente en las 2 celdas. Todavía no es un campo editable de la app (mismo
+ * criterio que molecula_texto_pastilla.html en banners: pieza nueva,
+ * flagueada pero no construida) — se oculta explícitamente acá para no
+ * mostrar un 2do logo inesperado en cada deal, ver LOGO_PASTILLA_PLACEHOLDER
+ * más abajo. Si en algún momento se decide exponerla, esto es lo que hay que
+ * reemplazar por un campo real en vez de removerla.
+ */
+const LOGO_PASTILLA_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe'
 
 function renderImageCell(cell: string, fields: DealCardFields): string {
   const edits: Edit[] = []
@@ -222,6 +234,12 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
     const urlIndex = indexOfOrThrow(cell, LOGO_PLACEHOLDER)
     edits.push({ start: urlIndex, end: urlIndex + LOGO_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.logoUrl) })
   }
+
+  // Logo pastilla: se remueve el <div> que lo envuelve entero (no solo el
+  // <img>), así no queda un <div style="padding: 10px;"></div> vacío
+  // agregando espacio de más debajo del logo 1:1.
+  const pastillaIndex = indexOfOrThrow(cell, LOGO_PASTILLA_PLACEHOLDER)
+  edits.push({ ...elementBounds(cell, pastillaIndex, 'div'), replacement: '' })
 
   // {{img_overlay_1_mail_general}} queda para la pasada de tema del final.
   return applyEdits(cell, edits)

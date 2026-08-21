@@ -27,7 +27,19 @@ const COBRANDING_ANCHOR = '<!-- Si la opción "cobranding" se encuentra activa, 
 
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 const BG_HEADER_VAR_RE = /\{\{\s*bg_header_mail_general\s*\}\}/g
-const COBRANDING_IMG_RE = /<img class="cobranding-[sml]"[^>]*>/g
+/**
+ * El pull 2026-08-21 (bd9f4a5) agregó una 4ta variante, `cobranding-xl`, a los
+ * 40 archivos de header — todavía no expuesta como opción (COBRANDING_SIZE_VALUES
+ * en schema.ts sigue siendo solo s/m/l, mismo criterio "flagueado, no
+ * construido" que molecula_texto_pastilla.html en banners). El regex tiene que
+ * matchearla IGUAL que a las otras 3: si no, `applyCobranding` de más abajo
+ * nunca la toca (no matchea `[sml]`) y queda SIEMPRE presente sin importar el
+ * tamaño elegido — un 4to logo duplicado colándose en todo header con
+ * cobranding activo. Al incluirla acá, el mismo mecanismo de "solo se
+ * conserva la clase == keepClass" la descarta siempre (nunca es un tamaño
+ * seleccionable), reproduciendo el comportamiento visual de antes de este pull.
+ */
+const COBRANDING_IMG_RE = /<img class="cobranding-(?:s|m|l|xl)"[^>]*>/g
 
 /**
  * La <img> del logo de MARCA es siempre la primera del <tr> — antes del
