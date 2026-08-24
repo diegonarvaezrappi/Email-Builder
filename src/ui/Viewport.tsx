@@ -221,7 +221,7 @@ export function Viewport({
           Preview
         </button>
         <button type="button" className={tab === 'code' ? 'active' : ''} onClick={() => setTab('code')}>
-          Código
+          Exportar
         </button>
         {tab === 'preview' && (
           <>
