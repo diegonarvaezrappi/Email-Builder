@@ -33,10 +33,38 @@ function triggerDownload(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+/** `navigator.clipboard` solo existe en secure context (https, o localhost) —
+ *  el staging sirve http:// sobre una IP pública (no localhost), así que ahí
+ *  es `undefined` y "Copiar HTML" explotaba con un TypeError (capturado por
+ *  el try/catch de handleCopy en ui/Viewport.tsx, de ahí el "Error al copiar"
+ *  en vez de un crash). Fallback: el `execCommand('copy')` legacy vía un
+ *  <textarea> oculto sí funciona en contextos inseguros — deprecado pero
+ *  soportado en todos los navegadores actuales, es el fallback estándar para
+ *  exactamente este caso. */
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  try {
+    const ok = document.execCommand('copy')
+    if (!ok) throw new Error('execCommand copy failed')
+  } finally {
+    textarea.remove()
+  }
+}
+
 /** Copia el HTML ensamblado al portapapeles. Devuelve su peso en KB (para un toast). */
 export async function copyHtmlToClipboard(doc: EmailDocument): Promise<number> {
   const html = assembleEmailHtml(doc)
-  await navigator.clipboard.writeText(html)
+  await copyText(html)
   return Math.round((new Blob([html]).size / 1024) * 10) / 10
 }
 
