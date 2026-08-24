@@ -51,6 +51,7 @@ import {
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { copyHtmlToClipboard, downloadHtml, downloadJson, downloadPng } from '../export/exporters'
 import { CodeView } from './CodeView'
+import { ImportPanel } from './ImportPanel'
 import {
   isBannerItemSelected,
   isBlockSelected,
@@ -105,9 +106,12 @@ interface ViewportProps {
    *  lienzo (oculta esa pieza puntual) — misma acción del store que ya usa
    *  ui/InspectorPanel.tsx (onChangeDealCard ahí), ver DealCardPiecePropertiesPanel. */
   onChangeDealCard: (cardId: string, fields: unknown) => void
+  /** Pestaña "Importar" — reemplaza el documento entero por uno subido, ver
+   *  ui/ImportPanel.tsx. Misma acción del store que "Deshacer" sabe revertir. */
+  onImportDocument: (doc: EmailDocument) => void
 }
 
-type Tab = 'preview' | 'code'
+type Tab = 'preview' | 'code' | 'import'
 
 /**
  * Ancho del preview — Escritorio (todo el ancho del panel, como la ventana de
@@ -157,6 +161,7 @@ export function Viewport({
   onRemoveDealCard,
   onReorderDealCardPiece,
   onChangeDealCard,
+  onImportDocument,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
   const [country, setCountry] = useState<PreviewCountry>('CO')
@@ -237,6 +242,9 @@ export function Viewport({
         </button>
         <button type="button" className={tab === 'code' ? 'active' : ''} onClick={() => setTab('code')}>
           Exportar
+        </button>
+        <button type="button" className={tab === 'import' ? 'active' : ''} onClick={() => setTab('import')}>
+          Importar
         </button>
         {tab === 'preview' && (
           <>
@@ -326,7 +334,7 @@ export function Viewport({
             onChangeDealCard={onChangeDealCard}
           />
         )
-      ) : (
+      ) : tab === 'code' ? (
         <div className="code-view">
           <div className="code-actions">
             <button type="button" className="primary" onClick={handleCopy}>
@@ -344,6 +352,8 @@ export function Viewport({
           </div>
           <CodeView code={assembleEmailHtml(doc)} />
         </div>
+      ) : (
+        <ImportPanel onImport={onImportDocument} />
       )}
     </div>
   )

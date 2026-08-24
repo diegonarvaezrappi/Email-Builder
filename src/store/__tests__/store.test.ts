@@ -588,3 +588,16 @@ describe('updateDealCardFields', () => {
     expect(useBuilder.getState().document.contenidos[0]).toEqual(ctaBlock('cta-1'))
   })
 })
+
+describe('setDocument', () => {
+  it('reemplaza el documento entero (usado por la pestaña Importar) — no un merge parcial', () => {
+    setContenidos([ctaBlock('viejo')])
+    useBuilder.setState((s) => ({ document: { ...s.document, global: { ...s.document.global, tema: 'pro' } } }))
+
+    const imported = { ...useBuilder.getState().document, contenidos: [ctaBlock('nuevo')], global: { ...useBuilder.getState().document.global, tema: 'beige100' as const } }
+    useBuilder.getState().setDocument(imported)
+
+    expect(ids()).toEqual(['nuevo'])
+    expect(useBuilder.getState().document.global.tema).toBe('beige100')
+  })
+})

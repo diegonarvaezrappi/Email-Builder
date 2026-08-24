@@ -91,6 +91,18 @@ interface BuilderState {
    * una pieza de banner: son 7 tipos fijos, uno de cada por tarjeta).
    */
   reorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
+
+  /**
+   * Reemplaza el documento ENTERO — usado por la pestaña "Importar" (subir un
+   * .json exportado antes con "Descargar JSON", ver ui/ImportPanel.tsx). El
+   * JSON ya llega VALIDADO por `emailDocumentSchema.safeParse` antes de
+   * llamar acá (misma validación que loadDocument usa al leer localStorage);
+   * esta acción no vuelve a parsear, solo pisa `document`. Un `set` más, así
+   * que entra al historial de undo/redo igual que cualquier otro cambio — un
+   * import accidental se deshace con "Deshacer", no hace falta un diálogo de
+   * confirmación aparte.
+   */
+  setDocument: (doc: EmailDocument) => void
 }
 
 /** Reescribe la lista de tarjetas de un bloque DEALS dejando el resto del
@@ -323,6 +335,8 @@ export const useBuilder = create<BuilderState>()(
           )
           return { document: withDealCards(s.document, found.index, items) }
         }),
+
+      setDocument: (doc) => set(() => ({ document: doc })),
     }),
     {
       limit: 100,

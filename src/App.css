@@ -893,6 +893,25 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* --- Pestaña "Importar" -------------------------------------------------- */
+.import-panel {
+  padding: 24px;
+  max-width: 480px;
+}
+
+.import-panel .inspector-hint {
+  margin: 0 0 16px;
+}
+
+.import-status {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+.import-status-error {
+  color: var(--danger);
+}
+
 /* --- Vista de código estilo editor -------------------------------------- */
 .code-scroll {
   flex: 1;

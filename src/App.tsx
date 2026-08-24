@@ -31,6 +31,7 @@ function App() {
   const removeDealCard = useBuilder((s) => s.removeDealCard)
   const updateDealCardFields = useBuilder((s) => s.updateDealCardFields)
   const reorderDealCardPiece = useBuilder((s) => s.reorderDealCardPiece)
+  const setDocument = useBuilder((s) => s.setDocument)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
@@ -116,6 +117,7 @@ function App() {
           onRemoveDealCard={removeDealCard}
           onReorderDealCardPiece={reorderDealCardPiece}
           onChangeDealCard={updateDealCardFields}
+          onImportDocument={setDocument}
         />
         <InspectorPanel
           document={doc}
