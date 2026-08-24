@@ -49,7 +49,7 @@ import {
   DEAL_CARD_PIECE_OPEN_RE,
 } from '../template/contentBlocks'
 import { findDealsBlockByCard } from '../components/deals/blocks'
-import { copyHtmlToClipboard, downloadHtml } from '../export/exporters'
+import { copyHtmlToClipboard, downloadHtml, downloadJson, downloadPng } from '../export/exporters'
 import { CodeView } from './CodeView'
 import {
   isBannerItemSelected,
@@ -168,6 +168,7 @@ export function Viewport({
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewError, setPreviewError] = useState<string | undefined>()
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
+  const [pngStatus, setPngStatus] = useState<'idle' | 'generating' | 'error'>('idle')
 
   useEffect(() => {
     let cancelled = false
@@ -189,6 +190,20 @@ export function Viewport({
       setCopyStatus('error')
     } finally {
       setTimeout(() => setCopyStatus('idle'), 2000)
+    }
+  }
+
+  // downloadPng es async (rasteriza un iframe oculto, ver export/exporters.ts)
+  // y puede tardar un momento — mismo patrón de estado que handleCopy, para
+  // que el botón avise "Generando…" en vez de quedar mudo mientras corre.
+  const handleDownloadPng = async () => {
+    setPngStatus('generating')
+    try {
+      await downloadPng(doc, 'email-footer')
+      setPngStatus('idle')
+    } catch {
+      setPngStatus('error')
+      setTimeout(() => setPngStatus('idle'), 2500)
     }
   }
 
@@ -319,6 +334,12 @@ export function Viewport({
             </button>
             <button type="button" onClick={() => downloadHtml(doc, 'email-footer')}>
               Descargar .html
+            </button>
+            <button type="button" onClick={() => downloadJson(doc, 'email-footer')}>
+              Descargar JSON
+            </button>
+            <button type="button" onClick={handleDownloadPng} disabled={pngStatus === 'generating'}>
+              {pngStatus === 'generating' ? 'Generando…' : pngStatus === 'error' ? 'Error al generar' : 'Descargar PNG'}
             </button>
           </div>
           <CodeView code={assembleEmailHtml(doc)} />
