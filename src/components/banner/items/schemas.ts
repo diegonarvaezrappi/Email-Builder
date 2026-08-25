@@ -143,10 +143,36 @@ export const imgFijaFieldsSchema = z.object({
 export type ImgFijaFields = z.infer<typeof imgFijaFieldsSchema>
 export const defaultImgFijaFields: ImgFijaFields = imgFijaFieldsSchema.parse({})
 
-/** El archivo real trae 3 pills hardcodeadas con el texto literal "tag 1".
- *  Acá son 1-3 etiquetas editables: "si la fuente no trae tag, se omite"
+/** El archivo real trae 3 pills hardcodeadas, cada una con el mismo ícono
+ *  (`<img>`) + el texto literal "tag 1". Mismo criterio ya usado en TAG1/TAG2
+ *  de deals (components/deals/schema.ts) y documentado para el patrón
+ *  hermano `molecula_tag_icono.html` en 02-components/README.md ("ícono y
+ *  texto ocultables/cambiables"): el ícono es editable y removible por tag,
+ *  independiente del texto. */
+export const TAG_ICON_DEFAULT_URL = 'https://lh3.googleusercontent.com/d/1WGmmnGkKvxsrQ1eRVygjRfpzCi60p2df'
+
+/**
+ * `.preprocess` acepta también un string plano (formato viejo de este campo,
+ * antes de exponer el ícono) y lo normaliza a un tag con el ícono del maestro
+ * activado — mismo mecanismo que `richTextSchema` (richText/model.ts): así un
+ * documento guardado en localStorage antes de este cambio sigue cargando en
+ * vez de invalidar todo el documento (persistence.ts descarta el documento
+ * ENTERO si un solo campo no valida).
+ */
+export const tagItemSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? { text: value, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL } : value),
+  z.object({
+    text: z.string().default('tag 1'),
+    iconEnabled: z.boolean().default(true),
+    iconUrl: z.string().default(TAG_ICON_DEFAULT_URL),
+  }),
+)
+export type TagItem = z.infer<typeof tagItemSchema>
+export const defaultTagItem = (text = 'tag 1'): TagItem => ({ text, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL })
+
+/** 1-3 etiquetas editables: "si la fuente no trae tag, se omite"
  *  (05-docs/USO-DE-CADA-PARTE.md) implica que 1 sola es lo normal. */
-export const tagsFieldsSchema = z.object({ tags: z.array(z.string()).min(1).max(3).default(['tag 1']) })
+export const tagsFieldsSchema = z.object({ tags: z.array(tagItemSchema).min(1).max(3).default([defaultTagItem()]) })
 export type TagsFields = z.infer<typeof tagsFieldsSchema>
 export const defaultTagsFields: TagsFields = tagsFieldsSchema.parse({})
 

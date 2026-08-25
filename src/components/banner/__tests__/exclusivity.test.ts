@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { applyImageModuleExclusivity } from '../exclusivity'
+import { defaultTagItem } from '../items/schemas'
 import type { BannerItem } from '../items/schemas'
 
-const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['tag 1'] } })
+const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem()] } })
 const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
 const imgAutoModulo = (id: string): BannerItem => ({ id, type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: '', widthPercent: 80 } })
 const imgAutoMolecula = (id: string): BannerItem => ({ id, type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: '', widthPercent: 80 } })

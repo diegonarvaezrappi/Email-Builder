@@ -4,6 +4,7 @@ import type { EmailDocument } from '../../../model'
 import { richTextFromPlain } from '../../../richText/model'
 import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
+import { defaultTagItem, tagsFieldsSchema } from '../items/schemas'
 import {
   renderCreditosSnippet,
   renderCtaInternoSnippet,
@@ -401,28 +402,65 @@ describe('renderImgFijaSnippet', () => {
 
 describe('renderTagsSnippet', () => {
   it.each([1, 2, 3])('renders exactly %i pill(s) for %i label(s)', (n) => {
-    const tags = Array.from({ length: n }, (_, i) => `tag${i}`)
+    const tags = Array.from({ length: n }, (_, i) => defaultTagItem(`tag${i}`))
     const html = renderTagsSnippet({ tags }, doc(), ctx('horizontal'))
     expect((html.match(/<h4/g) ?? []).length).toBe(n)
-    for (const t of tags) expect(html).toContain(`> ${t} </h4>`)
+    for (const t of tags) expect(html).toContain(`> ${t.text} </h4>`)
   })
 
   it('never duplicates the wrapper table/structure regardless of label count', () => {
-    const html = renderTagsSnippet({ tags: ['a', 'b', 'c'] }, doc(), ctx('vertical'))
+    const html = renderTagsSnippet({ tags: ['a', 'b', 'c'].map((t) => defaultTagItem(t)) }, doc(), ctx('vertical'))
     expect((html.match(/<table/g) ?? []).length).toBe(
-      (renderTagsSnippet({ tags: ['a'] }, doc(), ctx('vertical')).match(/<table/g) ?? []).length,
+      (renderTagsSnippet({ tags: [defaultTagItem('a')] }, doc(), ctx('vertical')).match(/<table/g) ?? []).length,
     )
   })
 
   it('escapes HTML-significant characters in tag labels', () => {
-    const html = renderTagsSnippet({ tags: ['<script>&x'] }, doc(), ctx('horizontal'))
+    const html = renderTagsSnippet({ tags: [defaultTagItem('<script>&x')] }, doc(), ctx('horizontal'))
     expect(html).toContain('&lt;script&gt;&amp;x')
     expect(html).not.toContain('<script>&x')
   })
 
   it('horizontal uses float:right, vertical uses margin:0 auto (orientation-specific alignment preserved)', () => {
-    expect(renderTagsSnippet({ tags: ['a'] }, doc(), ctx('horizontal'))).toContain('float: right')
-    expect(renderTagsSnippet({ tags: ['a'] }, doc(), ctx('vertical'))).toContain('margin: 0 auto')
+    expect(renderTagsSnippet({ tags: [defaultTagItem('a')] }, doc(), ctx('horizontal'))).toContain('float: right')
+    expect(renderTagsSnippet({ tags: [defaultTagItem('a')] }, doc(), ctx('vertical'))).toContain('margin: 0 auto')
+  })
+
+  it('shows the master icon by default, keeping the same output as before this field existed', () => {
+    const html = renderTagsSnippet({ tags: [defaultTagItem('a')] }, doc(), ctx('vertical'))
+    expect(html).toContain('<img')
+    expect((html.match(/<img/g) ?? []).length).toBe(1)
+  })
+
+  it('hides only the disabled icon, keeping its own text and the other pills intact', () => {
+    const html = renderTagsSnippet(
+      { tags: [{ text: 'a', iconEnabled: false, iconUrl: defaultTagItem().iconUrl }, defaultTagItem('b')] },
+      doc(),
+      ctx('vertical'),
+    )
+    expect((html.match(/<img/g) ?? []).length).toBe(1)
+    expect(html).toContain('> a </h4>')
+    expect(html).toContain('> b </h4>')
+  })
+
+  it('treats a blank icon URL as "no icon", same convention as every other <img> field', () => {
+    const html = renderTagsSnippet({ tags: [{ text: 'a', iconEnabled: true, iconUrl: '' }] }, doc(), ctx('vertical'))
+    expect(html).not.toContain('<img')
+    expect(html).toContain('> a </h4>')
+  })
+
+  it('substitutes a custom icon URL', () => {
+    const html = renderTagsSnippet(
+      { tags: [{ text: 'a', iconEnabled: true, iconUrl: 'https://x.test/custom-icon.png' }] },
+      doc(),
+      ctx('vertical'),
+    )
+    expect(html).toContain('src="https://x.test/custom-icon.png"')
+  })
+
+  it('migrates a legacy plain-string tag (pre-icon documents) into the new shape', () => {
+    const parsed = tagsFieldsSchema.parse({ tags: ['legacy tag'] })
+    expect(parsed.tags).toEqual([defaultTagItem('legacy tag')])
   })
 })
 

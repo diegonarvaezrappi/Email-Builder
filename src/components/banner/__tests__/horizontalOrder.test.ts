@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { enforceHorizontalItemOrder } from '../horizontalOrder'
 import { richTextFromPlain } from '../../../richText/model'
+import { defaultTagItem } from '../items/schemas'
 import type { BannerItem } from '../items/schemas'
 
 const promo = (id: string): BannerItem => ({
@@ -9,7 +10,7 @@ const promo = (id: string): BannerItem => ({
   fields: { promoText: richTextFromPlain('120'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') },
 })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: [] } })
-const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['a'] } })
+const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem('a')] } })
 const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
 const imgAutoModulo = (id: string): BannerItem => ({ id, type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: '', widthPercent: 80 } })
 

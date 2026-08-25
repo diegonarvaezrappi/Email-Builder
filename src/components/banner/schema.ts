@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { bannerItemSchema, defaultImgFijaFields, defaultPromoFields } from './items/schemas'
+import { bannerItemSchema, defaultImgFijaFields, defaultPromoFields, defaultTagItem } from './items/schemas'
 import { richTextFromPlain } from '../../richText/model'
 
 /**
@@ -192,6 +192,10 @@ export const defaultBannerFields: BannerFields = {
         logoImageUrl: 'https://lh3.googleusercontent.com/d/133AXVYx3soz7FSck1bjiF5vBLh-5mzml',
       },
     },
-    { id: 'banner-tags-default', type: 'TAGS', fields: { tags: ['tag 1', 'tag 2', 'tag 3'] } },
+    {
+      id: 'banner-tags-default',
+      type: 'TAGS',
+      fields: { tags: [defaultTagItem('tag 1'), defaultTagItem('tag 2'), defaultTagItem('tag 3')] },
+    },
   ],
 }

@@ -4,6 +4,7 @@ import { renderBannerSnippet } from '../render'
 import { THEME_SLUGS } from '../../../themes/themes'
 import { richTextFromPlain } from '../../../richText/model'
 import type { EmailDocument } from '../../../model'
+import { defaultTagItem } from '../items/schemas'
 import type { BannerItem } from '../items/schemas'
 
 const doc = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultEmailDocument, ...over })
@@ -15,7 +16,7 @@ const promo = (id: string, promoText = '120'): BannerItem => ({
   type: 'PROMO',
   fields: { promoText: richTextFromPlain(promoText), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') },
 })
-const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: ['tag 1'] } })
+const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem('tag 1')] } })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
 const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
@@ -100,7 +101,7 @@ describe('renderBannerSnippet', () => {
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } },
       { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoLink: '' } },
-      { id: '7', type: 'TAGS', fields: { tags: ['a'] } },
+      { id: '7', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } },
     ]
     for (const tema of THEME_SLUGS) {
       const d = withItems(allItems, { global: { ...defaultEmailDocument.global, tema } })
@@ -110,7 +111,7 @@ describe('renderBannerSnippet', () => {
   })
 
   it('bakes real theme literals in for a known theme (beige100)', () => {
-    const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: ['a'] } }], {
+    const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } }], {
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
     })
     const html = renderBannerSnippet(d.banner, d)
@@ -137,7 +138,7 @@ describe('renderBannerSnippet', () => {
       // "en cualquier parte del html", para no confundir un valor legítimo de
       // otra variable con el tono del banner sin desactivar.
       for (const tema of ['darkturbo', 'pro', 'darkneon']) {
-        const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: ['a'] } }], {
+        const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } }], {
           global: { ...defaultEmailDocument.global, tema },
           banner: { ...defaultEmailDocument.banner, backgroundEnabled: false },
         })
@@ -152,7 +153,7 @@ describe('renderBannerSnippet', () => {
     })
 
     it('turning it off does not disturb the theme resolution of unrelated variables', () => {
-      const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: ['a'] } }], {
+      const d = withItems([{ id: '1', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } }], {
         global: { ...defaultEmailDocument.global, tema: 'beige100' },
         banner: { ...defaultEmailDocument.banner, backgroundEnabled: false },
       })

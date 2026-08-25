@@ -29,6 +29,7 @@ import type {
   ImgAutomaticaMoleculaFields,
   ImgFijaFields,
   PromoFields,
+  TagItem,
   TagsFields,
   TextoComplementarioFields,
   TextoMFields,
@@ -384,6 +385,31 @@ export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument,
 const TAG_PILL_RE = /<td style=""><div style="vertical-align: middle;text-align: left;[\s\S]*?<\/div><\/td>/g
 const TAG_TEXT_PLACEHOLDER = '> tag 1 </h4>'
 
+/**
+ * Ícono + texto de UN pill, a partir de la plantilla pristina (el 1er pill de
+ * `pills`, sirve para las 3 copias). `imgEnd` es el índice del `>` que cierra
+ * el `<img>` — coincide con el primer char de TAG_TEXT_PLACEHOLDER, así que
+ * separa la plantilla en "cabeza" (todo antes del `<img>`), el propio
+ * `<img>` (cortable aparte) y "cola" (el texto + cierre del `<h4>` y el resto
+ * del pill) sin volver a buscar nada por tag.
+ *
+ * "cambiar o quitar el ícono" (mismo criterio que TAG1/TAG2 de deals,
+ * components/deals/render.ts): sin ícono habilitado o con la URL en blanco,
+ * se elimina el `<img>` ENTERO — no solo el `src` — para no dejar un
+ * `<img src="">` roto. El texto de la pill queda intacto en ambos casos
+ * (a diferencia de deals, este módulo no borra la pill completa: el maestro
+ * no trae ninguna instrucción de "sin ícono no hay pill" para este archivo).
+ */
+function renderTagPill(template: string, imgStart: number, imgEnd: number, tag: TagItem): string {
+  const head = template.slice(0, imgStart)
+  const iconTag = template.slice(imgStart, imgEnd)
+  const tail = template.slice(imgEnd) // arranca en " tag 1 </h4>..."
+
+  const icon = tag.iconEnabled && tag.iconUrl.trim() !== '' ? iconTag.replace(/src="[^"]*"/, () => `src="${escapeHtmlAttr(tag.iconUrl)}"`) : ''
+  const body = tail.replace(TAG_TEXT_PLACEHOLDER.slice(1), () => ` ${escapeHtmlText(tag.text)} </h4>`)
+  return head + icon + body
+}
+
 export function renderTagsSnippet(fields: TagsFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `modulo_tags_${ctx.bannerType}.html`
   const raw = stripComments(loadBannerMoleculaFile(fileName))
@@ -392,13 +418,21 @@ export function renderTagsSnippet(fields: TagsFields, _doc: EmailDocument, ctx: 
     throw new Error(`${fileName}: se esperaban 3 pills de tag y se encontraron ${pills.length} — revisar TAG_PILL_RE en components/banner/items/render.ts`)
   }
   const template = pills[0][0]
-  if (!template.includes(TAG_TEXT_PLACEHOLDER)) {
+  const textPlaceholderIndex = template.indexOf(TAG_TEXT_PLACEHOLDER)
+  if (textPlaceholderIndex === -1) {
     throw new Error(`${fileName}: el pill de tag ya no contiene "${TAG_TEXT_PLACEHOLDER}" — revisar components/banner/items/render.ts`)
   }
+  const imgStart = template.indexOf('<img')
+  if (imgStart === -1 || imgStart > textPlaceholderIndex) {
+    throw new Error(`${fileName}: no se encontró el <img> del ícono del tag antes de su texto — revisar components/banner/items/render.ts`)
+  }
+  // El placeholder de texto arranca justo en el `>` que cierra el <img>, así
+  // que ese índice ES el final (exclusivo) del ícono completo.
+  const imgEnd = textPlaceholderIndex + 1
 
   const renderedPills = fields.tags
     .slice(0, 3)
-    .map((label) => template.replace(TAG_TEXT_PLACEHOLDER, () => `> ${escapeHtmlText(label)} </h4>`))
+    .map((tag) => renderTagPill(template, imgStart, imgEnd, tag))
     .join('\n')
 
   const start = pills[0].index

@@ -5,7 +5,7 @@ import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import type { RichTextColorMap } from '../../../richText/model'
 import { themeVars } from '../../../themes/themes'
-import { CREDITOS_VARIANT_LABELS, CREDITOS_VARIANT_VALUES } from './schemas'
+import { CREDITOS_VARIANT_LABELS, CREDITOS_VARIANT_VALUES, defaultTagItem } from './schemas'
 import type {
   CreditosFields,
   CtaInternoFields,
@@ -13,6 +13,7 @@ import type {
   ImgAutomaticaMoleculaFields,
   ImgFijaFields,
   PromoFields,
+  TagItem,
   TagsFields,
   TextoComplementarioFields,
   TextoMFields,
@@ -237,12 +238,12 @@ export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanel
 }
 
 export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<TagsFields>) {
-  const setTag = (index: number, text: string) => {
-    onChange({ tags: value.tags.map((t, i) => (i === index ? text : t)) })
+  const setTag = (index: number, patch: Partial<TagItem>) => {
+    onChange({ tags: value.tags.map((t, i) => (i === index ? { ...t, ...patch } : t)) })
   }
   const addTag = () => {
     if (value.tags.length >= 3) return
-    onChange({ tags: [...value.tags, 'tag'] })
+    onChange({ tags: [...value.tags, defaultTagItem('tag')] })
   }
   const removeTag = (index: number) => {
     if (value.tags.length <= 1) return
@@ -252,17 +253,38 @@ export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<Ta
   return (
     <div className="properties-panel">
       {value.tags.map((tag, index) => (
-        <label className="field" key={index}>
-          <span>Tag {index + 1}</span>
-          <div className="field-row">
-            <input type="text" value={tag} onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, e.target.value)} />
-            {value.tags.length > 1 && (
-              <button type="button" onClick={() => removeTag(index)} aria-label={`Eliminar tag ${index + 1}`}>
-                ×
-              </button>
-            )}
-          </div>
-        </label>
+        <div key={index}>
+          <p className="field-group-label">Tag {index + 1}</p>
+          <label className="field">
+            <span>Texto</span>
+            <div className="field-row">
+              <input type="text" value={tag.text} onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { text: e.target.value })} />
+              {value.tags.length > 1 && (
+                <button type="button" onClick={() => removeTag(index)} aria-label={`Eliminar tag ${index + 1}`}>
+                  ×
+                </button>
+              )}
+            </div>
+          </label>
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={tag.iconEnabled}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { iconEnabled: e.target.checked })}
+            />
+            <span>Mostrar ícono</span>
+          </label>
+          <label className="field">
+            <span>URL del ícono</span>
+            <input
+              type="text"
+              placeholder="https://..."
+              value={tag.iconUrl}
+              disabled={!tag.iconEnabled}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { iconUrl: e.target.value })}
+            />
+          </label>
+        </div>
       ))}
       {value.tags.length < 3 && (
         <button type="button" onClick={addTag}>
