@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultHeaderFields } from '../schema'
+import { defaultHeaderFields, COBRANDING_SIZE_VALUES } from '../schema'
 import { renderHeaderSnippet } from '../render'
 
 describe('renderHeaderSnippet', () => {
@@ -51,25 +51,19 @@ describe('renderHeaderSnippet', () => {
     expect(columnasConCobranding).not.toContain('alt="|"')
   })
 
+  // Recorre COBRANDING_SIZE_VALUES (no una lista literal): así el test sigue
+  // cubriendo automáticamente cualquier tamaño futuro que se exponga ahí —
+  // incluida 'xl', agregada 2026-08-25 (antes de eso, este mismo test cubría
+  // la regresión de que 'xl' quedara siempre presente sin importar el tamaño
+  // elegido — un 4to logo duplicado — porque COBRANDING_IMG_RE no la
+  // matcheaba; ver la nota en render.ts).
   it('keeps exactly one cobranding image, matching the chosen size', () => {
-    for (const size of ['s', 'm', 'l'] as const) {
+    for (const size of COBRANDING_SIZE_VALUES) {
       const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true, cobrandingSize: size }, 'beige100')
       expect(snippet).toContain(`class="cobranding-${size}"`)
-      for (const other of ['s', 'm', 'l'] as const) {
+      for (const other of COBRANDING_SIZE_VALUES) {
         if (other !== size) expect(snippet).not.toContain(`class="cobranding-${other}"`)
       }
-    }
-  })
-
-  // Regresión: el maestro agregó una 4ta variante ("cobranding-xl") en el pull
-  // 2026-08-21 que COBRANDING_IMG_RE no matcheaba — quedaba siempre presente
-  // sin importar el tamaño elegido (un logo duplicado). No está expuesta como
-  // tamaño seleccionable (COBRANDING_SIZE_VALUES sigue en s/m/l), así que debe
-  // desaparecer siempre, para los 3 tamaños reales.
-  it('never leaks the not-yet-exposed "cobranding-xl" master variant', () => {
-    for (const size of ['s', 'm', 'l'] as const) {
-      const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true, cobrandingSize: size }, 'beige100')
-      expect(snippet).not.toContain('cobranding-xl')
     }
   })
 

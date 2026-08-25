@@ -29,15 +29,14 @@ const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 const BG_HEADER_VAR_RE = /\{\{\s*bg_header_mail_general\s*\}\}/g
 /**
  * El pull 2026-08-21 (bd9f4a5) agregó una 4ta variante, `cobranding-xl`, a los
- * 40 archivos de header — todavía no expuesta como opción (COBRANDING_SIZE_VALUES
- * en schema.ts sigue siendo solo s/m/l, mismo criterio "flagueado, no
- * construido" que molecula_texto_pastilla.html en banners). El regex tiene que
- * matchearla IGUAL que a las otras 3: si no, `applyCobranding` de más abajo
- * nunca la toca (no matchea `[sml]`) y queda SIEMPRE presente sin importar el
- * tamaño elegido — un 4to logo duplicado colándose en todo header con
- * cobranding activo. Al incluirla acá, el mismo mecanismo de "solo se
- * conserva la clase == keepClass" la descarta siempre (nunca es un tamaño
- * seleccionable), reproduciendo el comportamiento visual de antes de este pull.
+ * 40 archivos de header — expuesta como opción real desde 2026-08-25
+ * (COBRANDING_SIZE_VALUES en schema.ts incluye 'xl'). El regex ya la
+ * matcheaba desde el pull mismo (antes de exponerla, para poder descartarla
+ * siempre vía el mecanismo de "solo se conserva la clase == keepClass" de
+ * más abajo — si no, quedaba SIEMPRE presente sin importar el tamaño
+ * elegido, un 4to logo duplicado colándose en todo header con cobranding
+ * activo); no hace falta tocar nada acá para que 'xl' funcione como cualquier
+ * otro tamaño seleccionable.
  */
 const COBRANDING_IMG_RE = /<img class="cobranding-(?:s|m|l|xl)"[^>]*>/g
 

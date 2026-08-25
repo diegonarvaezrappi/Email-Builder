@@ -32,7 +32,10 @@ export type HeaderLayout = (typeof HEADER_LAYOUT_VALUES)[number]
 export const HEADER_LOGO_BACKGROUND_VALUES = ['claro', 'oscuro'] as const
 export type HeaderLogoBackground = (typeof HEADER_LOGO_BACKGROUND_VALUES)[number]
 
-export const COBRANDING_SIZE_VALUES = ['s', 'm', 'l'] as const
+/** 'xl' agregado en el pull 2026-08-21 (bd9f4a5) — los 40 maestros ya traen
+ *  esa 4ta <img> de cobranding, ver render.ts (COBRANDING_IMG_RE ya la
+ *  matcheaba para poder descartarla; ahora queda seleccionable). */
+export const COBRANDING_SIZE_VALUES = ['s', 'm', 'l', 'xl'] as const
 export type CobrandingSize = (typeof COBRANDING_SIZE_VALUES)[number]
 
 /**
@@ -116,6 +119,7 @@ export const COBRANDING_SIZE_LABELS: Record<CobrandingSize, string> = {
   s: 'Pequeño',
   m: 'Mediano',
   l: 'Grande',
+  xl: 'Extra grande',
 }
 
 export const HEADER_LOGO_SIZE_LABELS: Record<HeaderLogoSize, string> = {
