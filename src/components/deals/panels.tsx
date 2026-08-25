@@ -4,6 +4,8 @@ import type { GlobalFields } from '../../global/schema'
 import {
   DEAL_CARD_PIECE_LABELS,
   DEAL_CARD_PIECE_TYPES,
+  DEAL_LOGO_SHAPE_LABELS,
+  DEAL_LOGO_SHAPE_VALUES,
   DEALS_COPY_MAX_LENGTH,
   DEALS_MAX_CARDS,
   hideDealCardPiece,
@@ -11,6 +13,7 @@ import {
   restoreDealCardPiece,
   type DealCardFields,
   type DealCardPieceType,
+  type DealLogoShape,
   type DealsFields,
 } from './schema'
 
@@ -126,6 +129,16 @@ export function DealCardPropertiesPanel({ value, onChange }: DealCardPropertiesP
       <label className="field">
         <span>Imagen del producto</span>
         <input type="text" placeholder="https://..." value={value.productImageUrl} onChange={(e) => set('productImageUrl', e.target.value)} />
+      </label>
+      <label className="field">
+        <span>Forma del logo</span>
+        <select value={value.logoShape} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoShape', e.target.value as DealLogoShape)}>
+          {DEAL_LOGO_SHAPE_VALUES.map((shape) => (
+            <option key={shape} value={shape}>
+              {DEAL_LOGO_SHAPE_LABELS[shape]}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="field">
         <span>Logo del comercio</span>

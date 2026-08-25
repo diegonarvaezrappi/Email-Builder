@@ -204,12 +204,9 @@ const LOGO_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkd
  * "Logo pastilla" — 2da variante de logo que el pull 2026-08-21 (bd9f4a5)
  * agregó junto al "Logo 1:1" de siempre (mismo `role="molecula-iconoL"`, otra
  * URL/tamaño/forma), sin `{% if %}` que la apague: el maestro la deja SIEMPRE
- * presente en las 2 celdas. Todavía no es un campo editable de la app (mismo
- * criterio que molecula_texto_pastilla.html en banners: pieza nueva,
- * flagueada pero no construida) — se oculta explícitamente acá para no
- * mostrar un 2do logo inesperado en cada deal, ver LOGO_PASTILLA_PLACEHOLDER
- * más abajo. Si en algún momento se decide exponerla, esto es lo que hay que
- * reemplazar por un campo real en vez de removerla.
+ * presente en las 2 celdas. Ahora es un campo real (`fields.logoShape`, ver
+ * components/deals/schema.ts) — pedido explícito del usuario 2026-08-25 de
+ * exponerla como una 2da forma de logo elegible, no solo ocultarla.
  */
 const LOGO_PASTILLA_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe'
 
@@ -226,20 +223,40 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
     replacement: cssUrlValue(fields.productImageUrl),
   })
 
-  const logoIndex = indexOfOrThrow(cell, LOGO_ANCHOR)
-  if (fields.logoUrl.trim() === '') {
-    // "si no hay url se debe eliminar la etiqueta de imagen por completo".
-    edits.push({ ...voidElementBounds(cell, logoIndex, 'img'), replacement: '' })
-  } else {
-    const urlIndex = indexOfOrThrow(cell, LOGO_PLACEHOLDER)
-    edits.push({ start: urlIndex, end: urlIndex + LOGO_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.logoUrl) })
-  }
+  // LOGO_ANCHOR (`role="molecula-iconoL"`) se repite en los 2 <img> del maestro
+  // (cuadrado Y pastilla) — indexOfOrThrow toma el PRIMERO, que en el HTML real
+  // es siempre el cuadrado (viene antes en el archivo), igual que antes de que
+  // existiera este selector.
+  const squareRoleIndex = indexOfOrThrow(cell, LOGO_ANCHOR)
+  const pastillaSrcIndex = indexOfOrThrow(cell, LOGO_PASTILLA_PLACEHOLDER)
 
-  // Logo pastilla: se remueve el <div> que lo envuelve entero (no solo el
-  // <img>), así no queda un <div style="padding: 10px;"></div> vacío
-  // agregando espacio de más debajo del logo 1:1.
-  const pastillaIndex = indexOfOrThrow(cell, LOGO_PASTILLA_PLACEHOLDER)
-  edits.push({ ...elementBounds(cell, pastillaIndex, 'div'), replacement: '' })
+  // La forma NO elegida se descarta ENTERA (su <div>), no solo su <img>, así
+  // no quedan 2 `<div style="padding: 10px;"></div>` vacíos apilando espacio
+  // de más (mismo criterio que ya tenía la pastilla cuando estaba siempre
+  // oculta). La forma elegida sigue la regla del maestro tal cual estaba antes
+  // de este selector: sin URL se elimina solo la etiqueta `<img>`, el `<div>`
+  // que la envuelve queda.
+  if (fields.logoShape === 'pastilla') {
+    edits.push({ ...elementBounds(cell, squareRoleIndex, 'div'), replacement: '' })
+    if (fields.logoUrl.trim() === '') {
+      edits.push({ ...voidElementBounds(cell, pastillaSrcIndex, 'img'), replacement: '' })
+    } else {
+      edits.push({
+        start: pastillaSrcIndex,
+        end: pastillaSrcIndex + LOGO_PASTILLA_PLACEHOLDER.length,
+        replacement: escapeHtmlAttr(fields.logoUrl),
+      })
+    }
+  } else {
+    edits.push({ ...elementBounds(cell, pastillaSrcIndex, 'div'), replacement: '' })
+    if (fields.logoUrl.trim() === '') {
+      // "si no hay url se debe eliminar la etiqueta de imagen por completo".
+      edits.push({ ...voidElementBounds(cell, squareRoleIndex, 'img'), replacement: '' })
+    } else {
+      const urlIndex = indexOfOrThrow(cell, LOGO_PLACEHOLDER)
+      edits.push({ start: urlIndex, end: urlIndex + LOGO_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.logoUrl) })
+    }
+  }
 
   // {{img_overlay_1_mail_general}} queda para la pasada de tema del final.
   return applyEdits(cell, edits)

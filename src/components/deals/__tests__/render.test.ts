@@ -179,6 +179,38 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     expect(withoutLogo).not.toContain('alt="LOGO"')
   })
 
+  // logoShape: pedido explícito del usuario 2026-08-25 — exponer la "logo
+  // pastilla" del maestro (bd9f4a5) como una 2da forma elegible, en vez de
+  // ocultarla siempre. Ver DEAL_LOGO_SHAPE_VALUES en schema.ts.
+  describe('logoShape', () => {
+    it('"cuadrado" (default) muestra solo el logo cuadrado; la pastilla no aparece ni una vez', () => {
+      const html = render(cards(card('a')))
+      expect(count(html, 'role="molecula-iconoL"')).toBe(1)
+      expect(html).toContain('1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j') // logoUrl por defecto
+      expect(html).not.toContain('1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe') // placeholder de la pastilla
+    })
+
+    it('"pastilla" muestra solo el logo pastilla con la URL del usuario; el cuadrado no aparece', () => {
+      const html = render(cards(card('a', { logoShape: 'pastilla', logoUrl: 'https://x.test/pastilla.png' })))
+      expect(count(html, 'role="molecula-iconoL"')).toBe(1)
+      expect(html).toContain('src="https://x.test/pastilla.png"')
+      expect(html).not.toContain('1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j')
+    })
+
+    it('"pastilla" con logoUrl vacío elimina la etiqueta <img>, no deja un <img src="">', () => {
+      const html = render(cards(card('a', { logoShape: 'pastilla', logoUrl: '' })))
+      expect(html).not.toContain('role="molecula-iconoL"')
+      expect(html).not.toContain('src=""')
+    })
+
+    it('cambiar la forma no afecta a la otra tarjeta del par', () => {
+      const html = render(cards(card('a', { logoShape: 'pastilla', logoUrl: 'https://x.test/pastilla.png' }), card('b')))
+      expect(html).toContain('src="https://x.test/pastilla.png"')
+      expect(html).toContain('1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j') // logo cuadrado por defecto de 'b'
+      expect(count(html, 'role="molecula-iconoL"')).toBe(2) // 1 pastilla (a) + 1 cuadrado (b)
+    })
+  })
+
   it('los íconos de tag se pueden cambiar, y cada tag es independiente del otro', () => {
     const html = render(cards(card('a', { tag1IconUrl: 'https://x.test/1.png', tag2Enabled: false })))
     expect(html).toContain('https://x.test/1.png')

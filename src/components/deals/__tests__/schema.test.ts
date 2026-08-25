@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   DEAL_CARD_PIECE_LABELS,
   DEAL_CARD_PIECE_TYPES,
+  DEAL_LOGO_SHAPE_LABELS,
+  DEAL_LOGO_SHAPE_VALUES,
+  dealCardFieldsSchema,
   defaultDealCardFields,
   hideDealCardPiece,
   isDealCardPieceHidden,
@@ -16,6 +19,24 @@ describe('DEAL_CARD_PIECE_LABELS', () => {
     for (const type of DEAL_CARD_PIECE_TYPES) {
       expect(DEAL_CARD_PIECE_LABELS[type]).toBeTruthy()
     }
+  })
+})
+
+describe('logoShape', () => {
+  it('tiene una etiqueta para cada una de las 2 formas', () => {
+    for (const shape of DEAL_LOGO_SHAPE_VALUES) {
+      expect(DEAL_LOGO_SHAPE_LABELS[shape]).toBeTruthy()
+    }
+  })
+
+  it('default a "cuadrado" — preserva el comportamiento de siempre en documentos ya existentes', () => {
+    expect(defaultDealCardFields.logoShape).toBe('cuadrado')
+    expect(dealCardFieldsSchema.parse({}).logoShape).toBe('cuadrado')
+  })
+
+  it('un documento viejo sin logoShape en absoluto sigue cargando (retrocompatible)', () => {
+    const { logoShape: _omit, ...legacy } = defaultDealCardFields
+    expect(dealCardFieldsSchema.parse(legacy).logoShape).toBe('cuadrado')
   })
 })
 

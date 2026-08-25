@@ -100,12 +100,40 @@ export function normalizePieceOrder(order: readonly DealCardPieceType[]): DealCa
   return clean
 }
 
+/**
+ * El maestro trae 2 formas de logo por celda, "Logo 1:1" (cuadrado) y "Logo
+ * pastilla" (píldora ancha) — mismo `role="molecula-iconoL"` en los 2 `<img>`,
+ * agregada sin `{% if %}` por el pull `bd9f4a5` (2026-08-21, ver
+ * components/deals/render.ts, LOGO_PASTILLA_PLACEHOLDER). Antes de este
+ * selector la app la ocultaba siempre (pieza "flagueada, no construida" —
+ * mismo bucket que molecula_texto_pastilla.html de banners); pedido explícito
+ * del usuario 2026-08-25 de exponerla como una 2da forma elegible.
+ *
+ * Una sola URL (`logoUrl` abajo) para las 2 formas, no 2 campos de URL
+ * independientes: es el mismo logo del comercio, solo cambia el contenedor
+ * (cuadrado 50×50 vs. píldora 23px de alto × hasta 150px de ancho) — decisión
+ * de producto, el maestro no lo especifica (ninguna de las 2 formas viene
+ * documentada en 05-docs, es contenido nuevo del pull).
+ */
+export const DEAL_LOGO_SHAPE_VALUES = ['cuadrado', 'pastilla'] as const
+export type DealLogoShape = (typeof DEAL_LOGO_SHAPE_VALUES)[number]
+export const DEAL_LOGO_SHAPE_LABELS: Record<DealLogoShape, string> = {
+  cuadrado: 'Cuadrado',
+  pastilla: 'Pastilla',
+}
+
 export const dealCardFieldsSchema = z.object({
   /** Va dentro de `background-image: url(...)` de la celda de imagen (no en un
    *  atributo), así que el render lo pasa por cssUrlValue, no por escapeHtmlAttr. */
   productImageUrl: z.string().default('https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png'),
+  /** Cuál de las 2 formas de logo del maestro se muestra — ver el comentario
+   *  grande de DEAL_LOGO_SHAPE_VALUES arriba. Default 'cuadrado': preserva el
+   *  comportamiento de siempre para toda tarjeta/documento ya existente. */
+  logoShape: z.enum(DEAL_LOGO_SHAPE_VALUES).default('cuadrado'),
   /** Vacío = se elimina la etiqueta `<img>` completa, como pide el comentario
-   *  del maestro ("si no hay url se debe eliminar la etiqueta de imagen por completo"). */
+   *  del maestro ("si no hay url se debe eliminar la etiqueta de imagen por completo").
+   *  Aplica a la forma que esté activa (`logoShape`); la forma inactiva se
+   *  descarta entera sin importar este valor. */
   logoUrl: z.string().default('https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'),
   /** Reemplaza el token de relleno manual LINKDEAL de ESTA celda. Los deals son
    *  el único módulo de contenido que viene clickeable por defecto
