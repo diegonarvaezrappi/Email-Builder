@@ -50,7 +50,9 @@ export type HeaderLogoSize = (typeof HEADER_LOGO_SIZE_VALUES)[number]
 
 export const headerSchema = z.object({
   brand: z.enum(HEADER_BRAND_VALUES).default('rappi'),
-  layout: z.enum(HEADER_LAYOUT_VALUES).default('centrado'),
+  /** Default 'columnas' — pedido explícito del usuario 2026-08-25 (antes era
+   *  'centrado'). */
+  layout: z.enum(HEADER_LAYOUT_VALUES).default('columnas'),
   logoBackground: z.enum(HEADER_LOGO_BACKGROUND_VALUES).default('claro'),
   /**
    * "Personalizado" en el select de Marca — pedido explícito del usuario: el
@@ -74,13 +76,18 @@ export const headerSchema = z.object({
    *  efecto cuando customLogo es true (una marca real siempre usa el tamaño
    *  original del maestro, sin overrides). */
   logoSize: z.enum(HEADER_LOGO_SIZE_VALUES).default('m'),
-  cobranding: z.boolean().default(false),
+  /** Default `true` — pedido explícito del usuario 2026-08-25 (antes era
+   *  `false`), junto con `cobrandingImageUrl` de abajo. */
+  cobranding: z.boolean().default(true),
   cobrandingSize: z.enum(COBRANDING_SIZE_VALUES).default('m'),
-  /** Default = la URL placeholder que traen los 40 archivos de header
-   *  (idéntica en los 3 tamaños de cada uno) — debe coincidir con
-   *  COBRANDING_IMG_SRC_PLACEHOLDER en header/render.ts, que la usa como
-   *  ancla para sustituir por esta URL. */
-  cobrandingImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA'),
+  /** Default: imagen de cobranding pedida explícitamente por el usuario
+   *  2026-08-25 para que aparezca activada desde que se carga la app. Ya NO
+   *  coincide con COBRANDING_IMG_SRC_PLACEHOLDER en header/render.ts (el
+   *  placeholder que traen los 40 archivos de header) — no hace falta que
+   *  coincida: ese placeholder es del maestro, independiente de este default,
+   *  y `applyCobranding` siempre sustituye el placeholder por el valor actual
+   *  de este campo sea cual sea. */
+  cobrandingImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1JYYWeVebW_G73Y2f-Enj6gwV--MN3Y_u'),
   /** Los 40 archivos traen `border-radius: 5px` en las 3 <img> de cobranding.
    *  Default `true` = se respeta el maestro tal cual; en `false`, render.ts se
    *  lo quita a la <img> que queda (algunos logos de partner no deben salir

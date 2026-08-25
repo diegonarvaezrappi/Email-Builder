@@ -3,13 +3,18 @@ import { defaultHeaderFields, COBRANDING_SIZE_VALUES } from '../schema'
 import { renderHeaderSnippet } from '../render'
 
 describe('renderHeaderSnippet', () => {
-  it('renders the default fields (Rappi, centrado, claro, sin cobranding) with no cobranding markup', () => {
+  // Defaults pedidos explícitamente por el usuario 2026-08-25: layout
+  // 'columnas' y cobranding activado (con la imagen que dio) desde que carga
+  // la app — antes eran 'centrado' y cobranding apagado.
+  it('renders the default fields (Rappi, columnas, claro, cobranding activado) with exactly the default cobranding markup', () => {
     const snippet = renderHeaderSnippet(defaultHeaderFields, 'beige100')
     expect(snippet).toContain('alt="Rappi"')
-    expect(snippet).not.toContain('cobranding-s')
-    expect(snippet).not.toContain('cobranding-m')
-    expect(snippet).not.toContain('cobranding-l')
-    // Sin cobranding tampoco va el separador, aunque el layout sea centrado.
+    expect(snippet).toContain('class="cobranding-m"')
+    expect(snippet).not.toContain('cobranding-s"')
+    expect(snippet).not.toContain('cobranding-l"')
+    expect(snippet).not.toContain('cobranding-xl"')
+    expect(snippet).toContain('src="https://lh3.googleusercontent.com/d/1JYYWeVebW_G73Y2f-Enj6gwV--MN3Y_u"')
+    // El separador solo va con layout centrado (ver el test dedicado más abajo) — columnas nunca lo trae.
     expect(snippet).not.toContain('alt="|"')
   })
 
@@ -39,8 +44,16 @@ describe('renderHeaderSnippet', () => {
   })
 
   it('keeps the separator only when cobranding is on AND layout is centrado', () => {
-    const centradoSinCobranding = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: false }, 'beige100')
-    const centradoConCobranding = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true }, 'beige100')
+    // El default ahora es layout 'columnas' — hay que fijar 'centrado' a mano
+    // en los 2 casos que lo necesitan, no asumirlo del default.
+    const centradoSinCobranding = renderHeaderSnippet(
+      { ...defaultHeaderFields, layout: 'centrado', cobranding: false },
+      'beige100',
+    )
+    const centradoConCobranding = renderHeaderSnippet(
+      { ...defaultHeaderFields, layout: 'centrado', cobranding: true },
+      'beige100',
+    )
     const columnasConCobranding = renderHeaderSnippet(
       { ...defaultHeaderFields, layout: 'columnas', cobranding: true },
       'beige100',
@@ -133,12 +146,14 @@ describe('renderHeaderSnippet', () => {
 
   it('replaces the brand logo src with the URL the user chose (customLogo on)', () => {
     const snippet = renderHeaderSnippet(
-      { ...defaultHeaderFields, customLogo: true, logoUrl: 'https://example.com/mi-logo.png' },
+      // cobranding se apaga a mano: este test cubre el logo de MARCA, no el
+      // de cobranding (que ahora está prendido por default) — así se sigue
+      // pudiendo afirmar que el swap de marca no lo toca para nada.
+      { ...defaultHeaderFields, customLogo: true, logoUrl: 'https://example.com/mi-logo.png', cobranding: false },
       'beige100',
     )
     expect(snippet).toContain('src="https://example.com/mi-logo.png"')
     expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf')
-    // El logo de cobranding (deshabilitado por default) no se ve afectado.
     expect(snippet).not.toContain('cobranding-')
   })
 
@@ -191,7 +206,9 @@ describe('renderHeaderSnippet', () => {
 
   it('resizing the brand logo does not touch the separator logo or the cobranding images', () => {
     const snippet = renderHeaderSnippet(
-      { ...defaultHeaderFields, customLogo: true, logoSize: 'l', cobranding: true },
+      // El separador solo existe en layout 'centrado' (ver el test dedicado
+      // más arriba) — hay que fijarlo a mano, ya no es el default.
+      { ...defaultHeaderFields, layout: 'centrado', customLogo: true, logoSize: 'l', cobranding: true },
       'beige100',
     )
     // El separador (alt="|") sigue con el alto original del maestro, sin escalar.
