@@ -345,6 +345,21 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
     expect(html).toContain('width: 55%')
     expect(html).not.toContain('braze-images.com')
   })
+
+  // Regresión: pedido explícito del usuario 2026-08-25 — URL en blanco borra
+  // el <img> entero en vez de dejar src="" (evita el ícono de "imagen no
+  // cargada" en el mail).
+  it('molecula: removes the <img> entirely when imageUrl is blank', () => {
+    const html = renderImgAutomaticaMoleculaSnippet({ imageUrl: '', widthPercent: 80 }, doc(), ctx('horizontal'))
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('src=""')
+  })
+
+  it('modulo: removes the <img> entirely when imageUrl is blank', () => {
+    const html = renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80 })
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('src=""')
+  })
 })
 
 describe('renderImgFijaSnippet', () => {
@@ -369,6 +384,18 @@ describe('renderImgFijaSnippet', () => {
   it('leaves {{img_overlay_2_mail_general}} for the final theme pass (not a user field)', () => {
     const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoLink: '' }, doc(), ctx('horizontal'))
     expect(html).toContain('{{img_overlay_2_mail_general}}')
+  })
+
+  // Regresión: pedido explícito del usuario 2026-08-25 — el logo (un <img>
+  // real) desaparece cuando su URL queda en blanco, en vez de dejar src="".
+  // El fondo (heroImageUrl) es background-image: url(...), no un <img> — ahí
+  // un valor vacío ya no deja ningún ícono roto, así que sigue sustituyéndose
+  // como siempre (url() vacío, no se borra nada).
+  it.each(['horizontal', 'vertical'] as const)('%s: removes the logo <img> when logoImageUrl is blank, but keeps the hero background substitution', (bannerType) => {
+    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoLink: '' }, doc(), ctx(bannerType))
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('src=""')
+    expect(html).toContain('background-image: url();')
   })
 })
 

@@ -15,7 +15,7 @@
 // de PROMO/TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO — ver richText/render.ts.
 // ============================================================================
 import type { EmailDocument } from '../../../model'
-import { escapeHtmlAttr, escapeHtmlText } from '../../../template/htmlText'
+import { escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../../template/htmlText'
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { DARK_THEME_SLUGS } from '../../../themes/themes'
@@ -331,7 +331,7 @@ export function renderImgAutomaticaMoleculaSnippet(
 ): string {
   const fileName = `molecula_img_automatica_${ctx.bannerType}.html`
   let html = stripComments(loadBannerMoleculaFile(fileName))
-  html = substituteOnce(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, escapeHtmlAttr(fields.imageUrl), fileName)
+  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, fields.imageUrl, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }
 
@@ -347,12 +347,15 @@ const IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER =
 export function renderImgAutomaticaModuloSnippet(fields: ImgAutomaticaModuloFields): string {
   const fileName = 'modulo_img_automatica_horizontal.html'
   let html = stripComments(loadBannerMoleculaFile(fileName))
-  html = substituteOnce(html, IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER, escapeHtmlAttr(fields.imageUrl), fileName)
+  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER, fields.imageUrl, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }
 
 // --- IMG_FIJA ----------------------------------------------------------------
 
+/** El fondo va en `background-image: url(...)`, no un `<img>` — un valor
+ *  vacío ya no deja ningún ícono roto ahí (el navegador simplemente no pinta
+ *  nada), así que sigue con `substituteOnce` normal, sin `substituteImgSrcOrRemove`. */
 const IMG_FIJA_HERO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1DUvbZ8_lGdt1N_jZUSt4vyHHblvbVg9P'
 const IMG_FIJA_LOGO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1a9-c_8otztz8MJvWa6G-TczJ3NEO083G'
 /** Solo la variante VERTICAL envuelve el logo en este link — asimetría real
@@ -364,7 +367,7 @@ export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument,
   const fileName = `modulo_img_altofijo_${ctx.bannerType}.html`
   let html = stripComments(loadBannerMoleculaFile(fileName))
   html = substituteOnce(html, IMG_FIJA_HERO_URL_PLACEHOLDER, escapeHtmlAttr(fields.heroImageUrl), fileName)
-  html = substituteOnce(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, escapeHtmlAttr(fields.logoImageUrl), fileName)
+  html = substituteImgSrcOrRemove(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, fields.logoImageUrl, fileName)
   if (ctx.bannerType === 'vertical') {
     html = substituteOnce(html, IMG_FIJA_LOGO_LINK_PLACEHOLDER, escapeHtmlAttr(fields.logoLink), fileName)
   }

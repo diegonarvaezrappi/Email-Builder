@@ -89,6 +89,15 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jrRUyQvYuQ8gsVP1Sk0jvM3BdFO0ZaJA')
   })
 
+  // Regresión: pedido explícito del usuario 2026-08-25 — un campo de URL de
+  // imagen vacío debe borrar el <img> entero en vez de dejar src="" (evita el
+  // ícono de "imagen no cargada" en el mail).
+  it('removes the cobranding <img> entirely when the URL is left blank, instead of leaving src=""', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true, cobrandingImageUrl: '' }, 'beige100')
+    expect(snippet).not.toContain('<img class="cobranding-m"')
+    expect(snippet).not.toContain('src=""')
+  })
+
   it('keeps the master border-radius on the cobranding image by default', () => {
     const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true }, 'beige100')
     const img = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]

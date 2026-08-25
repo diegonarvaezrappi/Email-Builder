@@ -1,6 +1,6 @@
 import wrapperRaw from '../../assets/templates/headers/_header-wrapper.html?raw'
 import { themeVars } from '../../themes/themes'
-import { escapeHtmlAttr } from '../../template/htmlText'
+import { escapeHtmlAttr, substituteImgSrcOrRemove } from '../../template/htmlText'
 import type { HeaderFields } from './schema'
 
 /**
@@ -150,12 +150,8 @@ function applyCobranding(trHtml: string, fields: HeaderFields): string {
     return fields.cobrandingRounded ? imgTag : imgTag.replace(COBRANDING_BORDER_RADIUS_RE, '')
   })
 
-  if (!cell.includes(COBRANDING_IMG_SRC_PLACEHOLDER)) {
-    throw new Error(
-      `headers/${fields.brand}/${fields.layout}-${fields.logoBackground}.html: el <td> de cobranding ya no trae "${COBRANDING_IMG_SRC_PLACEHOLDER}" — revisar components/header/render.ts`,
-    )
-  }
-  cell = cell.replace(COBRANDING_IMG_SRC_PLACEHOLDER, () => escapeHtmlAttr(fields.cobrandingImageUrl))
+  const fileName = `headers/${fields.brand}/${fields.layout}-${fields.logoBackground}.html`
+  cell = substituteImgSrcOrRemove(cell, COBRANDING_IMG_SRC_PLACEHOLDER, fields.cobrandingImageUrl, fileName)
 
   return trHtml.slice(0, anchorIndex) + cell + trHtml.slice(cellEnd)
 }

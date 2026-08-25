@@ -186,6 +186,15 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     // El ícono por defecto del tag 2 desapareció junto con su div.
     expect(html).not.toContain('19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn')
   })
+
+  // Regresión: pedido explícito del usuario 2026-08-25 — dejar la URL del
+  // ícono en blanco (aunque el tag siga "activado") borra el pill completo,
+  // mismo criterio ya documentado para "apagar el tag": sin ícono no hay pill.
+  it('un tag "activado" pero con el ícono en blanco borra el pill completo, no deja un <img src="">', () => {
+    const html = render(cards(card('a', { tag1IconUrl: '', tag2Enabled: false })))
+    expect(html).not.toContain('src=""')
+    expect(count(html, 'role="molecula-tag"')).toBe(0)
+  })
 })
 
 describe('renderDealsSnippet · legales (fila del par, toggle por tarjeta)', () => {

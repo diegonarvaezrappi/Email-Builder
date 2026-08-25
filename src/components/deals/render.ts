@@ -318,8 +318,10 @@ function tagGroupBounds(cell: string, iconPlaceholder: string): Bounds {
 function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, text: string): Edit[] {
   const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
   // "se debe poder cambiar o quitar el ícono, si se quita, se elimina la div
-  // completa" — sin ícono no hay pill, así que apagar el tag borra el <div>.
-  if (!enabled) return [{ ...tagGroupBounds(cell, iconPlaceholder), replacement: '' }]
+  // completa" — sin ícono no hay pill, así que apagar el tag (o dejar la URL
+  // del ícono en blanco — pedido explícito del usuario 2026-08-25, para no
+  // dejar un <img src=""> roto) borra el <div> completo.
+  if (!enabled || iconUrl.trim() === '') return [{ ...tagGroupBounds(cell, iconPlaceholder), replacement: '' }]
 
   const labelBounds = textRunBounds(cell, elementBounds(cell, iconIndex, 'h5'), 'h5')
   return [

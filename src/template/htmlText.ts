@@ -34,3 +34,34 @@ export function escapeHtmlText(value: string): string {
 export function escapeHtmlAttr(value: string): string {
   return value.replace(/[&<>"']/g, (c) => HTML_ATTR_ESCAPES[c])
 }
+
+/**
+ * Sustituye el `src` placeholder de un `<img>` por la URL del usuario — o,
+ * si la dejó en blanco, borra el `<img>` ENTERO en vez de dejar `src=""`.
+ * Pedido explícito del usuario 2026-08-25 ("evitar que aparezca en el mail
+ * que la imagen no ha cargado"), aplicado como mecanismo compartido a todo
+ * campo de URL de imagen que renderiza como un `<img>` real (no aplica a
+ * `background-image: url(...)` — ahí un valor vacío ya no deja ningún ícono
+ * roto, el navegador simplemente no pinta nada).
+ *
+ * `html` puede ser el documento completo o ya un fragmento recortado (ej. la
+ * celda de cobranding en header/render.ts) — busca el `<img` más cercano
+ * ANTES del placeholder, así que solo funciona si `placeholder` es
+ * literalmente el valor de su atributo `src` (nunca aparece un `<img` real
+ * entre el placeholder y su propia apertura).
+ */
+export function substituteImgSrcOrRemove(html: string, placeholder: string, url: string, fileName: string): string {
+  const placeholderIndex = html.indexOf(placeholder)
+  if (placeholderIndex === -1) {
+    throw new Error(`${fileName}: no se encontró "${placeholder}" — revisar substituteImgSrcOrRemove`)
+  }
+  if (url.trim() === '') {
+    const tagStart = html.lastIndexOf('<img', placeholderIndex)
+    if (tagStart === -1) {
+      throw new Error(`${fileName}: no se encontró la apertura "<img" antes de "${placeholder}" — revisar substituteImgSrcOrRemove`)
+    }
+    const tagEnd = html.indexOf('>', placeholderIndex) + 1
+    return html.slice(0, tagStart) + html.slice(tagEnd)
+  }
+  return html.replace(placeholder, () => escapeHtmlAttr(url))
+}
