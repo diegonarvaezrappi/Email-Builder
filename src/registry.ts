@@ -1,6 +1,6 @@
 import type { ZodType, ZodTypeDef } from 'zod'
 import type { ComponentType } from 'react'
-import type { ContentBlock, CtaBlock, EmailDocument, SlotName } from './model'
+import type { ContentBlock, CtaBlock, DealsBlock, EmailDocument, SlotName } from './model'
 import { contentBlockSchema } from './model'
 import { defaultFooterFields, footerSchema, type FooterFields } from './components/footer/schema'
 import { renderFooterSnippet } from './components/footer/render'
@@ -16,6 +16,7 @@ import { renderBannerSnippet } from './components/banner/render'
 import { BannerPropertiesPanel } from './components/banner/PropertiesPanel'
 import { renderContenidosSnippet } from './components/contenidos/render'
 import { defaultCtaFields } from './components/cta/schema'
+import { defaultDealCardFields } from './components/deals/schema'
 import { defaultGlobalFields } from './global/schema'
 import { z } from 'zod'
 
@@ -134,11 +135,34 @@ const defaultContenidosCtaBlock: CtaBlock = {
   fields: defaultCtaFields,
 }
 
+/** Pedido explícito del usuario: el documento nuevo trae 3 filas de Deals de
+ *  fábrica, debajo del CTA. Cada fila es un bloque DEALS independiente (ver
+ *  la nota grande en components/deals/schema.ts: un bloque = 1 fila = hasta 2
+ *  tarjetas), así que necesita sus propios ids — tanto el del bloque como los
+ *  de sus 2 tarjetas deben ser únicos en TODO el documento (findDealsBlockByCard
+ *  asume eso). Por lo mismo no se puede reutilizar defaultDealsFields (sus 2
+ *  ids fijos colisionarían entre las 3 filas) ni newId() (rompería que
+ *  defaultEmailDocument sea determinista para tests) — de ahí este generador
+ *  con ids fijos parametrizados por índice de fila. Sigue siendo una fila
+ *  removible como cualquier otra (el botón × del overlay), igual que el CTA.*/
+function defaultDealsBlock(row: 1 | 2 | 3): DealsBlock {
+  return {
+    id: `contenidos-deals-default-${row}`,
+    type: 'DEALS',
+    fields: {
+      items: [
+        { id: `deals-card-1-default-${row}`, fields: defaultDealCardFields },
+        { id: `deals-card-2-default-${row}`, fields: defaultDealCardFields },
+      ],
+    },
+  }
+}
+
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
   header: defaultHeaderFields,
   banner: defaultBannerFields,
   footer: defaultFooterFields,
   cierre: defaultCierreFields,
-  contenidos: [defaultContenidosCtaBlock],
+  contenidos: [defaultContenidosCtaBlock, defaultDealsBlock(1), defaultDealsBlock(2), defaultDealsBlock(3)],
 }
