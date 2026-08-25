@@ -1,6 +1,9 @@
 import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../model'
 import type { GlobalFields } from '../../global/schema'
+import { RichTextInput } from '../../richText/RichTextInput'
+import type { RichTextColorMap } from '../../richText/model'
+import { themeVars } from '../../themes/themes'
 import {
   DEAL_CARD_PIECE_LABELS,
   DEAL_CARD_PIECE_TYPES,
@@ -16,6 +19,22 @@ import {
   type DealLogoShape,
   type DealsFields,
 } from './schema'
+
+/** Mismo helper que components/banner/items/panels.tsx (no exportado desde
+ *  ahí, se duplica acá) — colores REALES del tema activo para la vista
+ *  previa de RichTextInput mientras se escribe (el HTML final deja
+ *  `{{color_x_mail_general}}` sin resolver hasta la pasada de tema de
+ *  renderDealsSnippet). Hoy ningún campo de deals expone los 3 colores
+ *  (`showColors={false}` en complemento2Text, ver más abajo), pero
+ *  RichTextInput igual requiere un `RichTextColorMap` válido. */
+function richTextColorsForTema(tema: string): RichTextColorMap {
+  const vars = themeVars(tema)
+  return {
+    colorBase: vars.color_texto_mail_general ?? '#000000',
+    colorAcento1: vars.color_acento1_mail_general ?? '#000000',
+    colorAcento2: vars.color_acento2_mail_general ?? '#000000',
+  }
+}
 
 /**
  * Panel del BLOQUE DEALS. Queda casi vacío a propósito: todo lo editable vive
@@ -189,6 +208,10 @@ interface DealCardPiecePropertiesPanelProps {
   pieceType: DealCardPieceType
   value: DealCardFields
   onChange: (next: DealCardFields) => void
+  /** Solo para leer `doc.global.tema` (colores reales de RichTextInput en
+   *  complemento2Text) — mismo motivo que BannerItemPanelProps en
+   *  components/banner/items/panels.tsx recibe `doc` completo. */
+  doc: EmailDocument
 }
 
 /**
@@ -203,10 +226,11 @@ interface DealCardPiecePropertiesPanelProps {
  * fijo del maestro, no una lista libre como los items de banner); para volver
  * a mostrarla está el catálogo de "piezas ocultas" en el panel de la tarjeta.
  */
-export function DealCardPiecePropertiesPanel({ pieceType, value, onChange }: DealCardPiecePropertiesPanelProps) {
+export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }: DealCardPiecePropertiesPanelProps) {
   const set = <K extends keyof DealCardFields>(key: K, next: DealCardFields[K]) => {
     onChange({ ...value, [key]: next })
   }
+  const colors = richTextColorsForTema(doc.global.tema)
 
   return (
     <div className="properties-panel">
@@ -255,14 +279,24 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange }: Dea
             text={value.complemento1Text}
             onText={(complemento1Text) => set('complemento1Text', complemento1Text)}
           />
-          <TogglableTextField
-            label="Mostrar complemento 2 (precio anterior)"
-            enabled={value.complemento2Enabled}
-            onToggle={(complemento2Enabled) => set('complemento2Enabled', complemento2Enabled)}
-            text={value.complemento2Text}
-            onText={(complemento2Text) => set('complemento2Text', complemento2Text)}
-            hint='Todo el texto queda tachado; el "|" que lo separa del complemento 1 es fijo.'
-          />
+          <label className="field field-checkbox">
+            <input
+              type="checkbox"
+              checked={value.complemento2Enabled}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('complemento2Enabled', e.target.checked)}
+            />
+            <span>Mostrar complemento 2 (precio anterior)</span>
+          </label>
+          <label className="field">
+            <RichTextInput
+              value={value.complemento2Text}
+              onChange={(complemento2Text) => set('complemento2Text', complemento2Text)}
+              colors={colors}
+              disabled={!value.complemento2Enabled}
+              showColors={false}
+            />
+            <span className="field-hint">El "|" que lo separa del complemento 1 es fijo, no es parte del texto.</span>
+          </label>
         </>
       )}
 

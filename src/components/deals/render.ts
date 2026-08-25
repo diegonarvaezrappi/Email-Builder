@@ -43,6 +43,7 @@ import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
 import { escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
 import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
+import { LIQUID_COLOR_TOKENS, renderRichText } from '../../richText/render'
 import {
   DEAL_CARD_PIECE_TYPES,
   DEALS_CARDS_PER_PAIR,
@@ -301,27 +302,35 @@ function copyLineEdits(cell: string, liquidVar: string, text: string): Edit[] {
   return [{ start: index, end: index + liquidVar.length, replacement: escapeHtmlText(text) }]
 }
 
-/** El maestro trae la palabra "Antes " fija, pegada justo antes del `<del>`
- *  de COMPLEMENTO 2 — ver el comentario grande de complemento2Edits. */
-const COMPLEMENTO_2_FIXED_PREFIX = 'Antes '
+/** El maestro trae `Antes <del>$999</del>` fijo, pegado justo después del
+ *  `| ` de COMPLEMENTO 2 — ver el comentario grande de complemento2Edits. */
+const COMPLEMENTO_2_FIXED_SEGMENT = 'Antes <del>$999</del>'
 
 /**
  * COMPLEMENTO 2: el maestro trae `| Antes <del>$999</del>`. Pedido explícito
- * del usuario 2026-08-25: "Antes" pasa de ser un literal fijo del maestro a
- * ser parte de `complemento2Text` (que ahora incluye la palabra por
- * default) — se descarta el literal fijo del maestro y TODO el valor del
- * campo entra dentro del `<del>` (tachado), no solo el monto. El `| ` que
- * separa esta pieza de COMPLEMENTO 1 sigue fijo — no es parte de "Antes",
- * es el separador general de la fila de precio.
+ * del usuario 2026-08-25, en 2 pasos: primero "Antes" pasó a ser parte de
+ * `complemento2Text` (ya no un literal fijo), después se pidieron
+ * modificadores de texto (bold/italic/tachado/subrayado/superíndice) con
+ * tachado SOLO en "Antes" por default.
+ *
+ * Por eso el `<del>` fijo del maestro se descarta acá: tacha TODO su
+ * contenido sin distinción, y el tachado ahora es selectivo por RUN — lo
+ * pone `renderRichText` con su propio `text-decoration: line-through` por
+ * span, no un `<del>` contenedor. Se reemplaza el segmento fijo completo
+ * ("Antes <del>$999</del>") por el RichText renderizado; el `| ` que
+ * precede sigue fijo, es el separador general de la fila de precio, no
+ * parte de "Antes".
  */
 function complemento2Edits(cell: string, fields: DealCardFields): Edit[] {
   const bounds = elementBounds(cell, indexOfOrThrow(cell, COMPLEMENTO_2_ANCHOR), 'h5')
   if (!fields.complemento2Enabled) return [{ ...bounds, replacement: '' }]
-  const delBounds = elementBounds(cell, indexOfOrThrow(cell, '<del>', bounds.start), 'del')
-  const prefixIndex = indexOfOrThrow(cell, COMPLEMENTO_2_FIXED_PREFIX, bounds.start)
+  const segmentIndex = indexOfOrThrow(cell, COMPLEMENTO_2_FIXED_SEGMENT, bounds.start)
   return [
-    { start: prefixIndex, end: prefixIndex + COMPLEMENTO_2_FIXED_PREFIX.length, replacement: '' },
-    { ...textRunBounds(cell, delBounds, 'del'), replacement: escapeHtmlText(fields.complemento2Text) },
+    {
+      start: segmentIndex,
+      end: segmentIndex + COMPLEMENTO_2_FIXED_SEGMENT.length,
+      replacement: renderRichText(fields.complemento2Text, LIQUID_COLOR_TOKENS),
+    },
   ]
 }
 

@@ -98,6 +98,7 @@ export function InspectorPanel({
             pieceType={selected.dealCardPieceType}
             value={card.fields}
             onChange={(next) => onChangeDealCard(card.id, next)}
+            doc={doc}
           />
         </aside>
       )

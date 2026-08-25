@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
 import { THEME_SLUGS } from '../../../themes/themes'
+import { richTextFromPlain } from '../../../richText/model'
 import type { EmailDocument } from '../../../model'
 import { renderDealsSnippet, stripDealsFieldAssigns } from '../render'
 import {
   DEAL_CARD_PIECE_TYPES,
+  dealCardFieldsSchema,
   defaultDealCardFields,
   normalizePieceOrder,
   type DealCard,
@@ -121,7 +123,7 @@ describe('renderDealsSnippet · piezas opcionales', () => {
           copy2: 'Mi bajada',
           markdownText: '$1.234',
           complemento1Text: '50% OFF',
-          complemento2Text: '$9.999',
+          complemento2Text: richTextFromPlain('$9.999'),
           categoriaText: 'Sushi',
           ratingText: '4.2',
           tiempoText: '15 min.',
@@ -141,13 +143,14 @@ describe('renderDealsSnippet · piezas opcionales', () => {
   })
 
   it('mantiene los separadores del maestro que no son dato (el &nbsp; del rating/tiempo, el "|" fijo antes del precio anterior)', () => {
-    const html = render(cards(card('a', { ratingText: '4.2', tiempoText: '15 min.', complemento2Text: 'Antes $9.999' })))
+    const html = render(
+      cards(card('a', { ratingText: '4.2', tiempoText: '15 min.', complemento2Text: richTextFromPlain('Antes $9.999') })),
+    )
     expect(html).toContain('&nbsp;4.2')
     expect(html).toContain('&nbsp;15 min.')
-    // "Antes" ya no es un literal fijo del maestro: es parte del dato, y por
-    // eso entra DENTRO del <del> (tachado) junto con el monto — solo el "| "
-    // que lo separa de COMPLEMENTO 1 sigue fijo.
-    expect(html).toContain('| <del>Antes $9.999</del>')
+    // Sin marcas, renderRichText no envuelve nada en <span> — el "| " que
+    // separa esta pieza de COMPLEMENTO 1 sigue siendo el único fijo.
+    expect(html).toContain('| Antes $9.999')
   })
 
   it('copy1/copy2 vacíos quitan su <h4>, y no queda Liquid de la variable', () => {
@@ -214,25 +217,62 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     })
   })
 
-  // complemento2Text: pedido explícito del usuario 2026-08-25 — "Antes" pasó
-  // de ser un literal fijo del maestro (fuera del <del>) a ser parte del
-  // campo editable (dentro del <del>, tachado junto con el monto).
+  // complemento2Text: pedido explícito del usuario 2026-08-25, en 2 pasos —
+  // primero "Antes" se sumó al campo (ya no un literal fijo del maestro),
+  // después se pidieron modificadores de texto con tachado SOLO en "Antes"
+  // por default. El maestro trae `<del>` fijo (tacha todo su contenido), así
+  // que se descarta a favor del tachado selectivo por RUN de renderRichText.
   describe('complemento2Text', () => {
-    it('el default ("Antes $999") queda completo dentro del <del>, con el "|" fijo antes', () => {
+    it('el default tacha SOLO "Antes", " $999" queda sin marcas — el "|" sigue fijo', () => {
       const html = render(cards(card('a')))
-      expect(html).toContain('| <del>Antes $999</del>')
+      expect(html).toContain('| <span style="text-decoration: line-through;">Antes</span> $999')
+      // Ni un <del> del maestro, ni el monto tachado por accidente.
+      expect(html).not.toContain('<del>')
+      expect(html).not.toContain('line-through;">$999')
     })
 
-    it('un valor personalizado sin la palabra "Antes" no la agrega sola (ya no es un prefijo automático)', () => {
-      const html = render(cards(card('a', { complemento2Text: '$500' })))
-      expect(html).toContain('| <del>$500</del>')
+    it('permite tachar también el monto (o destachar "Antes") vía marcas explícitas', () => {
+      const html = render(
+        cards(
+          card('a', {
+            complemento2Text: [
+              { text: 'Antes', marks: [] },
+              { text: ' $500', marks: ['strike'] },
+            ],
+          }),
+        ),
+      )
+      expect(html).toContain('Antes<span style="text-decoration: line-through;"> $500</span>')
+    })
+
+    it('otros modificadores (bold/italic/subrayado/superíndice) se renderizan igual que en TextoM', () => {
+      const html = render(
+        cards(
+          card('a', {
+            complemento2Text: [{ text: 'Antes $999', marks: ['bold', 'italic'] }],
+          }),
+        ),
+      )
+      expect(html).toContain('font-weight: bold;')
+      expect(html).toContain('font-style: italic;')
+    })
+
+    it('un valor plano sin marcas no agrega tachado ni "Antes" por su cuenta', () => {
+      const html = render(cards(card('a', { complemento2Text: richTextFromPlain('$500') })))
+      expect(html).toContain('| $500')
       expect(html).not.toContain('Antes')
+      expect(html).not.toContain('<del>')
     })
 
     it('complemento2Enabled false sigue cortando el <h5> entero', () => {
       const html = render(cards(card('a', { complemento2Enabled: false })))
       expect(html).not.toContain('role="COMPLEMENTO 2"')
       expect(html).not.toContain('Antes')
+    })
+
+    it('migra un complemento2Text viejo (string plano, de antes de los modificadores) sin invalidar el documento', () => {
+      const parsed = dealCardFieldsSchema.parse({ complemento2Text: 'Antes $999' })
+      expect(parsed.complemento2Text).toEqual([{ text: 'Antes $999', marks: [] }])
     })
   })
 
