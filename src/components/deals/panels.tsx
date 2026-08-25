@@ -261,7 +261,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange }: Dea
             onToggle={(complemento2Enabled) => set('complemento2Enabled', complemento2Enabled)}
             text={value.complemento2Text}
             onText={(complemento2Text) => set('complemento2Text', complemento2Text)}
-            hint='Se muestra como "| Antes" + el monto tachado.'
+            hint='Todo el texto queda tachado; el "|" que lo separa del complemento 1 es fijo.'
           />
         </>
       )}

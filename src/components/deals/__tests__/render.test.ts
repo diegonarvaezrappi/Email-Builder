@@ -140,11 +140,14 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     }
   })
 
-  it('mantiene los separadores del maestro que no son dato (el &nbsp; del rating/tiempo, el <del> del precio anterior)', () => {
-    const html = render(cards(card('a', { ratingText: '4.2', tiempoText: '15 min.', complemento2Text: '$9.999' })))
+  it('mantiene los separadores del maestro que no son dato (el &nbsp; del rating/tiempo, el "|" fijo antes del precio anterior)', () => {
+    const html = render(cards(card('a', { ratingText: '4.2', tiempoText: '15 min.', complemento2Text: 'Antes $9.999' })))
     expect(html).toContain('&nbsp;4.2')
     expect(html).toContain('&nbsp;15 min.')
-    expect(html).toContain('| Antes <del>$9.999</del>')
+    // "Antes" ya no es un literal fijo del maestro: es parte del dato, y por
+    // eso entra DENTRO del <del> (tachado) junto con el monto — solo el "| "
+    // que lo separa de COMPLEMENTO 1 sigue fijo.
+    expect(html).toContain('| <del>Antes $9.999</del>')
   })
 
   it('copy1/copy2 vacíos quitan su <h4>, y no queda Liquid de la variable', () => {
@@ -208,6 +211,28 @@ describe('renderDealsSnippet · piezas opcionales', () => {
       expect(html).toContain('src="https://x.test/pastilla.png"')
       expect(html).toContain('1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j') // logo cuadrado por defecto de 'b'
       expect(count(html, 'role="molecula-iconoL"')).toBe(2) // 1 pastilla (a) + 1 cuadrado (b)
+    })
+  })
+
+  // complemento2Text: pedido explícito del usuario 2026-08-25 — "Antes" pasó
+  // de ser un literal fijo del maestro (fuera del <del>) a ser parte del
+  // campo editable (dentro del <del>, tachado junto con el monto).
+  describe('complemento2Text', () => {
+    it('el default ("Antes $999") queda completo dentro del <del>, con el "|" fijo antes', () => {
+      const html = render(cards(card('a')))
+      expect(html).toContain('| <del>Antes $999</del>')
+    })
+
+    it('un valor personalizado sin la palabra "Antes" no la agrega sola (ya no es un prefijo automático)', () => {
+      const html = render(cards(card('a', { complemento2Text: '$500' })))
+      expect(html).toContain('| <del>$500</del>')
+      expect(html).not.toContain('Antes')
+    })
+
+    it('complemento2Enabled false sigue cortando el <h5> entero', () => {
+      const html = render(cards(card('a', { complemento2Enabled: false })))
+      expect(html).not.toContain('role="COMPLEMENTO 2"')
+      expect(html).not.toContain('Antes')
     })
   })
 

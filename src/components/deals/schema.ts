@@ -156,11 +156,14 @@ export const dealCardFieldsSchema = z.object({
   /** LINEA 3, espacio 2. */
   complemento1Enabled: z.boolean().default(true),
   complemento1Text: z.string().default('99% OFF'),
-  /** LINEA 3, espacio 3. Solo el precio: el maestro trae `| Antes <del>$999</del>`
-   *  y el `<del>` (tachado) + el prefijo "| Antes" quedan fijos — lo editable es
-   *  el monto, que es lo que cambia por deal. */
+  /** LINEA 3, espacio 3. El maestro trae `| Antes <del>$999</del>` — el `| `
+   *  que lo separa de COMPLEMENTO 1 sigue fijo, pero "Antes" pasó a ser
+   *  parte de este campo (pedido explícito del usuario 2026-08-25, antes era
+   *  un literal fijo del maestro y solo el monto era editable): TODO el
+   *  texto entra dentro del `<del>` (tachado) — "Antes" queda tachado junto
+   *  con el precio — ver components/deals/render.ts, complemento2Edits. */
   complemento2Enabled: z.boolean().default(true),
-  complemento2Text: z.string().default('$999'),
+  complemento2Text: z.string().default('Antes $999'),
 
   /** Fila TEXTOS RATING: categoría, rating (con su estrella) y tiempo (con su
    *  reloj). Los 2 íconos son fijos en el maestro — no hay campo para cambiarlos. */

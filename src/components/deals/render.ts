@@ -301,14 +301,28 @@ function copyLineEdits(cell: string, liquidVar: string, text: string): Edit[] {
   return [{ start: index, end: index + liquidVar.length, replacement: escapeHtmlText(text) }]
 }
 
-/** COMPLEMENTO 2: el maestro trae `| Antes <del>$999</del>`. Lo editable es el
- *  monto; el prefijo "| Antes" y el `<del>` (tachado) quedan fijos, que es lo
- *  que le da el sentido de "precio anterior". */
+/** El maestro trae la palabra "Antes " fija, pegada justo antes del `<del>`
+ *  de COMPLEMENTO 2 — ver el comentario grande de complemento2Edits. */
+const COMPLEMENTO_2_FIXED_PREFIX = 'Antes '
+
+/**
+ * COMPLEMENTO 2: el maestro trae `| Antes <del>$999</del>`. Pedido explícito
+ * del usuario 2026-08-25: "Antes" pasa de ser un literal fijo del maestro a
+ * ser parte de `complemento2Text` (que ahora incluye la palabra por
+ * default) — se descarta el literal fijo del maestro y TODO el valor del
+ * campo entra dentro del `<del>` (tachado), no solo el monto. El `| ` que
+ * separa esta pieza de COMPLEMENTO 1 sigue fijo — no es parte de "Antes",
+ * es el separador general de la fila de precio.
+ */
 function complemento2Edits(cell: string, fields: DealCardFields): Edit[] {
   const bounds = elementBounds(cell, indexOfOrThrow(cell, COMPLEMENTO_2_ANCHOR), 'h5')
   if (!fields.complemento2Enabled) return [{ ...bounds, replacement: '' }]
   const delBounds = elementBounds(cell, indexOfOrThrow(cell, '<del>', bounds.start), 'del')
-  return [{ ...textRunBounds(cell, delBounds, 'del'), replacement: escapeHtmlText(fields.complemento2Text) }]
+  const prefixIndex = indexOfOrThrow(cell, COMPLEMENTO_2_FIXED_PREFIX, bounds.start)
+  return [
+    { start: prefixIndex, end: prefixIndex + COMPLEMENTO_2_FIXED_PREFIX.length, replacement: '' },
+    { ...textRunBounds(cell, delBounds, 'del'), replacement: escapeHtmlText(fields.complemento2Text) },
+  ]
 }
 
 /** Límites del `<div role="molecula-tag">` — el ABUELO del ícono (envuelve el
