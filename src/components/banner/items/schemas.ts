@@ -157,7 +157,7 @@ export const defaultTagsFields: TagsFields = tagsFieldsSchema.parse({})
  *  color/estilo sale de doc.global.ctaStyle, compartido con el CTA libre de
  *  CONTENIDOS. */
 export const ctaInternoFieldsSchema = z.object({
-  text: z.string().default('Súper completo en 10 min'),
+  text: z.string().default('Pide ahora'),
   deeplink: z.string().default(''),
 })
 export type CtaInternoFields = z.infer<typeof ctaInternoFieldsSchema>

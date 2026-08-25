@@ -27,7 +27,7 @@ export const CTA_ALIGN_LABELS: Record<CtaAlign, string> = {
  * infla ese mismo content block). No se duplica esa lógica acá.
  */
 export const ctaFieldsSchema = z.object({
-  text: z.string().default('Súper completo en 10 min'),
+  text: z.string().default('Pide ahora'),
   deeplink: z.string().default(''),
   align: z.enum(CTA_ALIGN_VALUES).default('center'),
 })
