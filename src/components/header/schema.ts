@@ -49,12 +49,27 @@ export const headerSchema = z.object({
   brand: z.enum(HEADER_BRAND_VALUES).default('rappi'),
   layout: z.enum(HEADER_LAYOUT_VALUES).default('centrado'),
   logoBackground: z.enum(HEADER_LOGO_BACKGROUND_VALUES).default('claro'),
-  /** URL propia para reemplazar el logo de marca. Vacío (default) = se
-   *  conserva el asset del maestro para la marca/logoBackground elegidos. */
+  /**
+   * "Personalizado" en el select de Marca — pedido explícito del usuario: el
+   * cambio de tamaño/URL de logo NO debe estar disponible para las 10 marcas
+   * reales, solo cuando el usuario elige explícitamente personalizar el logo.
+   * NO se agrega 'personalizado' a HEADER_BRAND_VALUES (esa lista debe seguir
+   * 1:1 con las carpetas reales de 02-components/01_headers/ que
+   * sync-master.mjs sincroniza — un valor inventado ahí rompería esa
+   * sincronización) — en su lugar, `brand` sigue siendo siempre una marca real
+   * (la que sirve de base estructural: layout, cobranding, etc.) y este flag,
+   * puramente de UI/render, decide si logoUrl/logoSize tienen efecto. Ver
+   * PropertiesPanel.tsx (el <select> combina ambos en una sola opción visible)
+   * y applyLogoOverrides en render.ts.
+   */
+  customLogo: z.boolean().default(false),
+  /** URL propia para reemplazar el logo de marca. Solo tiene efecto cuando
+   *  customLogo es true — vacío = se conserva el asset del maestro para la
+   *  marca/logoBackground elegidos. */
   logoUrl: z.string().default(''),
-  /** Tamaño del logo de marca — ver HEADER_LOGO_SIZE_VALUES arriba. Se aplica
-   *  también cuando logoUrl está vacío (afecta el logo original, no solo un
-   *  reemplazo custom). */
+  /** Tamaño del logo de marca — ver HEADER_LOGO_SIZE_VALUES arriba. Solo tiene
+   *  efecto cuando customLogo es true (una marca real siempre usa el tamaño
+   *  original del maestro, sin overrides). */
   logoSize: z.enum(HEADER_LOGO_SIZE_VALUES).default('m'),
   cobranding: z.boolean().default(false),
   cobrandingSize: z.enum(COBRANDING_SIZE_VALUES).default('m'),

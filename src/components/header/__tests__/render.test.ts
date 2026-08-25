@@ -137,36 +137,58 @@ describe('renderHeaderSnippet', () => {
     expect(withDefault).toContain('src="https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf"')
   })
 
-  it('replaces the brand logo src with the URL the user chose', () => {
-    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoUrl: 'https://example.com/mi-logo.png' }, 'beige100')
+  it('replaces the brand logo src with the URL the user chose (customLogo on)', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, customLogo: true, logoUrl: 'https://example.com/mi-logo.png' },
+      'beige100',
+    )
     expect(snippet).toContain('src="https://example.com/mi-logo.png"')
     expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf')
     // El logo de cobranding (deshabilitado por default) no se ve afectado.
     expect(snippet).not.toContain('cobranding-')
   })
 
-  it('escapes special characters in a user-provided logo URL', () => {
-    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoUrl: 'https://example.com/a"b&c' }, 'beige100')
+  it('escapes special characters in a user-provided logo URL (customLogo on)', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, customLogo: true, logoUrl: 'https://example.com/a"b&c' },
+      'beige100',
+    )
     expect(snippet).toContain('src="https://example.com/a&quot;b&amp;c"')
   })
 
-  it('leaves the brand logo height untouched when logoSize is "m" (default, no-op)', () => {
-    const snippet = renderHeaderSnippet(defaultHeaderFields, 'beige100')
+  // Regresión: pedido explícito del usuario — el cambio de URL/tamaño de logo
+  // NO debe aplicar a ninguna de las 10 marcas reales, solo a "Personalizado"
+  // (customLogo). Antes de este fix, logoUrl/logoSize se aplicaban siempre,
+  // sin importar la marca elegida.
+  it('ignores logoUrl and logoSize entirely when customLogo is false, even if they hold values', () => {
+    const snippet = renderHeaderSnippet(
+      { ...defaultHeaderFields, customLogo: false, logoUrl: 'https://example.com/deberia-ignorarse.png', logoSize: 'l' },
+      'beige100',
+    )
+    expect(snippet).not.toContain('deberia-ignorarse')
+    expect(snippet).toContain('src="https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf"')
     const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
     expect(img).toBeDefined()
     expect(img).toContain('height: 30px; max-height: 30px; min-height: 30px')
   })
 
-  it('shrinks the brand logo height when logoSize is "s"', () => {
-    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoSize: 's' }, 'beige100')
+  it('leaves the brand logo height untouched when logoSize is "m" (default, no-op)', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, customLogo: true }, 'beige100')
+    const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
+    expect(img).toBeDefined()
+    expect(img).toContain('height: 30px; max-height: 30px; min-height: 30px')
+  })
+
+  it('shrinks the brand logo height when logoSize is "s" (customLogo on)', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, customLogo: true, logoSize: 's' }, 'beige100')
     const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
     expect(img).toBeDefined()
     // 30 * 0.8 = 24
     expect(img).toContain('height: 24px; max-height: 24px; min-height: 24px')
   })
 
-  it('grows the brand logo height when logoSize is "l"', () => {
-    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, logoSize: 'l' }, 'beige100')
+  it('grows the brand logo height when logoSize is "l" (customLogo on)', () => {
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, customLogo: true, logoSize: 'l' }, 'beige100')
     const img = snippet.match(/<img class="logo-base1"[^>]*alt="Rappi"[^>]*>/)?.[0]
     expect(img).toBeDefined()
     // 30 * 1.25 = 37.5 -> redondeado a 38
@@ -175,7 +197,7 @@ describe('renderHeaderSnippet', () => {
 
   it('resizing the brand logo does not touch the separator logo or the cobranding images', () => {
     const snippet = renderHeaderSnippet(
-      { ...defaultHeaderFields, logoSize: 'l', cobranding: true },
+      { ...defaultHeaderFields, customLogo: true, logoSize: 'l', cobranding: true },
       'beige100',
     )
     // El separador (alt="|") sigue con el alto original del maestro, sin escalar.

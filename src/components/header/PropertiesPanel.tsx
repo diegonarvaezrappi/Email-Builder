@@ -18,21 +18,38 @@ interface HeaderPropertiesPanelProps {
   onChange: (next: HeaderFields) => void
 }
 
+/** Valor especial del <select> de Marca, distinto de cualquier HeaderBrand
+ *  real — ver `customLogo` en schema.ts para por qué no se agrega a
+ *  HEADER_BRAND_VALUES. */
+const CUSTOM_BRAND_OPTION = 'personalizado'
+
 export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanelProps) {
   const set = <K extends keyof HeaderFields>(key: K, next: HeaderFields[K]) => {
     onChange({ ...value, [key]: next })
+  }
+
+  const brandSelectValue = value.customLogo ? CUSTOM_BRAND_OPTION : value.brand
+
+  const handleBrandChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const next = e.target.value
+    if (next === CUSTOM_BRAND_OPTION) {
+      onChange({ ...value, customLogo: true })
+      return
+    }
+    onChange({ ...value, customLogo: false, brand: next as HeaderFields['brand'] })
   }
 
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Marca</span>
-        <select value={value.brand} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('brand', e.target.value as HeaderFields['brand'])}>
+        <select value={brandSelectValue} onChange={handleBrandChange}>
           {HEADER_BRAND_VALUES.map((b) => (
             <option key={b} value={b}>
               {HEADER_BRAND_LABELS[b]}
             </option>
           ))}
+          <option value={CUSTOM_BRAND_OPTION}>Personalizado</option>
         </select>
       </label>
 
@@ -64,29 +81,33 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
         </select>
       </label>
 
-      <label className="field">
-        <span>URL del logo (opcional)</span>
-        <input
-          type="text"
-          placeholder="Dejar vacío para usar el logo original de la marca"
-          value={value.logoUrl}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => set('logoUrl', e.target.value)}
-        />
-      </label>
+      {value.customLogo && (
+        <>
+          <label className="field">
+            <span>URL del logo personalizado</span>
+            <input
+              type="text"
+              placeholder="https://..."
+              value={value.logoUrl}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('logoUrl', e.target.value)}
+            />
+          </label>
 
-      <label className="field">
-        <span>Tamaño del logo</span>
-        <select
-          value={value.logoSize}
-          onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoSize', e.target.value as HeaderFields['logoSize'])}
-        >
-          {HEADER_LOGO_SIZE_VALUES.map((s) => (
-            <option key={s} value={s}>
-              {HEADER_LOGO_SIZE_LABELS[s]}
-            </option>
-          ))}
-        </select>
-      </label>
+          <label className="field">
+            <span>Tamaño del logo</span>
+            <select
+              value={value.logoSize}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoSize', e.target.value as HeaderFields['logoSize'])}
+            >
+              {HEADER_LOGO_SIZE_VALUES.map((s) => (
+                <option key={s} value={s}>
+                  {HEADER_LOGO_SIZE_LABELS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
 
       <label className="field field-checkbox">
         <input

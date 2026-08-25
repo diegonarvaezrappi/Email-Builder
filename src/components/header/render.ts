@@ -98,8 +98,15 @@ function resizeLogoImg(imgTag: string, size: HeaderFields['logoSize']): string {
  * vacío = se conserva el asset del maestro) y aplica logoSize. Opera sobre la
  * <img> completa como una unidad para no interferir con applyCobranding, que
  * trabaja sobre el resto del <tr> a partir de COBRANDING_ANCHOR.
+ *
+ * Ambos overrides quedan atrás de `customLogo` — pedido explícito del
+ * usuario: las 10 marcas reales siempre muestran su logo y tamaño originales
+ * del maestro, sin excepción; solo "Personalizado" (ver schema.ts) habilita
+ * URL/tamaño propios.
  */
 function applyLogoOverrides(trHtml: string, fields: HeaderFields): string {
+  if (!fields.customLogo) return trHtml
+
   const match = trHtml.match(MAIN_LOGO_IMG_RE)
   if (!match || match.index === undefined) return trHtml
 
