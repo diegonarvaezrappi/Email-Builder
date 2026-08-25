@@ -45,6 +45,51 @@ function stripComments(html: string): string {
   return html.replace(HTML_COMMENT_RE, '')
 }
 
+/**
+ * PROMO y CREDITOS son las 2 únicas piezas MOLECULA cuya <table> raíz trae
+ * `bgcolor` (el fondo de color de su "pastillita") en la MISMA tabla que
+ * carga el `padding-bottom: 7px` de separación con la pieza siguiente. Hasta
+ * el pull 2026-08-21 (bd9f4a5) esa separación era `margin-bottom: 7px` —
+ * transparente por definición, nunca se nota si vive en una tabla con o sin
+ * `bgcolor`. Ese pull convirtió el margin de las 17 moléculas de banner a
+ * padding-bottom "porque el margin no se aplicaba consistente en clientes de
+ * mail" (CHANGELOG v0.7.0, ver la nota de MOLECULE_ADD_CENTER_MARGIN_RE en
+ * components/banner/render.ts) — cambio cosmético e inocuo para el resto de
+ * las moléculas (texto plano, sin fondo propio), pero con un efecto visual
+ * real acá: el padding queda PINTADO del color de la pastillita en vez de
+ * transparente, así que la pieza siguiente queda pegada sin espacio visible.
+ * Reportado por el usuario 2026-08-25 ("entre Promo e Imagen automática no
+ * hay espacio") — se notó recién ahora porque la pieza que sigue a PROMO por
+ * default solía ser TEXTOM (texto plano, cuyo propio interlineado disimulaba
+ * la falta de espacio real); con una imagen a ancho completo justo después,
+ * la ausencia de espacio se vuelve obvia.
+ *
+ * Fix: se envuelve la tabla coloreada (intacta, con su propio `padding: 3px
+ * 6px` de siempre para el look de la pastillita) en una tabla EXTERIOR
+ * transparente con su propio `padding-bottom: 7px` — mismo mecanismo que ya
+ * usan el resto de las moléculas (una tabla sin bgcolor cargando la
+ * separación) — y se le quita el `padding-bottom: 7px` extra a la tabla
+ * coloreada para no duplicar el espacio. THROW si el patrón ya no aparece:
+ * significaría que el maestro cambió esta estructura y el parche quedó
+ * huérfano.
+ */
+const COLORED_BADGE_PADDING_BOTTOM = 'padding-bottom: 7px;'
+
+function wrapColoredBadgeSpacing(html: string, bannerType: BannerItemRenderCtx['bannerType'], fileName: string): string {
+  const tagStart = html.indexOf('<table')
+  const tagEnd = tagStart === -1 ? -1 : html.indexOf('>', tagStart) + 1
+  const openTag = tagStart === -1 ? '' : html.slice(tagStart, tagEnd)
+  if (!openTag.includes('bgcolor="{{') || !openTag.includes(COLORED_BADGE_PADDING_BOTTOM)) {
+    throw new Error(
+      `${fileName}: la tabla raíz ya no trae bgcolor + "${COLORED_BADGE_PADDING_BOTTOM}" — revisar wrapColoredBadgeSpacing en components/banner/items/render.ts`,
+    )
+  }
+  const fixedOpenTag = openTag.replace(COLORED_BADGE_PADDING_BOTTOM, '')
+  const withoutOwnSpacing = html.slice(0, tagStart) + fixedOpenTag + html.slice(tagEnd)
+  const outerMargin = bannerType === 'vertical' ? ' margin: 0 auto;' : ''
+  return `<table cellpadding="0" cellspacing="0" border="0" style="width: auto;${outerMargin} padding-bottom: 7px;">\n  <tr>\n    <td>${withoutOwnSpacing}</td>\n  </tr>\n</table>\n`
+}
+
 // --- PROMO -------------------------------------------------------------------
 
 /**
@@ -107,7 +152,7 @@ export function renderPromoSnippet(fields: PromoFields, _doc: EmailDocument, ctx
       ctx.bannerType,
     ),
   }
-  return resolveBannerVars(raw, vars, fileName)
+  return wrapColoredBadgeSpacing(resolveBannerVars(raw, vars, fileName), ctx.bannerType, fileName)
 }
 
 // --- CREDITOS ------------------------------------------------------------------
@@ -198,7 +243,7 @@ export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocumen
       ctx.bannerType,
     ),
   }
-  return resolveBannerVars(raw, vars, fileName)
+  return wrapColoredBadgeSpacing(resolveBannerVars(raw, vars, fileName), ctx.bannerType, fileName)
 }
 
 // --- TEXTOXL / TEXTOM: color de acento por tema -----------------------------

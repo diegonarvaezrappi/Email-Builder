@@ -62,6 +62,30 @@ describe('renderPromoSnippet', () => {
     expect(html).not.toContain('<b>x</b>')
   })
 
+  // Regresión: reportado por el usuario 2026-08-25 ("entre Promo e Imagen
+  // automática no hay espacio"). La tabla coloreada de PROMO (bgcolor de la
+  // pastillita) traía el padding-bottom:7px de separación EN LA MISMA tabla
+  // -> ese padding queda pintado del color de fondo en vez de transparente,
+  // así que la pieza siguiente queda pegada. wrapColoredBadgeSpacing debe
+  // envolverla en una tabla exterior transparente que sea la que cargue esa
+  // separación.
+  it.each(['horizontal', 'vertical'] as const)(
+    '%s: wraps the colored badge in a transparent outer table carrying the padding-bottom, instead of leaving it on the colored table',
+    (bannerType) => {
+      const html = renderPromoSnippet(promoFields('120'), doc(), ctx(bannerType))
+      const outerTagEnd = html.indexOf('>')
+      const outerOpenTag = html.slice(0, outerTagEnd + 1)
+      expect(outerOpenTag).not.toContain('bgcolor')
+      expect(outerOpenTag).toContain('padding-bottom: 7px;')
+      // La pastillita de siempre sigue adentro, intacta (bgcolor real, sin el padding-bottom extra).
+      const innerTagStart = html.indexOf('<table', outerTagEnd)
+      const innerTagEnd = html.indexOf('>', innerTagStart)
+      const innerOpenTag = html.slice(innerTagStart, innerTagEnd + 1)
+      expect(innerOpenTag).toContain('bgcolor="{{bg_descuento_mail_general}}"')
+      expect(innerOpenTag).not.toContain('padding-bottom: 7px;')
+    },
+  )
+
   it('applies rich-text marks to the promo amount (bold, same mechanism as TEXTOM)', () => {
     const html = renderPromoSnippet(
       { ...promoFields('120'), promoText: [{ text: '120', marks: ['bold'] }] },
@@ -125,6 +149,24 @@ describe('renderCreditosSnippet', () => {
     expect(html).not.toContain('font-siaze')
     expect(html).toMatch(/font-size:\s*\{\{banner_copy_modulo_creditos_fontsize\}\}|font-size:\s*\d/)
   })
+
+  // Regresión: mismo bug que PROMO (ver el test homónimo más arriba) — CREDITOS
+  // también tiene bgcolor + padding-bottom:7px en la misma tabla.
+  it.each(['horizontal', 'vertical'] as const)(
+    '%s: wraps the colored badge in a transparent outer table carrying the padding-bottom, instead of leaving it on the colored table',
+    (bannerType) => {
+      const html = renderCreditosSnippet(creditosFields('120'), doc(), ctx(bannerType))
+      const outerTagEnd = html.indexOf('>')
+      const outerOpenTag = html.slice(0, outerTagEnd + 1)
+      expect(outerOpenTag).not.toContain('bgcolor')
+      expect(outerOpenTag).toContain('padding-bottom: 7px;')
+      const innerTagStart = html.indexOf('<table', outerTagEnd)
+      const innerTagEnd = html.indexOf('>', innerTagStart)
+      const innerOpenTag = html.slice(innerTagStart, innerTagEnd + 1)
+      expect(innerOpenTag).toContain('bgcolor="{{bg_creditos_mail_general}}"')
+      expect(innerOpenTag).not.toContain('padding-bottom: 7px;')
+    },
+  )
 
   describe('la leyenda "DE REINTEGRO"', () => {
     it.each(['horizontal', 'vertical'] as const)('%s: reemplaza el texto por el que ponga el usuario', (bannerType) => {

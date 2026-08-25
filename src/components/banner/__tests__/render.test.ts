@@ -345,6 +345,15 @@ describe('renderBannerSnippet', () => {
       expect(textomHtml).toContain('text-align: center')
     })
 
+    it('"center" centers PROMO via its transparent OUTER wrapper (the colored badge table has no padding-bottom to match on anymore, see wrapColoredBadgeSpacing)', () => {
+      const d = withItems([promo('a')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } })
+      const html = renderBannerSnippet(d.banner, d)
+      const promoHtml = html.slice(html.indexOf('BITEM:PROMO:a'), html.indexOf('/BITEM:PROMO:a'))
+      expect(promoHtml).toMatch(/margin:\s*0\s*auto\s*;\s*padding-bottom:\s*7px;/)
+      // Solo 1 occurrencia: la del wrapper transparente, no la de la pastillita coloreada.
+      expect((promoHtml.match(/padding-bottom:\s*7px;/g) ?? []).length).toBe(1)
+    })
+
     it('"center" centers IMG_AUTOMATICA_MOLECULA via its own <img> margin (its outer table is already width:100%)', () => {
       const d = withItems([{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } }], {
         banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
