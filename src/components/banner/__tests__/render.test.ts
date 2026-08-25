@@ -21,14 +21,27 @@ const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', field
 const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
 
 describe('renderBannerSnippet', () => {
-  it('default document (vertical, pre-loaded with PROMO/TEXTOM/TEXTO_COMPLEMENTARIO/IMG_FIJA/TAGS) renders every default piece', () => {
+  it('default document (vertical, pre-loaded with PROMO/IMG_AUTOMATICA_MOLECULA/TEXTO_COMPLEMENTARIO/IMG_FIJA/TAGS) renders every default piece', () => {
     const html = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
     expect(html).toContain('BANNER_VERTICAL')
     expect(html).toContain('BITEM:PROMO:')
-    expect(html).toContain('BITEM:TEXTOM:')
+    expect(html).toContain('BITEM:IMG_AUTOMATICA_MOLECULA:')
     expect(html).toContain('BITEM:TEXTO_COMPLEMENTARIO:')
     expect(html).toContain('BITEM:IMG_FIJA:')
     expect(html).toContain('BITEM:TAGS:')
+  })
+
+  // Regresión: contenido específico pedido por el usuario 2026-08-25 para el
+  // banner con el que arranca la app (no los defaults genéricos de cada
+  // pieza — ver el comentario de defaultBannerFields en banner/schema.ts).
+  it('default document uses the requested content for each default piece', () => {
+    const html = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
+    expect(html).toContain('>Desde<')
+    expect(html).toContain('>50% OFF<')
+    expect(html).toContain('src="https://lh3.googleusercontent.com/d/1uhZpndNKQ7C9tt1dXlFkpS0EHGXQhx-L"')
+    expect(html).toContain('Tus combos y hamburguesas favoritas con descuento solo esta semana.')
+    expect(html).toContain('url(https://lh3.googleusercontent.com/d/14_FBy89QriBRhPFmE08rTUKcq0YOYl4e)')
+    expect(html).toContain('src="https://lh3.googleusercontent.com/d/133AXVYx3soz7FSck1bjiF5vBLh-5mzml"')
   })
 
   it('groups a run of consecutive MOLECULA-zone items into ONE molecule table', () => {

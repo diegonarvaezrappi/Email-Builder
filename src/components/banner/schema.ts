@@ -1,11 +1,6 @@
 import { z } from 'zod'
-import {
-  bannerItemSchema,
-  defaultImgFijaFields,
-  defaultPromoFields,
-  defaultTextoComplementarioFields,
-  defaultTextoMFields,
-} from './items/schemas'
+import { bannerItemSchema, defaultImgFijaFields, defaultPromoFields } from './items/schemas'
+import { richTextFromPlain } from '../../richText/model'
 
 /**
  * 'vertical' primero: es el default documentado por el maestro
@@ -150,11 +145,22 @@ export type BannerFields = z.infer<typeof bannerSchema>
  * qué trae el banner por defecto vive acá, no en el schema. Además del banner
  * vertical con TAGS que documenta el maestro ("por defecto el template debe
  * tener un banner vertical, con tags"), el banner por defecto viene pre-cargado
- * con PROMO, TEXTOM, TEXTO_COMPLEMENTARIO e IMG_FIJA (decisión de producto, no
- * del maestro): así un usuario nuevo ve de entrada, con datos de ejemplo, qué
- * tipos de pieza puede combinar en vez de abrir la app con un banner casi
- * vacío. TAGS trae 3 tags (el máximo, en vez del único por defecto de
- * `defaultTagsFields`) para que quede claro que se pueden agregar varios.
+ * con PROMO, IMG_AUTOMATICA_MOLECULA, TEXTO_COMPLEMENTARIO e IMG_FIJA
+ * (decisión de producto, no del maestro): así un usuario nuevo ve de entrada,
+ * con datos de ejemplo, qué tipos de pieza puede combinar en vez de abrir la
+ * app con un banner casi vacío. TAGS trae 3 tags (el máximo, en vez del único
+ * por defecto de `defaultTagsFields`) para que quede claro que se pueden
+ * agregar varios.
+ *
+ * Los valores de campo de acá son deliberadamente propios de ESTE banner de
+ * ejemplo — no tocan defaultPromoFields/defaultImgFijaFields (los defaults
+ * genéricos que sí usa bannerItemRegistry.ts al insertar una pieza NUEVA
+ * desde el catálogo): pedido explícito del usuario 2026-08-25 de contenido
+ * específico solo para el banner con el que arranca la app, sin cambiar qué
+ * trae una pieza recién agregada. Reemplaza también TEXTOM por
+ * IMG_AUTOMATICA_MOLECULA en la 2da posición (ya no forma parte del banner
+ * por defecto).
+ *
  * Ids fijos (no newId()) a propósito: mantienen defaultEmailDocument
  * determinista para tests — los ids solo necesitan ser únicos dentro de un
  * documento, y duplicateBannerItem siempre genera uno nuevo con newId().
@@ -162,10 +168,30 @@ export type BannerFields = z.infer<typeof bannerSchema>
 export const defaultBannerFields: BannerFields = {
   ...bannerSchema.parse({}),
   items: [
-    { id: 'banner-promo-default', type: 'PROMO', fields: defaultPromoFields },
-    { id: 'banner-textom-default', type: 'TEXTOM', fields: defaultTextoMFields },
-    { id: 'banner-texto-complementario-default', type: 'TEXTO_COMPLEMENTARIO', fields: defaultTextoComplementarioFields },
-    { id: 'banner-img-fija-default', type: 'IMG_FIJA', fields: defaultImgFijaFields },
+    {
+      id: 'banner-promo-default',
+      type: 'PROMO',
+      fields: { ...defaultPromoFields, promoText: richTextFromPlain('50% OFF'), ahoraText: richTextFromPlain('Desde') },
+    },
+    {
+      id: 'banner-img-automatica-molecula-default',
+      type: 'IMG_AUTOMATICA_MOLECULA',
+      fields: { imageUrl: 'https://lh3.googleusercontent.com/d/1uhZpndNKQ7C9tt1dXlFkpS0EHGXQhx-L', widthPercent: 100 },
+    },
+    {
+      id: 'banner-texto-complementario-default',
+      type: 'TEXTO_COMPLEMENTARIO',
+      fields: { text: richTextFromPlain('Tus combos y hamburguesas favoritas con descuento solo esta semana.') },
+    },
+    {
+      id: 'banner-img-fija-default',
+      type: 'IMG_FIJA',
+      fields: {
+        ...defaultImgFijaFields,
+        heroImageUrl: 'https://lh3.googleusercontent.com/d/14_FBy89QriBRhPFmE08rTUKcq0YOYl4e',
+        logoImageUrl: 'https://lh3.googleusercontent.com/d/133AXVYx3soz7FSck1bjiF5vBLh-5mzml',
+      },
+    },
     { id: 'banner-tags-default', type: 'TAGS', fields: { tags: ['tag 1', 'tag 2', 'tag 3'] } },
   ],
 }
