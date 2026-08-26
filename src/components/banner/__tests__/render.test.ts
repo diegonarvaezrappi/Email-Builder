@@ -75,7 +75,7 @@ describe('renderBannerSnippet', () => {
 
   it('items whose type has no file for the active orientation are skipped at render, not crashed on', () => {
     const d = withItems(
-      [{ id: 'a', type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: 'x', widthPercent: 80 } }],
+      [{ id: 'a', type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
       { banner: { ...defaultEmailDocument.banner, bannerType: 'vertical' } },
     )
     expect(() => renderBannerSnippet(d.banner, d)).not.toThrow()

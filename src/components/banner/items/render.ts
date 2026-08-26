@@ -345,9 +345,34 @@ export function renderImgAutomaticaMoleculaSnippet(
 const IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER =
   'https://braze-images.com/appboy/communication/assets/image_assets/images/6a69942490791600863938e5/original.png?1785304099'
 
+/**
+ * El maestro trae un typo real en el `style` de esta <img>: usa una `,` en
+ * vez de `;` entre `margin` y `border-radius` ("margin: 0 auto, border-radius:0px"),
+ * lo que invalida la declaración de `margin` entera en cualquier motor CSS
+ * estricto — y el comentario que lo acompaña pide explícitamente "Este
+ * border radius se debe poder modificar por el usuario". Se ancla el
+ * fragmento roto completo y se reemplaza por CSS válido con el radius que
+ * corresponda según el toggle, corrigiendo el separador de paso.
+ */
+const IMG_AUTOMATICA_MODULO_STYLE_BUG = 'margin: 0 auto, border-radius:0px'
+/** Sin valor de referencia del maestro (el `0px` de fábrica es "apagado", no
+ *  un tamaño a imitar) — 8px es el mismo radius que ya usa la tarjeta de
+ *  Deals (components/deals/schema.ts) para esquinas redondeadas moderadas,
+ *  reutilizado acá por consistencia visual. */
+const IMG_AUTOMATICA_MODULO_BORDER_RADIUS = '8px'
+
 export function renderImgAutomaticaModuloSnippet(fields: ImgAutomaticaModuloFields): string {
   const fileName = 'modulo_img_automatica_horizontal.html'
   let html = stripComments(loadBannerMoleculaFile(fileName))
+  // El fix de border-radius va ANTES de substituteImgSrcOrRemove: con
+  // imageUrl en blanco esa función borra la <img> ENTERA (incluido su
+  // style), así que el literal roto ya no existiría para anclar el
+  // substituteOnce de abajo — no hace falta el radius de una imagen que no
+  // se va a mostrar.
+  if (fields.imageUrl.trim() !== '') {
+    const radius = fields.borderRadiusEnabled ? IMG_AUTOMATICA_MODULO_BORDER_RADIUS : '0px'
+    html = substituteOnce(html, IMG_AUTOMATICA_MODULO_STYLE_BUG, `margin: 0 auto; border-radius: ${radius};`, fileName)
+  }
   html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER, fields.imageUrl, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }

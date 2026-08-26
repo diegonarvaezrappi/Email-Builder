@@ -199,6 +199,14 @@ export function ImgAutomaticaModuloPropertiesPanel({ value, onChange }: BannerIt
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, widthPercent: Number(e.target.value) })}
         />
       </label>
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.borderRadiusEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, borderRadiusEnabled: e.target.checked })}
+        />
+        <span>Esquinas redondeadas</span>
+      </label>
     </div>
   )
 }

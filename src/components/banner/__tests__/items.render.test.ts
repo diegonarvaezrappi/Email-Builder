@@ -341,7 +341,7 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   })
 
   it('modulo (horizontal only): substitutes the image URL and width%, uses a different placeholder URL than the molecula', () => {
-    const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 55 })
+    const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 55, borderRadiusEnabled: false })
     expect(html).toContain('https://x.test/b.png')
     expect(html).toContain('width: 55%')
     expect(html).not.toContain('braze-images.com')
@@ -357,9 +357,33 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   })
 
   it('modulo: removes the <img> entirely when imageUrl is blank', () => {
-    const html = renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80 })
+    const html = renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: false })
     expect(html).not.toContain('<img')
     expect(html).not.toContain('src=""')
+  })
+
+  // borderRadiusEnabled: pedido explícito del usuario 2026-08-26 — el
+  // maestro trae `border-radius:0px` con un comentario que pide justo esto
+  // ("Este border radius se debe poder modificar por el usuario"), y un typo
+  // real (`,` en vez de `;` antes de `border-radius`) que invalida el
+  // `margin` si no se corrige.
+  describe('modulo: borderRadiusEnabled', () => {
+    it('default (false) renders a valid, unrounded style — fixes the master\'s comma typo too', () => {
+      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 80, borderRadiusEnabled: false })
+      expect(html).toContain('margin: 0 auto; border-radius: 0px;')
+      expect(html).not.toContain('margin: 0 auto,')
+    })
+
+    it('true adds a real border-radius', () => {
+      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 80, borderRadiusEnabled: true })
+      expect(html).toContain('border-radius: 8px;')
+    })
+
+    it('does not throw when the image is blank (the whole <img> — and the style bug with it — gets removed first)', () => {
+      expect(() =>
+        renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: true }),
+      ).not.toThrow()
+    })
   })
 })
 

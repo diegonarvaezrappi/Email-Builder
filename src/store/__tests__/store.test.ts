@@ -33,7 +33,7 @@ const imgFijaItem = (id: string): BannerItem => ({
 const imgAutomaticaModuloItem = (id: string): BannerItem => ({
   id,
   type: 'IMG_AUTOMATICA_MODULO',
-  fields: { imageUrl: '', widthPercent: 80 },
+  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
 })
 
 function setBannerItems(items: BannerItem[]) {

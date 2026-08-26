@@ -128,6 +128,14 @@ export const imgAutomaticaModuloFieldsSchema = z.object({
     'https://braze-images.com/appboy/communication/assets/image_assets/images/6a69942490791600863938e5/original.png?1785304099',
   ),
   widthPercent: z.number().int().min(1).max(100).default(80),
+  /** El maestro trae `border-radius:0px` en la <img> junto a un comentario
+   *  dirigido a un humano: "Este border radius se debe poder modificar por
+   *  el usuario" — pedido explícito, no una pieza flagueada como las de
+   *  project_master_upstream_state. Default `false` (sin esquinas
+   *  redondeadas, igual que el 0px de fábrica del maestro) — ver
+   *  IMG_AUTOMATICA_MODULO_BORDER_RADIUS en components/banner/items/render.ts
+   *  para el valor que aplica cuando está prendido. */
+  borderRadiusEnabled: z.boolean().default(false),
 })
 export type ImgAutomaticaModuloFields = z.infer<typeof imgAutomaticaModuloFieldsSchema>
 export const defaultImgAutomaticaModuloFields: ImgAutomaticaModuloFields = imgAutomaticaModuloFieldsSchema.parse({})
