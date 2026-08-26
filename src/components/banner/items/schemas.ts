@@ -119,6 +119,13 @@ export const defaultTextoComplementarioFields: TextoComplementarioFields = texto
 export const imgAutomaticaMoleculaFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN'),
   widthPercent: z.number().int().min(1).max(100).default(80),
+  /** Pedido explícito del usuario 2026-08-26: mismo control que ya tiene
+   *  IMG_AUTOMATICA_MODULO (ver ese schema más abajo), acá extendido a la
+   *  molécula — a diferencia del módulo, el maestro NO trae NINGÚN
+   *  border-radius en este archivo (ni roto ni sano), así que el CSS es
+   *  nuevo, no una corrección de un literal existente. Default `false`:
+   *  sin esquinas redondeadas, mismo look de siempre. */
+  borderRadiusEnabled: z.boolean().default(false),
 })
 export type ImgAutomaticaMoleculaFields = z.infer<typeof imgAutomaticaMoleculaFieldsSchema>
 export const defaultImgAutomaticaMoleculaFields: ImgAutomaticaMoleculaFields = imgAutomaticaMoleculaFieldsSchema.parse({})

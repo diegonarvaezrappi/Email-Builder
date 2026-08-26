@@ -324,6 +324,15 @@ export function renderTextoComplementarioSnippet(fields: TextoComplementarioFiel
 // --- IMG_AUTOMATICA_MOLECULA -----------------------------------------------
 
 const IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN'
+/** Ancla presente igual en las 2 orientaciones (vertical trae además
+ *  `margin: 0 auto;` antes, horizontal no) — a diferencia de
+ *  IMG_AUTOMATICA_MODULO, acá el maestro NO trae ningún border-radius que
+ *  corregir: se inserta como CSS nuevo, pedido explícito del usuario
+ *  2026-08-26 de sumarle el mismo control que ya tiene el módulo. */
+const IMG_AUTOMATICA_MOLECULA_STYLE_ANCHOR = 'max-width: 480px;'
+/** Mismo valor que IMG_AUTOMATICA_MODULO_BORDER_RADIUS más abajo, por
+ *  consistencia visual entre las 2 piezas "imagen automática". */
+const IMG_AUTOMATICA_MOLECULA_BORDER_RADIUS = '8px'
 
 export function renderImgAutomaticaMoleculaSnippet(
   fields: ImgAutomaticaMoleculaFields,
@@ -332,6 +341,19 @@ export function renderImgAutomaticaMoleculaSnippet(
 ): string {
   const fileName = `molecula_img_automatica_${ctx.bannerType}.html`
   let html = stripComments(loadBannerMoleculaFile(fileName))
+  // Igual que IMG_AUTOMATICA_MODULO: el radius va ANTES de
+  // substituteImgSrcOrRemove, que con imageUrl en blanco borra la <img>
+  // ENTERA (estilo incluido) — no hace falta anclar nada de una imagen que
+  // no se va a mostrar.
+  if (fields.imageUrl.trim() !== '') {
+    const radius = fields.borderRadiusEnabled ? IMG_AUTOMATICA_MOLECULA_BORDER_RADIUS : '0px'
+    html = substituteOnce(
+      html,
+      IMG_AUTOMATICA_MOLECULA_STYLE_ANCHOR,
+      `${IMG_AUTOMATICA_MOLECULA_STYLE_ANCHOR} border-radius: ${radius};`,
+      fileName,
+    )
+  }
   html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, fields.imageUrl, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }

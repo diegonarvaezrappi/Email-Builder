@@ -99,7 +99,7 @@ describe('renderBannerSnippet', () => {
       },
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
-      { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } },
+      { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } },
       { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoLink: '' } },
       { id: '7', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } },
     ]
@@ -356,9 +356,10 @@ describe('renderBannerSnippet', () => {
     })
 
     it('"center" centers IMG_AUTOMATICA_MOLECULA via its own <img> margin (its outer table is already width:100%)', () => {
-      const d = withItems([{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80 } }], {
-        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
-      })
+      const d = withItems(
+        [{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
+        { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } },
+      )
       const html = renderBannerSnippet(d.banner, d)
       const imgHtml = html.slice(html.indexOf('BITEM:IMG_AUTOMATICA_MOLECULA:i'), html.indexOf('/BITEM:IMG_AUTOMATICA_MOLECULA:i'))
       expect(imgHtml).toMatch(/<img[^>]*margin:\s*0\s*auto;[^>]*>/)

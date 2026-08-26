@@ -334,7 +334,11 @@ describe('renderTextoComplementarioSnippet', () => {
 
 describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet', () => {
   it('molecula: substitutes the image URL and width%', () => {
-    const html = renderImgAutomaticaMoleculaSnippet({ imageUrl: 'https://x.test/a.png', widthPercent: 42 }, doc(), ctx('horizontal'))
+    const html = renderImgAutomaticaMoleculaSnippet(
+      { imageUrl: 'https://x.test/a.png', widthPercent: 42, borderRadiusEnabled: false },
+      doc(),
+      ctx('horizontal'),
+    )
     expect(html).toContain('https://x.test/a.png')
     expect(html).toContain('width: 42%')
     expect(html).not.toContain('1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN')
@@ -351,7 +355,11 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   // el <img> entero en vez de dejar src="" (evita el ícono de "imagen no
   // cargada" en el mail).
   it('molecula: removes the <img> entirely when imageUrl is blank', () => {
-    const html = renderImgAutomaticaMoleculaSnippet({ imageUrl: '', widthPercent: 80 }, doc(), ctx('horizontal'))
+    const html = renderImgAutomaticaMoleculaSnippet(
+      { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+      doc(),
+      ctx('horizontal'),
+    )
     expect(html).not.toContain('<img')
     expect(html).not.toContain('src=""')
   })
@@ -382,6 +390,36 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
     it('does not throw when the image is blank (the whole <img> — and the style bug with it — gets removed first)', () => {
       expect(() =>
         renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: true }),
+      ).not.toThrow()
+    })
+  })
+
+  // Mismo control, extendido a la molécula (pedido explícito del usuario
+  // 2026-08-26) — a diferencia del módulo, acá el maestro no trae NINGÚN
+  // border-radius: es CSS nuevo insertado junto a `max-width: 480px;`, no
+  // una corrección de un literal existente.
+  describe('molecula: borderRadiusEnabled', () => {
+    it.each(['horizontal', 'vertical'] as const)('default (false) renders border-radius: 0px in %s', (bannerType) => {
+      const html = renderImgAutomaticaMoleculaSnippet(
+        { imageUrl: 'https://x.test/a.png', widthPercent: 80, borderRadiusEnabled: false },
+        doc(),
+        ctx(bannerType),
+      )
+      expect(html).toContain('max-width: 480px; border-radius: 0px;')
+    })
+
+    it.each(['horizontal', 'vertical'] as const)('true adds a real border-radius in %s', (bannerType) => {
+      const html = renderImgAutomaticaMoleculaSnippet(
+        { imageUrl: 'https://x.test/a.png', widthPercent: 80, borderRadiusEnabled: true },
+        doc(),
+        ctx(bannerType),
+      )
+      expect(html).toContain('max-width: 480px; border-radius: 8px;')
+    })
+
+    it('does not throw when the image is blank', () => {
+      expect(() =>
+        renderImgAutomaticaMoleculaSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: true }, doc(), ctx('horizontal')),
       ).not.toThrow()
     })
   })

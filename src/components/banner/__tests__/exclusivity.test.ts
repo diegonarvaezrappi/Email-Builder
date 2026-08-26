@@ -10,7 +10,11 @@ const imgAutoModulo = (id: string): BannerItem => ({
   type: 'IMG_AUTOMATICA_MODULO',
   fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
 })
-const imgAutoMolecula = (id: string): BannerItem => ({ id, type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: '', widthPercent: 80 } })
+const imgAutoMolecula = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_AUTOMATICA_MOLECULA',
+  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+})
 
 describe('applyImageModuleExclusivity', () => {
   it('removes an existing IMG_FIJA when the incoming type is IMG_AUTOMATICA_MODULO', () => {
