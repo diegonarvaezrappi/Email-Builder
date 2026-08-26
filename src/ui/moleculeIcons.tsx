@@ -241,10 +241,72 @@ export function SeparadorLineaIcon(props: IconProps) {
   )
 }
 
+/** Círculo con un trazo corto al lado — mirror esquemático de un bullet con
+ *  ícono (molecula_bullet_icono_*.html): ícono redondo + 2 líneas de texto. */
+export function BulletIconoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <circle cx="14" cy="20" r="8" fill="currentColor" opacity="0.85" />
+      <rect x="30" y="14" width="26" height="5" rx="2.5" fill="currentColor" opacity="0.7" />
+      <rect x="30" y="23" width="20" height="5" rx="2.5" fill="currentColor" opacity="0.5" />
+    </svg>
+  )
+}
+
+/** Igual que BulletIconoIcon pero con un número en vez de círculo — mirror de
+ *  molecula_bullet_numerado.html. */
+export function BulletNumeradoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <text x="9" y="25" fontSize="14" fontWeight="700" fill="currentColor" opacity="0.85">
+        1
+      </text>
+      <line x1="20" y1="10" x2="20" y2="30" stroke="currentColor" strokeWidth="2" opacity="0.4" />
+      <rect x="30" y="14" width="26" height="5" rx="2.5" fill="currentColor" opacity="0.7" />
+      <rect x="30" y="23" width="20" height="5" rx="2.5" fill="currentColor" opacity="0.5" />
+    </svg>
+  )
+}
+
+/** Un solo círculo — mirror de molecula_icono.html (ícono suelto, sin texto,
+ *  a diferencia de BulletIconoIcon). */
+export function IconoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <circle cx="32" cy="20" r="10" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
+/** Mismo diagrama que TituloTextoIcon (título grueso + línea fina) — mirror de
+ *  la celda 2 de modulo-beneficios.html, cuyo `<h3>`/`<h4>` son visualmente
+ *  equivalentes aunque el archivo de origen sea distinto. */
+export function BeneficiosTituloIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="8" y="12" width="36" height="10" rx="3" fill="currentColor" opacity="0.9" />
+      <rect x="8" y="26" width="24" height="4" rx="2" fill="currentColor" opacity="0.4" />
+    </svg>
+  )
+}
+
+/** Mismo diagrama que SubtituloTextoIcon — mirror del `<h4>` de texto de
+ *  modulo-beneficios.html. */
+export function BeneficiosTextoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="8" y="14" width="48" height="5" rx="2.5" fill="currentColor" opacity="0.7" />
+      <rect x="8" y="23" width="34" height="5" rx="2.5" fill="currentColor" opacity="0.5" />
+    </svg>
+  )
+}
+
 /** Íconos de las moléculas del área libre de un módulo de body
- *  (bodyMoleculeRegistry.ts) — 3 nuevos (TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA)
- *  + los mismos 3 componentes que ya usa MOLECULE_ICONS para SEPARADOR/
- *  FRANJA_LOGOS/TEXTO_PASTILLA (misma molécula, reusada tal cual). */
+ *  (bodyMoleculeRegistry.ts) — TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA
+ *  (fase 2) y BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/
+ *  BENEFICIOS_TEXTO (fase 3), + los mismos 3 componentes que ya usa
+ *  MOLECULE_ICONS para SEPARADOR/FRANJA_LOGOS/TEXTO_PASTILLA (misma molécula,
+ *  reusada tal cual). */
 export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>> = {
   TITULO_TEXTO: TituloTextoIcon,
   SUBTITULO_TEXTO: SubtituloTextoIcon,
@@ -252,6 +314,11 @@ export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>>
   SEPARADOR: SeparadorIcon,
   FRANJA_LOGOS: FranjaLogosIcon,
   TEXTO_PASTILLA: TextoPastillaIcon,
+  BULLET_ICONO: BulletIconoIcon,
+  BULLET_NUMERADO: BulletNumeradoIcon,
+  ICONO: IconoIcon,
+  BENEFICIOS_TITULO: BeneficiosTituloIcon,
+  BENEFICIOS_TEXTO: BeneficiosTextoIcon,
 }
 
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {

@@ -244,6 +244,15 @@ const CONTENT_MOLECULAS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_D
 const TITLE_DIR_NAME = 'title'
 const TITLE_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, TITLE_DIR_NAME)
 const TITLE_FILE = 'modulo-titulo.html'
+/** `bullet/`/`benefits/` — mismo criterio que `title/`, fase 3 del plan de
+ *  nuevos módulos de contenido. Los nombres de carpeta son los del maestro
+ *  (inglés, aunque el contenido/archivo sea español, mismo patrón que title/). */
+const BULLET_DIR_NAME = 'bullet'
+const BULLET_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, BULLET_DIR_NAME)
+const BULLET_FILE = 'modulo_bullet.html'
+const BENEFITS_DIR_NAME = 'benefits'
+const BENEFITS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, BENEFITS_DIR_NAME)
+const BENEFITS_FILE = 'modulo-beneficios.html'
 
 /**
  * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
@@ -376,25 +385,33 @@ const DEALS_FILE = 'deal_columnas.html'
 /**
  * content_moleculas/ (16 archivos reales) — se COPIAN molecula_franja_logos.html
  * (fase 1, ver la nota 3d del encabezado: primer consumidor real es la pieza
- * FRANJA_LOGOS del banner) y molecula_separador_s.html (fase 2: la molécula
+ * FRANJA_LOGOS del banner), molecula_separador_s.html (fase 2: la molécula
  * SEPARADOR_LINEA del Título — ver bodyMoleculeRegistry.ts, moduleItems/render.ts.
  * NO confundir con molecula_separadores.html: esa es el espaciador invisible
  * S/M/general que ya usa la pieza SEPARADOR del banner desde fase 1; esta es
- * una línea decorativa con `role="molecula-separador"`, un archivo distinto).
+ * una línea decorativa con `role="molecula-separador"`, un archivo distinto),
+ * y (fase 3, ver [[project_body_modules_plan_2026-08-26]]) los 4 archivos de
+ * bullet (molecula_bullet_icono_{s,m,l}.html + molecula_bullet_numerado.html —
+ * la pieza BULLET_ICONO/BULLET_NUMERADO del catálogo compartido, ver
+ * moduleItems/render.ts) y molecula_icono.html (la pieza ICONO genérica,
+ * primer consumidor real: el área libre de Beneficios).
  * El resto queda LISTADO pero SIN COPIAR: son la materia prima de los módulos
  * de body de fases futuras del plan de nuevos módulos de contenido (ver
  * [[project_body_modules_plan_2026-08-26]]) — listarlos ya evita el warning de
  * "archivo nuevo sin sincronizar" antes de que exista el código que los
  * consuma (mismo criterio que BANNER_MOLECULA_KNOWN_EXTRA_FILES).
  */
-const CONTENT_MOLECULAS_FILES_TO_COPY = ['molecula_franja_logos.html', 'molecula_separador_s.html']
-const CONTENT_MOLECULAS_KNOWN_PENDING_FILES = [
-  'modificadores-texto.html',
-  'molecula_bullet_icono_l.html',
-  'molecula_bullet_icono_m.html',
+const CONTENT_MOLECULAS_FILES_TO_COPY = [
+  'molecula_franja_logos.html',
+  'molecula_separador_s.html',
   'molecula_bullet_icono_s.html',
+  'molecula_bullet_icono_m.html',
+  'molecula_bullet_icono_l.html',
   'molecula_bullet_numerado.html',
   'molecula_icono.html',
+]
+const CONTENT_MOLECULAS_KNOWN_PENDING_FILES = [
+  'modificadores-texto.html',
   'molecula_img_automatica.html',
   'molecula_link_interno.html',
   'molecula_separadores.html',
@@ -421,6 +438,28 @@ const FRANJA_LOGOS_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWd
 const SEPARADOR_LINEA_ANCHOR = 'role="molecula-separador"'
 
 /**
+ * Fase 3 — molecula_bullet_icono_{s,m,l}.html (pieza BULLET_ICONO,
+ * moduleItems/render.ts): las 3 comparten el mismo literal de título/texto
+ * ('>Subtitulo<' / el bloque de texto de relleno), cada uno 1 vez. OJO — el
+ * archivo NOMBRADO "l" trae internamente `role="molecula-iconoXL"` (no
+ * "...iconoL"): typo/inconsistencia real del maestro, no se valida el role acá
+ * porque moduleItems/render.ts elige el archivo por NOMBRE (mapeado desde
+ * `size`), nunca por su role interno.
+ */
+const BULLET_ICONO_TITULO_LITERAL = '>Subtitulo<'
+const BULLET_ICONO_TEXTO_LITERAL = 'bloque de texto bloque de texto bloque de texto'
+const BULLET_ICONO_FILES = ['molecula_bullet_icono_s.html', 'molecula_bullet_icono_m.html', 'molecula_bullet_icono_l.html']
+
+/** molecula_bullet_numerado.html (pieza BULLET_NUMERADO): el número de fábrica
+ *  (' 1 ', con espacios) + el mismo par título/texto que BULLET_ICONO. */
+const BULLET_NUMERADO_NUMERO_LITERAL = '> 1 <'
+
+/** molecula_icono.html (pieza ICONO, moduleItems/render.ts): un solo archivo
+ *  de referencia con 4 `<img>` alternativos (S/M/L/XL) — cada role debe seguir
+ *  apareciendo exactamente 1 vez; el render elige uno por `fields.size`. */
+const ICONO_ROLE_ANCHORS = ['role="molecula-iconoS"', 'role="molecula-iconoM"', 'role="molecula-iconoL"', 'role="molecula-iconoXL"']
+
+/**
  * Anclas que components/title/render.ts (el shell del bloque) y
  * moduleItems/render.ts (las piezas TITULO_TEXTO/SUBTITULO_TEXTO que se
  * extraen del mismo archivo) necesitan en modulo-titulo.html — todas deben
@@ -439,6 +478,48 @@ const TITLE_ANCHOR_COUNTS = {
   '>Titulo<': 1,
   'bloque de texto bloque de texto bloque de texto': 1,
   [SEPARADOR_LINEA_ANCHOR]: 1,
+}
+
+/**
+ * Anclas que components/bullet/render.ts (el shell del bloque) necesita en
+ * modulo_bullet.html — a diferencia de Título, este shell NO se reusa para
+ * extraer texto (el icono+h3+h4 de fábrica del archivo se descarta entero: el
+ * área libre por defecto trae un item BULLET_ICONO, sourced de su propio
+ * archivo en content_moleculas/, no de este). Solo hacen falta las anclas del
+ * SHELL (link + el <div> de fondo que envuelve toda el área libre).
+ */
+const BULLET_AREA_DIV_ANCHOR =
+  '<div style="display: inline-block; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden; width: 100%; max-width: 480px;">'
+const BULLET_ANCHOR_COUNTS = {
+  LINKMODULO: 1,
+  [BULLET_AREA_DIV_ANCHOR]: 1,
+  '{{alineado_molecular_mail_body}}': 1,
+  '{{body_container_background_padding}}': 1,
+}
+
+/**
+ * Anclas que components/benefits/render.ts (el shell + la celda 1 fija de
+ * imagen) y moduleItems/render.ts (las piezas BENEFICIOS_TITULO/BENEFICIOS_TEXTO,
+ * que SÍ se extraen de este mismo archivo — mismo criterio que TITULO_TEXTO/
+ * SUBTITULO_TEXTO con modulo-titulo.html) necesitan en modulo-beneficios.html.
+ * El icono + el <h5> vacío de fábrica de la celda 2 se descartan enteros (el
+ * área libre por defecto trae un item ICONO propio, sourced de
+ * content_moleculas/molecula_icono.html) — por eso no se ancla el icono de
+ * fábrica acá.
+ */
+const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
+const BENEFICIOS_TITULO_LITERAL = '>Descuentos de hasta xxx<'
+const BENEFICIOS_TEXTO_LITERAL = 'En todos tus pedidos en la app, pidiendo desde $XXXXXX'
+const BENEFICIOS_ANCHOR_COUNTS = {
+  LINKMODULO: 1,
+  '{{body_container_background_radius}}': 1,
+  '{{body_container_background_border}}': 1,
+  '{{bg_contenedor1_mail_general}}': 1,
+  '{{body_container_background_padding}}': 1,
+  'role="celda2"': 1,
+  [BENEFICIOS_IMAGE_URL_PLACEHOLDER]: 1,
+  [BENEFICIOS_TITULO_LITERAL]: 1,
+  [BENEFICIOS_TEXTO_LITERAL]: 1,
 }
 
 /**
@@ -903,6 +984,45 @@ if (CONTENT_MOLECULAS_DIR) {
     }
   }
 
+  // molecula_bullet_icono_{s,m,l}.html (pieza BULLET_ICONO): los 3 comparten
+  // el mismo par de literales de título/texto, 1 vez cada uno.
+  for (const name of BULLET_ICONO_FILES) {
+    const content = contentMoleculaFileContents[name]
+    if (!content) continue
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const literal of [BULLET_ICONO_TITULO_LITERAL, BULLET_ICONO_TEXTO_LITERAL]) {
+      const count = stripped.split(literal).length - 1
+      if (count !== 1) {
+        fail(`${label}/${name}: "${literal}" aparece ${count} veces sin comentarios (se esperaba 1) — revisar moduleItems/render.ts`)
+      }
+    }
+  }
+
+  // molecula_bullet_numerado.html (pieza BULLET_NUMERADO): el número de
+  // fábrica + el mismo par título/texto de arriba.
+  const bulletNumeradoContent = contentMoleculaFileContents['molecula_bullet_numerado.html']
+  if (bulletNumeradoContent) {
+    const stripped = bulletNumeradoContent.replace(HTML_COMMENT_RE, '')
+    for (const literal of [BULLET_NUMERADO_NUMERO_LITERAL, BULLET_ICONO_TITULO_LITERAL, BULLET_ICONO_TEXTO_LITERAL]) {
+      const count = stripped.split(literal).length - 1
+      if (count !== 1) {
+        fail(`${label}/molecula_bullet_numerado.html: "${literal}" aparece ${count} veces sin comentarios (se esperaba 1) — revisar moduleItems/render.ts`)
+      }
+    }
+  }
+
+  // molecula_icono.html (pieza ICONO): los 4 roles S/M/L/XL, 1 vez cada uno.
+  const iconoContent = contentMoleculaFileContents['molecula_icono.html']
+  if (iconoContent) {
+    const stripped = iconoContent.replace(HTML_COMMENT_RE, '')
+    for (const anchor of ICONO_ROLE_ANCHORS) {
+      const count = stripped.split(anchor).length - 1
+      if (count !== 1) {
+        fail(`${label}/molecula_icono.html: "${anchor}" aparece ${count} veces sin comentarios (se esperaba 1) — revisar moduleItems/render.ts`)
+      }
+    }
+  }
+
   // Aviso (no aborta): mismo criterio que banner_moleculas/ y deals/ — un
   // archivo nuevo en content_moleculas/ que el script no conoce pasaría
   // desapercibido.
@@ -953,6 +1073,80 @@ if (TITLE_DIR) {
   if (unknownTitleFiles.length > 0) {
     console.warn(
       `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownTitleFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
+// --- NN-components/NN_content-modules/bullet/modulo_bullet.html ----------------
+// Fase 3 del plan de nuevos módulos de contenido — ver components/bullet/render.ts.
+let bulletFileContent = ''
+if (BULLET_DIR) {
+  const fp = path.join(BULLET_DIR, BULLET_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BULLET_DIR_NAME}/${BULLET_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(BULLET_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/bullet/render.ts`)
+      }
+    }
+    bulletFileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/.
+  const knownBulletFiles = new Set([BULLET_FILE])
+  let actualBulletFiles = []
+  try {
+    actualBulletFiles = fs.readdirSync(BULLET_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BULLET_DIR_NAME}: ${e.message}`)
+  }
+  const unknownBulletFiles = actualBulletFiles.filter((f) => !knownBulletFiles.has(f))
+  if (unknownBulletFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BULLET_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownBulletFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
+// --- NN-components/NN_content-modules/benefits/modulo-beneficios.html ----------
+// Fase 3 del plan de nuevos módulos de contenido — ver components/benefits/render.ts
+// + moduleItems/render.ts (BENEFICIOS_TITULO/BENEFICIOS_TEXTO, extraídas de este
+// mismo archivo — mismo criterio que TITULO_TEXTO/SUBTITULO_TEXTO con title/).
+let beneficiosFileContent = ''
+if (BENEFITS_DIR) {
+  const fp = path.join(BENEFITS_DIR, BENEFITS_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BENEFITS_DIR_NAME}/${BENEFITS_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(BENEFICIOS_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/benefits/render.ts y moduleItems/render.ts`)
+      }
+    }
+    beneficiosFileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/.
+  const knownBeneficiosFiles = new Set([BENEFITS_FILE])
+  let actualBeneficiosFiles = []
+  try {
+    actualBeneficiosFiles = fs.readdirSync(BENEFITS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BENEFITS_DIR_NAME}: ${e.message}`)
+  }
+  const unknownBeneficiosFiles = actualBeneficiosFiles.filter((f) => !knownBeneficiosFiles.has(f))
+  if (unknownBeneficiosFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BENEFITS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownBeneficiosFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
     )
   }
 }
@@ -1050,6 +1244,18 @@ if (titleFileContent) {
   fs.writeFileSync(path.join(TITLE_ASSETS_DIR, TITLE_FILE), titleFileContent, 'utf8')
 }
 
+if (bulletFileContent) {
+  const BULLET_ASSETS_DIR = path.join(ASSETS_DIR, BULLET_DIR_NAME)
+  fs.mkdirSync(BULLET_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(BULLET_ASSETS_DIR, BULLET_FILE), bulletFileContent, 'utf8')
+}
+
+if (beneficiosFileContent) {
+  const BENEFITS_ASSETS_DIR = path.join(ASSETS_DIR, BENEFITS_DIR_NAME)
+  fs.mkdirSync(BENEFITS_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(BENEFITS_ASSETS_DIR, BENEFITS_FILE), beneficiosFileContent, 'utf8')
+}
+
 const HEADERS_ASSETS_DIR = path.join(ASSETS_DIR, 'headers')
 fs.mkdirSync(HEADERS_ASSETS_DIR, { recursive: true })
 fs.writeFileSync(path.join(HEADERS_ASSETS_DIR, HEADER_WRAPPER_FILE), headerWrapperContent, 'utf8')
@@ -1080,6 +1286,12 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}/ (${Object.keys(TITLE_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BULLET_DIR_NAME}/ (${Object.keys(BULLET_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BENEFITS_DIR_NAME}/ (${Object.keys(BENEFICIOS_ANCHOR_COUNTS).length} anclas OK)`,
 )
 if (themesMissingColorFooter.length === themeCount) {
   console.warn(

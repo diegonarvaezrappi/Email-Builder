@@ -11,6 +11,18 @@ import { DealsPropertiesPanel } from './components/deals/panels'
 import { cloneTitleFields, createDefaultTitleFields, defaultTitleFields, titleFieldsSchema, type TitleFields } from './components/title/schema'
 import { renderTitleSnippet } from './components/title/render'
 import { TitlePropertiesPanel } from './components/title/PropertiesPanel'
+import { bulletFieldsSchema, cloneBulletFields, createDefaultBulletFields, defaultBulletFields, type BulletFields } from './components/bullet/schema'
+import { renderBulletSnippet } from './components/bullet/render'
+import { BulletPropertiesPanel } from './components/bullet/PropertiesPanel'
+import {
+  beneficiosFieldsSchema,
+  cloneBeneficiosFields,
+  createDefaultBeneficiosFields,
+  defaultBeneficiosFields,
+  type BeneficiosFields,
+} from './components/benefits/schema'
+import { renderBeneficiosSnippet } from './components/benefits/render'
+import { BeneficiosPropertiesPanel } from './components/benefits/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -116,12 +128,40 @@ const titleBlockDef: ContentBlockDef<TitleFields> = {
   PropertiesPanel: TitlePropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy CTA, DEALS y TITLE; LOGOS/etc. se suman
- *  acá cuando se implementen. */
+const bulletBlockDef: ContentBlockDef<BulletFields> = {
+  type: 'BULLET',
+  label: 'Bullet',
+  schema: bulletFieldsSchema,
+  defaultFields: defaultBulletFields,
+  createDefaultFields: createDefaultBulletFields,
+  cloneFields: cloneBulletFields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  render: renderBulletSnippet,
+  PropertiesPanel: BulletPropertiesPanel,
+}
+
+const beneficiosBlockDef: ContentBlockDef<BeneficiosFields> = {
+  type: 'BENEFICIOS',
+  label: 'Beneficios',
+  schema: beneficiosFieldsSchema,
+  defaultFields: defaultBeneficiosFields,
+  createDefaultFields: createDefaultBeneficiosFields,
+  cloneFields: cloneBeneficiosFields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  render: renderBeneficiosSnippet,
+  PropertiesPanel: BeneficiosPropertiesPanel,
+}
+
+/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET y BENEFICIOS;
+ *  LOGOS/etc. se suman acá cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
   TITLE: titleBlockDef,
+  BULLET: bulletBlockDef,
+  BENEFICIOS: beneficiosBlockDef,
 }
 
 /**

@@ -112,7 +112,7 @@ export function parseThemes(headMetaHtml: string): ThemeDef[] {
 export const THEMES: ThemeDef[] = parseThemes(headMetaTagsRaw)
 
 /**
- * Las 4 variables que el maestro asigna DOS veces por rama de tema — primero
+ * Las 5 variables que el maestro asigna DOS veces por rama de tema — primero
  * el valor "con fondo" (el real del tema), después PISADO dentro de
  * `{% if body_container_background == 'Sinfondo' %} ... {% endif %}` (sin
  * `{% else %}`) por el valor "sin fondo" (0px/transparente). Verificado línea
@@ -120,7 +120,7 @@ export const THEMES: ThemeDef[] = parseThemes(headMetaTagsRaw)
  * (primero "con fondo", después "sin fondo"), nunca al revés.
  *
  * `parseThemes`/`themeVars` (arriba) escanean `{% assign %}` en orden de
- * aparición y se quedan con el ÚLTIMO — así que para estas 4 variables
+ * aparición y se quedan con el ÚLTIMO — así que para estas 5 variables
  * siempre devuelven la variante "sin fondo", nunca la "con fondo". Eso alcanza
  * para `bg_solid_generico100_mail_body` y compañía (un solo valor real por
  * tema, sin toggle), pero NO para el fondo de los módulos de body (fase 2 del
@@ -138,12 +138,24 @@ export const THEMES: ThemeDef[] = parseThemes(headMetaTagsRaw)
  * implementado la usa todavía (verificado — solo vive en el asset sincronizado
  * sin consumidor en src/), así que exponer acá su valor real no es una
  * regresión de nada existente.
+ *
+ * `img_fondo_especial_mail_general` se sumó en la fase 3 (Beneficios, ver
+ * [[project_body_modules_plan_2026-08-26]]): modulo-beneficios.html pinta
+ * `background-image: url({{img_fondo_especial_mail_general}})` en el `<tr>`
+ * que envuelve sus 2 celdas, y ESA variable sufre exactamente el mismo doble-
+ * assign (verificado línea por línea en las 12 ramas: "con fondo" trae una
+ * imagen real distinta por tema, "sin fondo" siempre el mismo placeholder
+ * genérico `.../1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A`) — sin este agregado,
+ * components/benefits/render.ts habría mostrado SIEMPRE el placeholder "sin
+ * fondo", ignorando el toggle. Ningún otro consumidor la usa hoy (confirmado
+ * por grep), así que sumarla acá no cambia nada existente.
  */
 export const MODULE_BACKGROUND_VAR_NAMES = [
   'bg_contenedor1_mail_general',
   'body_container_background_radius',
   'body_container_background_padding',
   'body_container_background_border',
+  'img_fondo_especial_mail_general',
 ] as const
 
 export interface ModuleBackgroundVars {

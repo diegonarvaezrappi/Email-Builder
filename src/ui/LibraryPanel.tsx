@@ -41,6 +41,7 @@ import { BANNER_TYPE_ICONS } from './moleculeIcons'
 /** Los 9 tipos de contenido que el maestro documenta dentro de CONTENIDOS — ver el comentario "WRAPPER DE CONTENIDOS". */
 const CONTENT_BLOCK_LIBRARY_ITEMS: { type: string; label: string }[] = [
   { type: 'TITLE', label: 'Título' },
+  { type: 'BULLET', label: 'Bullet' },
   { type: 'CTA', label: 'CTA' },
   { type: 'DEALS', label: 'Deals' },
   { type: 'LOGOS', label: 'Logos' },

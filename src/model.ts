@@ -5,6 +5,8 @@ import { cierreSchema, type CierreFields } from './components/cierre/schema'
 import { ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { titleFieldsSchema, type TitleFields } from './components/title/schema'
+import { bulletFieldsSchema, type BulletFields } from './components/bullet/schema'
+import { beneficiosFieldsSchema, type BeneficiosFields } from './components/benefits/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -27,10 +29,11 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * Tipos de bloque de contenido que puede alojar CONTENIDOS (ver el comentario
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
- * implementen los demás — hoy CTA, DEALS y TITLE (fase 2 del plan de nuevos
- * módulos de contenido, ver [[project_body_modules_plan_2026-08-26]]).
+ * implementen los demás — hoy CTA, DEALS, TITLE, BULLET y BENEFICIOS (fases 2
+ * y 3 del plan de nuevos módulos de contenido, ver
+ * [[project_body_modules_plan_2026-08-26]]).
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS'
 
 export interface CtaBlock {
   id: string
@@ -64,8 +67,29 @@ export interface TitleBlock {
   fields: TitleFields
 }
 
+/**
+ * Fase 3: mismo motor de área libre que TITLE, pero el shell descarta ENTERO
+ * su icono+h3+h4 de fábrica (no los extrae como items propios, a diferencia
+ * de TITLE) — ver components/bullet/.
+ */
+export interface BulletBlock {
+  id: string
+  type: 'BULLET'
+  fields: BulletFields
+}
+
+/**
+ * Fase 3: a diferencia de TITLE/BULLET, tiene una celda FIJA (una imagen no
+ * removible) además de su única área libre — ver components/benefits/.
+ */
+export interface BeneficiosBlock {
+  id: string
+  type: 'BENEFICIOS'
+  fields: BeneficiosFields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock | TitleBlock
+export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -85,7 +109,25 @@ const titleBlockSchema = z.object({
   fields: titleFieldsSchema,
 })
 
-export const contentBlockSchema = z.discriminatedUnion('type', [ctaBlockSchema, dealsBlockSchema, titleBlockSchema])
+const bulletBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('BULLET'),
+  fields: bulletFieldsSchema,
+})
+
+const beneficiosBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('BENEFICIOS'),
+  fields: beneficiosFieldsSchema,
+})
+
+export const contentBlockSchema = z.discriminatedUnion('type', [
+  ctaBlockSchema,
+  dealsBlockSchema,
+  titleBlockSchema,
+  bulletBlockSchema,
+  beneficiosBlockSchema,
+])
 
 /**
  * Estado completo de un email en construcción. A diferencia de inapps-builder

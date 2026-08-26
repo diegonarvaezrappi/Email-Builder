@@ -150,7 +150,7 @@ describe('themeVars', () => {
 })
 
 describe('moduleBackgroundVarsForTheme', () => {
-  it('exposes BOTH variants of the 4 vars for every theme, "on" different from "off"', () => {
+  it('exposes BOTH variants of the 5 vars for every theme, "on" different from "off"', () => {
     for (const slug of THEME_SLUGS) {
       const { on, off } = moduleBackgroundVarsForTheme(slug)
       for (const name of MODULE_BACKGROUND_VAR_NAMES) {

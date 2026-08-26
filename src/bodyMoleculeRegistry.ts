@@ -14,17 +14,45 @@ import {
 import { renderFranjaLogosSnippet, renderSeparadorSnippet, renderTextoPastillaSnippet } from './components/banner/items/render'
 import { FranjaLogosPropertiesPanel, SeparadorPropertiesPanel, TextoPastillaPropertiesPanel } from './components/banner/items/panels'
 import {
+  beneficiosTextoFieldsSchema,
+  beneficiosTituloFieldsSchema,
+  bulletIconoFieldsSchema,
+  bulletNumeradoFieldsSchema,
+  defaultBeneficiosTextoFields,
+  defaultBeneficiosTituloFields,
+  defaultBulletIconoFields,
+  defaultBulletNumeradoFields,
+  defaultIconoFields,
   defaultSeparadorLineaFields,
   defaultSubtituloTextoFields,
   defaultTituloTextoFields,
+  iconoFieldsSchema,
   MODULE_ITEM_TYPE_VALUES,
   separadorLineaFieldsSchema,
   subtituloTextoFieldsSchema,
   tituloTextoFieldsSchema,
   type ModuleItemType,
 } from './moduleItems/schemas'
-import { renderSeparadorLineaSnippet, renderSubtituloTextoSnippet, renderTituloTextoSnippet } from './moduleItems/render'
-import { SeparadorLineaPropertiesPanel, SubtituloTextoPropertiesPanel, TituloTextoPropertiesPanel } from './moduleItems/panels'
+import {
+  renderBeneficiosTextoSnippet,
+  renderBeneficiosTituloSnippet,
+  renderBulletIconoSnippet,
+  renderBulletNumeradoSnippet,
+  renderIconoSnippet,
+  renderSeparadorLineaSnippet,
+  renderSubtituloTextoSnippet,
+  renderTituloTextoSnippet,
+} from './moduleItems/render'
+import {
+  BeneficiosTextoPropertiesPanel,
+  BeneficiosTituloPropertiesPanel,
+  BulletIconoPropertiesPanel,
+  BulletNumeradoPropertiesPanel,
+  IconoPropertiesPanel,
+  SeparadorLineaPropertiesPanel,
+  SubtituloTextoPropertiesPanel,
+  TituloTextoPropertiesPanel,
+} from './moduleItems/panels'
 
 /** Lo que una molécula de módulo necesita saber de su instancia — mismo
  *  espíritu que BannerItemRenderCtx/ContentBlockRenderCtx, un nivel más
@@ -115,6 +143,56 @@ export const bodyMoleculeRegistry: Record<ModuleItemType, ModuleItemDef<any>> = 
     render: (fields, _doc, _ctx) => renderTextoPastillaSnippet(fields),
     PropertiesPanel: TextoPastillaPropertiesPanel,
     Icon: MODULE_ITEM_ICONS.TEXTO_PASTILLA,
+  },
+  // Las 5 de acá abajo son fase 3 (plan de nuevos módulos de contenido, ver
+  // [[project_body_modules_plan_2026-08-26]]) — BULLET_ICONO/BULLET_NUMERADO/
+  // ICONO nacen en el catálogo de Bullet, BENEFICIOS_TITULO/BENEFICIOS_TEXTO
+  // en el de Beneficios, pero las 5 quedan disponibles para CUALQUIER módulo
+  // (mismo criterio "universal" que TITULO_TEXTO/SUBTITULO_TEXTO).
+  BULLET_ICONO: {
+    type: 'BULLET_ICONO',
+    label: 'Bullet con ícono',
+    schema: bulletIconoFieldsSchema,
+    defaultFields: defaultBulletIconoFields,
+    render: (fields, _doc, _ctx) => renderBulletIconoSnippet(fields),
+    PropertiesPanel: BulletIconoPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.BULLET_ICONO,
+  },
+  BULLET_NUMERADO: {
+    type: 'BULLET_NUMERADO',
+    label: 'Bullet numerado',
+    schema: bulletNumeradoFieldsSchema,
+    defaultFields: defaultBulletNumeradoFields,
+    render: (fields, _doc, _ctx) => renderBulletNumeradoSnippet(fields),
+    PropertiesPanel: BulletNumeradoPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.BULLET_NUMERADO,
+  },
+  ICONO: {
+    type: 'ICONO',
+    label: 'Ícono',
+    schema: iconoFieldsSchema,
+    defaultFields: defaultIconoFields,
+    render: (fields, _doc, _ctx) => renderIconoSnippet(fields),
+    PropertiesPanel: IconoPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.ICONO,
+  },
+  BENEFICIOS_TITULO: {
+    type: 'BENEFICIOS_TITULO',
+    label: 'Título (Beneficios)',
+    schema: beneficiosTituloFieldsSchema,
+    defaultFields: defaultBeneficiosTituloFields,
+    render: (fields, _doc, _ctx) => renderBeneficiosTituloSnippet(fields),
+    PropertiesPanel: BeneficiosTituloPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.BENEFICIOS_TITULO,
+  },
+  BENEFICIOS_TEXTO: {
+    type: 'BENEFICIOS_TEXTO',
+    label: 'Texto (Beneficios)',
+    schema: beneficiosTextoFieldsSchema,
+    defaultFields: defaultBeneficiosTextoFields,
+    render: (fields, _doc, _ctx) => renderBeneficiosTextoSnippet(fields),
+    PropertiesPanel: BeneficiosTextoPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.BENEFICIOS_TEXTO,
   },
 }
 
