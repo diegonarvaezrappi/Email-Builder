@@ -55,7 +55,7 @@ describe('resolveGlobalVars', () => {
 
   it('does not let the background leak into other theme variables', () => {
     const vars = resolveGlobalVars(globals({ tema: 'pro', fondoUrl: 'https://x.test/a.png' }))
-    expect(vars.bg_solid_mail_general).toBe('#2A2B2B')
+    expect(vars.bg_solid_mail_general).toBe('#121212')
     expect(vars.color_texto_mail_general).toBe('#EEEEEE')
   })
 })

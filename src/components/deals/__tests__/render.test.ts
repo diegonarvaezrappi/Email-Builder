@@ -74,6 +74,12 @@ describe('renderDealsSnippet · armado de pares', () => {
   it('0 tarjetas no renderiza nada', () => {
     expect(render(cards())).toBe('')
   })
+
+  it('fixes the master\'s "display: display: table; ;" typo on cell 2 so both cards get a valid, matching display', () => {
+    const html = render(cards(card('a'), card('b')))
+    expect(html).not.toContain('display: display')
+    expect(count(html, 'style="display: table; text-decoration: none;')).toBe(2)
+  })
 })
 
 describe('renderDealsSnippet · piezas opcionales', () => {

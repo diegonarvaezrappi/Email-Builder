@@ -64,6 +64,29 @@ function stripComments(html: string): string {
   return html.replace(HTML_COMMENT_RE, '')
 }
 
+/**
+ * BUG DEL MAESTRO (no se puede tocar el archivo — regla de solo lectura): el
+ * pull `bd5f9aa` ("ajustes display deal") cambió el `<a>` que envuelve cada
+ * celda de textos de `display: inline-block` a `display: table` — pero la
+ * CELDA 2 quedó con un copy-paste roto: `display: display: table; ;`
+ * (confirmado por diff contra la celda 1, que sí quedó limpia). Un motor CSS
+ * descarta esa declaración entera por valor inválido, así que la celda 2
+ * termina sin ningún `display` explícito (el `inline` por defecto del
+ * navegador para `<a>`), distinto de la celda 1 (`table`) y del valor previo
+ * (`inline-block`) — las 2 tarjetas de un par quedarían con layout
+ * inconsistente. Se corrige acá tras cargar el archivo. THROW si el typo ya
+ * no aparece: significa que se arregló upstream y este parche quedó muerto,
+ * hay que borrarlo.
+ */
+const DEAL_CELL_2_DISPLAY_TYPO = 'style="display: display: table; ; text-decoration: none;'
+
+function fixDealCell2DisplayTypo(html: string): string {
+  if (!html.includes(DEAL_CELL_2_DISPLAY_TYPO)) {
+    throw new Error(`${FILE_NAME}: ya no contiene el typo "${DEAL_CELL_2_DISPLAY_TYPO}" — quitar fixDealCell2DisplayTypo en components/deals/render.ts`)
+  }
+  return html.replace(DEAL_CELL_2_DISPLAY_TYPO, 'style="display: table; text-decoration: none;')
+}
+
 // --- Utilidades de corte/reemplazo ------------------------------------------
 
 interface Bounds {
@@ -583,7 +606,7 @@ function removeLegalRow(html: string): string {
 }
 
 function renderDealPair(cards: (DealCard | undefined)[], blockId: string): string {
-  let html = stripComments(dealColumnasRaw)
+  let html = fixDealCell2DisplayTypo(stripComments(dealColumnasRaw))
 
   // Cada celda que SÍ tiene tarjeta se envuelve en su par de comentarios
   // DCARD — una tarjeta produce 2 o 3 pares (imagen, textos y, si aparece, su
