@@ -39,6 +39,16 @@ describe('domToRichText', () => {
     expect(runs).toEqual([{ text: 'x', marks: [] }])
   })
 
+  it('matches a span font-size against the h1-h5/.legal scale to recover the right size mark', () => {
+    const runs = domToRichText(container('<span style="font-size: 21px;">x</span>'), HEX_COLORS)
+    expect(runs).toEqual([{ text: 'x', marks: ['sizeH2'] }])
+  })
+
+  it('a font-size that matches none of the 6 size marks is dropped (defensive — should not happen in practice)', () => {
+    const runs = domToRichText(container('<span style="font-size: 13px;">x</span>'), HEX_COLORS)
+    expect(runs).toEqual([{ text: 'x', marks: [] }])
+  })
+
   it('round-trips every combination of marks through render -> dom unchanged (marks compared as a set — order is not semantic)', () => {
     const cases: RichText = [
       { text: 'a', marks: [] },
@@ -47,6 +57,8 @@ describe('domToRichText', () => {
       { text: 'd', marks: ['strike', 'colorAcento1'] },
       { text: 'e', marks: ['superscript', 'colorBase'] },
       { text: 'f', marks: ['bold', 'italic', 'strike', 'underline', 'superscript', 'colorAcento2'] },
+      { text: 'g', marks: ['sizeH3'] },
+      { text: 'h', marks: ['bold', 'sizeLegal'] },
     ]
     for (const run of cases) {
       const html = renderRichText([run], HEX_COLORS)

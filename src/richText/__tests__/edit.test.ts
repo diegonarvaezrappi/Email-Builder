@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { rangeHasMark, setColorMark, toggleMark } from '../edit'
+import { clearMarks, rangeHasMark, setColorMark, setSizeMark, toggleMark } from '../edit'
 import type { RichText } from '../model'
 
 const plain = (text: string): RichText => [{ text, marks: [] }]
@@ -81,6 +81,45 @@ describe('setColorMark', () => {
     const runs: RichText = [{ text: 'hola', marks: ['colorAcento1', 'bold'] }]
     const next = setColorMark(runs, 0, 4, null)
     expect(next).toEqual([{ text: 'hola', marks: ['bold'] }])
+  })
+})
+
+describe('setSizeMark', () => {
+  it('sets a size mark on the selection', () => {
+    const next = setSizeMark(plain('hola mundo'), 0, 4, 'sizeH1')
+    expect(next).toEqual([
+      { text: 'hola', marks: ['sizeH1'] },
+      { text: ' mundo', marks: [] },
+    ])
+  })
+
+  it('setting a different size mark REPLACES the previous one (mutually exclusive)', () => {
+    const runs: RichText = [{ text: 'hola', marks: ['sizeH1'] }]
+    const next = setSizeMark(runs, 0, 4, 'sizeLegal')
+    expect(next).toEqual([{ text: 'hola', marks: ['sizeLegal'] }])
+  })
+
+  it('setting null clears the size mark without touching other marks', () => {
+    const runs: RichText = [{ text: 'hola', marks: ['sizeH1', 'bold'] }]
+    const next = setSizeMark(runs, 0, 4, null)
+    expect(next).toEqual([{ text: 'hola', marks: ['bold'] }])
+  })
+})
+
+describe('clearMarks', () => {
+  it('removes every mark from the range, leaving marks outside untouched', () => {
+    const runs: RichText = [{ text: 'hola mundo', marks: ['bold', 'colorAcento1', 'sizeH1'] }]
+    const next = clearMarks(runs, 5, 10)
+    expect(next).toEqual([
+      { text: 'hola ', marks: ['bold', 'colorAcento1', 'sizeH1'] },
+      { text: 'mundo', marks: [] },
+    ])
+  })
+
+  it('a collapsed or inverted range is a no-op', () => {
+    const runs = plain('hola')
+    expect(clearMarks(runs, 2, 2)).toBe(runs)
+    expect(clearMarks(runs, 3, 1)).toBe(runs)
   })
 })
 

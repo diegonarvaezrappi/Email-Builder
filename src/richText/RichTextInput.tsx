@@ -14,12 +14,14 @@
 // window.getSelection()/Range de verdad, se verifica a mano vía CDP.
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
-import type { ClipboardEvent, CSSProperties, KeyboardEvent } from 'react'
-import { rangeHasMark, setColorMark, toggleMark } from './edit'
+import type { ChangeEvent, ClipboardEvent, CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
+import { clearMarks, rangeHasMark, setColorMark, setSizeMark, toggleMark } from './edit'
 import { domToRichText } from './dom'
 import { renderRichText } from './render'
 import { getSelectionOffsets, setSelectionOffsets, type SelectionOffsets } from './selection'
-import type { RichText, RichTextColorMap, TextMark } from './model'
+import { SIZE_MARK_LABELS, type RichText, type RichTextColorMap, type SizeMark, type TextMark } from './model'
+
+const SIZE_MARK_OPTIONS = Object.keys(SIZE_MARK_LABELS) as SizeMark[]
 
 interface RichTextInputProps {
   value: RichText
@@ -126,10 +128,39 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
   const applyMark = (mark: TextMark) => withSelection((runs, sel) => toggleMark(runs, sel.start, sel.end, mark))
   const applyColor = (mark: TextMark) =>
     withSelection((runs, sel) => setColorMark(runs, sel.start, sel.end, rangeHasMark(runs, sel.start, sel.end, mark) ? null : mark))
+  const applySize = (mark: SizeMark | '') => withSelection((runs, sel) => setSizeMark(runs, sel.start, sel.end, mark || null))
+  const clearFormatting = () => withSelection((runs, sel) => clearMarks(runs, sel.start, sel.end))
 
   const hasSelection = !!selection && selection.start < selection.end
   const selectedRuns = hasSelection && ref.current ? domToRichText(ref.current, colors) : null
   const isActive = (mark: TextMark) => !!selectedRuns && !!selection && rangeHasMark(selectedRuns, selection.start, selection.end, mark)
+  const activeSize = SIZE_MARK_OPTIONS.find((mark) => isActive(mark)) ?? ''
+
+  // Double-clicking a word to select it can, in Chrome, make the native
+  // 'click' that's part of that same gesture land on a toolbar button
+  // instead of the text — the button was `disabled` when the mousedown
+  // happened (no selection yet) and only became clickable once the mouseup
+  // handler (refreshSelection, above) re-rendered the toolbar mid-gesture.
+  // Confirmed live via CDP: a real double-click on plain text produced a
+  // genuine 'click' event targeting the "Negrita" button with no mousedown
+  // of its own. A toolbar button should only ever fire from a deliberate
+  // press-then-release ON that same toolbar — not a click that materializes
+  // out of an unrelated text selection — so we arm on a real mousedown
+  // anywhere in the toolbar and swallow any click that shows up unarmed.
+  // `e.detail === 0` exempts keyboard-activated clicks (Enter/Space on a
+  // focused button never fire a mousedown at all).
+  const toolbarArmedRef = useRef(false)
+  const armToolbar = () => {
+    toolbarArmedRef.current = true
+  }
+  const guardToolbarClick = (e: ReactMouseEvent) => {
+    const armed = toolbarArmedRef.current
+    toolbarArmedRef.current = false
+    if (!armed && e.detail !== 0) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
 
   const markButton = (mark: TextMark, label: string, content: React.ReactNode) => (
     <button
@@ -147,7 +178,13 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
 
   return (
     <div className={`rich-text-input${disabled ? ' rich-text-input-disabled' : ''}`}>
-      <div className="rich-text-toolbar" role="toolbar" aria-label="Modificadores de texto">
+      <div
+        className="rich-text-toolbar"
+        role="toolbar"
+        aria-label="Modificadores de texto"
+        onMouseDownCapture={armToolbar}
+        onClickCapture={guardToolbarClick}
+      >
         {markButton('bold', 'Negrita', <b>B</b>)}
         {markButton('italic', 'Cursiva', <i>I</i>)}
         {markButton('strike', 'Tachado', <span style={{ textDecoration: 'line-through' }}>S</span>)}
@@ -159,6 +196,22 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
             X<sup>2</sup>
           </span>,
         )}
+        <span className="rich-text-toolbar-sep" />
+        <select
+          className="rich-text-size-select"
+          value={activeSize}
+          disabled={disabled || !hasSelection}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => applySize(e.target.value as SizeMark | '')}
+          aria-label="Tamaño de texto"
+          title="Tamaño de texto"
+        >
+          <option value="">Normal</option>
+          {SIZE_MARK_OPTIONS.map((mark) => (
+            <option key={mark} value={mark}>
+              {SIZE_MARK_LABELS[mark]}
+            </option>
+          ))}
+        </select>
         {showColors && <span className="rich-text-toolbar-sep" />}
         {showColors &&
           COLOR_SWATCHES.map(({ mark, label }) => (
@@ -174,6 +227,16 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
               style={{ '--swatch-color': colors[mark] } as CSSProperties}
             />
           ))}
+        <span className="rich-text-toolbar-sep" />
+        <button
+          type="button"
+          className="rich-text-clear-btn"
+          disabled={disabled || !hasSelection}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={clearFormatting}
+        >
+          Quitar formato
+        </button>
       </div>
       <div
         ref={ref}

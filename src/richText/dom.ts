@@ -7,7 +7,7 @@
 // sanitizador de HTML arbitrario.
 // ============================================================================
 import { mergeAdjacentRuns } from './edit'
-import type { RichText, RichTextColorMap, RichTextRun, TextMark } from './model'
+import { sizeMarkForPx, type RichText, type RichTextColorMap, type RichTextRun, type TextMark } from './model'
 
 /** Delega en el propio parser de color del navegador (vía CSSOM) para que
  *  "#FF441F" y el "rgb(255, 68, 31)" que el DOM devuelve al releer ese mismo
@@ -37,6 +37,10 @@ function marksFromSpanStyle(style: CSSStyleDeclaration, colors: RichTextColorMap
   if (style.color) {
     const colorMark = colorMarkForValue(colors, style.color)
     if (colorMark) marks.push(colorMark)
+  }
+  if (style.fontSize) {
+    const sizeMark = sizeMarkForPx(parseFloat(style.fontSize))
+    if (sizeMark) marks.push(sizeMark)
   }
   return marks
 }

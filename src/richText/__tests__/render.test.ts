@@ -34,6 +34,11 @@ describe('renderRichText', () => {
     expect(renderRichText(runs, LIQUID_COLOR_TOKENS)).toBe('<span style="color: {{color_acento1_mail_general}};">x</span>')
   })
 
+  it('a size mark becomes a font-size in px, taken from the master h1-h5/.legal desktop scale', () => {
+    const runs: RichText = [{ text: 'x', marks: ['sizeH1'] }]
+    expect(renderRichText(runs, HEX_COLORS)).toBe('<span style="font-size: 26px;">x</span>')
+  })
+
   it('multiple runs concatenate in order', () => {
     const runs: RichText = [
       { text: 'hola ', marks: [] },

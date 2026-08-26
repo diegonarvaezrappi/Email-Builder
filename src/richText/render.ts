@@ -13,7 +13,7 @@
 // ("BOLD: se agrega font-weight: bold; en el style", etc.).
 // ============================================================================
 import { escapeHtmlText } from '../template/htmlText'
-import type { RichText, RichTextColorMap, RichTextRun } from './model'
+import { SIZE_MARK_PX, SIZE_MARKS, type RichText, type RichTextColorMap, type RichTextRun, type SizeMark } from './model'
 
 export const LIQUID_COLOR_TOKENS: RichTextColorMap = {
   colorBase: '{{color_texto_mail_general}}',
@@ -32,6 +32,8 @@ function runStyle(run: RichTextRun, colors: RichTextColorMap): string {
   else if (run.marks.includes('colorAcento2')) styles.push(`color: ${colors.colorAcento2};`)
   if (run.marks.includes('bold')) styles.push('font-weight: bold;')
   if (run.marks.includes('italic')) styles.push('font-style: italic;')
+  const sizeMark = SIZE_MARKS.find((m) => run.marks.includes(m)) as SizeMark | undefined
+  if (sizeMark) styles.push(`font-size: ${SIZE_MARK_PX[sizeMark]}px;`)
   return styles.join(' ')
 }
 

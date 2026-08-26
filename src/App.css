@@ -535,6 +535,29 @@
   margin: 0 2px;
 }
 
+.rich-text-size-select {
+  font: inherit;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.rich-text-size-select:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.rich-text-toolbar button.rich-text-clear-btn {
+  width: auto;
+  height: 26px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
 .rich-text-swatch::after {
   content: '';
   width: 14px;
