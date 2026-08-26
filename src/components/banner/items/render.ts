@@ -21,18 +21,24 @@ import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { DARK_THEME_SLUGS } from '../../../themes/themes'
 import { renderCtaSnippet } from '../../cta/render'
 import type { BannerItemRenderCtx } from '../schema'
-import { loadBannerMoleculaFile } from './files'
+import { loadBannerMoleculaFile, loadContentMoleculaFile } from './files'
 import type {
   CreditosFields,
   CtaInternoFields,
+  FranjaLogoItem,
+  FranjaLogosFields,
+  FranjaLogosSize,
   ImgAutomaticaModuloFields,
   ImgAutomaticaMoleculaFields,
   ImgFijaFields,
   PromoFields,
+  SeparadorFields,
+  SeparadorSize,
   TagItem,
   TagsFields,
   TextoComplementarioFields,
   TextoMFields,
+  TextoPastillaFields,
   TextoXlFields,
 } from './schemas'
 import { ahoraSizing, liveTextSizing, sizingVars } from './sizing'
@@ -485,6 +491,121 @@ export function renderTagsSnippet(fields: TagsFields, _doc: EmailDocument, ctx: 
   const start = pills[0].index
   const end = pills[2].index + pills[2][0].length
   return raw.slice(0, start) + renderedPills + raw.slice(end)
+}
+
+// --- SEPARADOR ---------------------------------------------------------------
+// molecula_separadores.html: 3 <div> vacíos de altura fija, sin variables que
+// resolver — se recorta el literal exacto del tamaño elegido (throw si el
+// maestro ya no lo trae, mismo criterio que el resto del archivo). Las clases
+// CSS (.separador/.separador-M/.separador-S) ya viven en global-styles.html,
+// sincronizado aparte — nada que inyectar acá.
+
+const SEPARADOR_DIV_LITERAL: Record<SeparadorSize, string> = {
+  general: '<div class="separador"></div>',
+  M: '<div class="separador-M"></div>',
+  S: '<div class="separador-S"></div>',
+}
+
+export function renderSeparadorSnippet(fields: SeparadorFields): string {
+  const fileName = 'molecula_separadores.html'
+  const raw = stripComments(loadBannerMoleculaFile(fileName))
+  const literal = SEPARADOR_DIV_LITERAL[fields.size]
+  if (!raw.includes(literal)) {
+    throw new Error(`${fileName}: ya no contiene "${literal}" — revisar SEPARADOR en components/banner/items/render.ts`)
+  }
+  return literal
+}
+
+// --- TEXTO_PASTILLA ------------------------------------------------------------
+// molecula_texto_pastilla.html: 2 tablas alternas completas (pastilla a la
+// derecha / a la izquierda) — se elige UNA según pillPosition y se descarta la
+// otra entera (no hay una sola tabla con "order" CSS que reordenar). Los 2
+// textos son literales fijos del maestro, no Liquid.
+
+const TEXTO_PASTILLA_TABLE_RE = /<table[\s\S]*?<\/table>/g
+const TEXTO_PASTILLA_TEXT_LITERAL = '>Supermercados<'
+const TEXTO_PASTILLA_PILL_LITERAL = '>Martes<'
+
+export function renderTextoPastillaSnippet(fields: TextoPastillaFields): string {
+  const fileName = 'molecula_texto_pastilla.html'
+  const raw = stripComments(loadBannerMoleculaFile(fileName))
+  const tables = [...raw.matchAll(TEXTO_PASTILLA_TABLE_RE)]
+  if (tables.length !== 2) {
+    throw new Error(
+      `${fileName}: se esperaban 2 tablas (pastilla a la derecha / a la izquierda) y se encontraron ${tables.length} — revisar components/banner/items/render.ts`,
+    )
+  }
+  const table = fields.pillPosition === 'derecha' ? tables[0][0] : tables[1][0]
+  let html = substituteOnce(table, TEXTO_PASTILLA_TEXT_LITERAL, `>${escapeHtmlText(fields.text)}<`, fileName)
+  html = substituteOnce(html, TEXTO_PASTILLA_PILL_LITERAL, `>${escapeHtmlText(fields.pillText)}<`, fileName)
+  return html
+}
+
+// --- FRANJA_LOGOS --------------------------------------------------------------
+// content_moleculas/molecula_franja_logos.html: lista ABIERTA de logos (el
+// maestro dice literalmente "se agregan o quitan <td>"), a diferencia de TAGS
+// (fija en 1-3). Se toma la 1ra celda del archivo real como plantilla — es la
+// única de las 4 que el maestro trae SIN el `margin: {{alineado_molecular_mail_body}}`
+// extra que solo carga la última (asimetría real del archivo, confirmada por
+// diff) — y se clona una vez por cada logo del usuario.
+//
+// El fondo circular ("plate") detrás de cada logo es una imagen decorativa
+// fija del maestro (misma URL en las 4 celdas, sin variable de tema asociada)
+// — no se expone como campo, mismo criterio que otros fondos puramente
+// decorativos del repo (ver deals). Lo único editable por logo es su propia
+// imagen y su link.
+//
+// `{{alineado_molecular_mail_body}}` (el margin de la tabla contenedora) es la
+// variable de alineado de MÓDULO DE BODY que el plan de fase 2
+// (generalRender.ts / bodyMoleculeRegistry, ver
+// [[project_body_modules_plan_2026-08-26]]) todavía no resuelve — no es un
+// `_mail_general` de tema, así que dejarla tal cual dejaría Liquid crudo en el
+// HTML exportado de esta pieza de BANNER. Se fija centrada por defecto (mismo
+// criterio que ya usan las moléculas de banner vertical, `margin: 0 auto`),
+// documentado acá como una decisión temporal de esta fase, no del maestro.
+
+const FRANJA_LOGOS_CELL_RE = /<td style="padding:0px 2px; max-width: 80px;">[\s\S]*?<\/td>/g
+const FRANJA_LOGOS_LINK_PLACEHOLDER = 'LINKLOGO'
+const FRANJA_LOGOS_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'
+const FRANJA_LOGOS_TABLE_MARGIN_VAR = '{{alineado_molecular_mail_body}}'
+const FRANJA_LOGOS_DEFAULT_MARGIN = '0 auto'
+/** Mismas 3 medidas que content_moleculas/molecula_icono.html documenta para
+ *  role="molecula-icono{S,M,L}" — la fuente real de qué significa cada
+ *  tamaño, aunque franja_logos no las repita por nombre. */
+const FRANJA_LOGOS_WIDTH_PX: Record<FranjaLogosSize, number> = { S: 15, M: 25, L: 50 }
+
+function renderFranjaLogoCell(template: string, logo: FranjaLogoItem, widthPx: number, fileName: string): string {
+  let html = substituteOnce(template, FRANJA_LOGOS_LINK_PLACEHOLDER, escapeHtmlAttr(logo.link), fileName)
+  // El ancho vive 2 veces en la plantilla: el atributo `width="50"` del <img> y
+  // el `width:50px` de su propio style — ambos se reescriben al tamaño
+  // elegido (también cuando es "L", el mismo 50 de fábrica: no hace falta un
+  // branch aparte para el no-op). Tiene que ir ANTES de substituteImgSrcOrRemove:
+  // con imageUrl en blanco esa función borra el <img> ENTERO (atributos
+  // incluidos), así que estos 2 literales ya no existirían para anclar acá.
+  html = substituteOnce(html, 'width="50"', `width="${widthPx}"`, fileName)
+  html = substituteOnce(html, 'width:50px', `width:${widthPx}px`, fileName)
+  return substituteImgSrcOrRemove(html, FRANJA_LOGOS_ICON_PLACEHOLDER, logo.imageUrl, fileName)
+}
+
+export function renderFranjaLogosSnippet(fields: FranjaLogosFields): string {
+  const fileName = 'molecula_franja_logos.html'
+  const raw = stripComments(loadContentMoleculaFile(fileName))
+
+  const cells = [...raw.matchAll(FRANJA_LOGOS_CELL_RE)]
+  if (cells.length === 0) {
+    throw new Error(`${fileName}: no se encontró ninguna celda de logo — revisar components/banner/items/render.ts`)
+  }
+  const template = cells[0][0]
+  const widthPx = FRANJA_LOGOS_WIDTH_PX[fields.size]
+  const renderedCells = fields.logos.map((logo) => renderFranjaLogoCell(template, logo, widthPx, fileName)).join('\n')
+
+  const firstCell = cells[0]
+  const lastCell = cells[cells.length - 1]
+  const start = firstCell.index as number
+  const end = (lastCell.index as number) + lastCell[0].length
+  const withCells = raw.slice(0, start) + renderedCells + raw.slice(end)
+
+  return substituteAll(withCells, FRANJA_LOGOS_TABLE_MARGIN_VAR, FRANJA_LOGOS_DEFAULT_MARGIN, fileName)
 }
 
 // --- CTA_INTERNO -----------------------------------------------------------

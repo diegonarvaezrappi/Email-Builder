@@ -34,9 +34,11 @@ import type { ContentBlockType, EmailDocument, SlotName } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
 import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
+import type { ModuleItemType } from '../moduleItems/schemas'
 import { registry, SLOT_LABELS } from '../registry'
 import { getContentBlockDef } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
+import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import { assembleEmailHtml } from '../template/assemble'
 import {
   BLOCK_CLOSE_RE,
@@ -47,8 +49,11 @@ import {
   DEAL_CARD_OPEN_RE,
   DEAL_CARD_PIECE_CLOSE_RE,
   DEAL_CARD_PIECE_OPEN_RE,
+  MODULE_ITEM_CLOSE_RE,
+  MODULE_ITEM_OPEN_RE,
 } from '../template/contentBlocks'
 import { findDealsBlockByCard } from '../components/deals/blocks'
+import { findModuleBlockByItem } from '../components/contentModules/blocks'
 import { copyHtmlToClipboard, downloadHtml, downloadJson, downloadPng } from '../export/exporters'
 import { CodeView } from './CodeView'
 import { ImportPanel } from './ImportPanel'
@@ -57,11 +62,13 @@ import {
   isBlockSelected,
   isDealCardPieceSelected,
   isDealCardSelected,
+  isModuleItemSelected,
   isSlotSelected,
   selectBannerItem,
   selectBlock,
   selectDealCard,
   selectDealCardPiece,
+  selectModuleItem,
   selectSlot,
   type Selection,
 } from './selection'
@@ -74,6 +81,8 @@ import {
   BANNER_ITEM_REORDER_DRAG_TYPE,
   DEAL_CARD_REORDER_DRAG_TYPE,
   DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
+  MODULE_ITEM_DRAG_TYPE,
+  MODULE_ITEM_REORDER_DRAG_TYPE,
 } from './dragTypes'
 import { dropXInFrameSpace, dropYInFrameSpace, resolveDropIndex, resolveDropIndexReadingOrder, type DropRect } from './dropIndex'
 import {
@@ -106,6 +115,12 @@ interface ViewportProps {
    *  lienzo (oculta esa pieza puntual) — misma acción del store que ya usa
    *  ui/InspectorPanel.tsx (onChangeDealCard ahí), ver DealCardPiecePropertiesPanel. */
   onChangeDealCard: (cardId: string, fields: unknown) => void
+  /** Mismo espíritu que las de banner, un nivel más adentro (el área libre de
+   *  moléculas de un módulo de body, ej. TITLE) — ver bodyMoleculeRegistry.ts. */
+  onInsertModuleItem: (blockId: string, areaKey: string, type: ModuleItemType, atIndex: number) => void
+  onDuplicateModuleItem: (itemId: string) => void
+  onReorderModuleItem: (itemId: string, toIndex: number) => void
+  onRemoveModuleItem: (itemId: string) => void
   /** Pestaña "Importar" — reemplaza el documento entero por uno subido, ver
    *  ui/ImportPanel.tsx. Misma acción del store que "Deshacer" sabe revertir. */
   onImportDocument: (doc: EmailDocument) => void
@@ -161,6 +176,10 @@ export function Viewport({
   onRemoveDealCard,
   onReorderDealCardPiece,
   onChangeDealCard,
+  onInsertModuleItem,
+  onDuplicateModuleItem,
+  onReorderModuleItem,
+  onRemoveModuleItem,
   onImportDocument,
 }: ViewportProps) {
   const [tab, setTab] = useState<Tab>('preview')
@@ -332,6 +351,10 @@ export function Viewport({
             onRemoveDealCard={onRemoveDealCard}
             onReorderDealCardPiece={onReorderDealCardPiece}
             onChangeDealCard={onChangeDealCard}
+            onInsertModuleItem={onInsertModuleItem}
+            onDuplicateModuleItem={onDuplicateModuleItem}
+            onReorderModuleItem={onReorderModuleItem}
+            onRemoveModuleItem={onRemoveModuleItem}
           />
         )
       ) : tab === 'code' ? (
@@ -383,6 +406,10 @@ interface EmailFrameProps {
   onRemoveDealCard: (cardId: string) => void
   onReorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
   onChangeDealCard: (cardId: string, fields: unknown) => void
+  onInsertModuleItem: (blockId: string, areaKey: string, type: ModuleItemType, atIndex: number) => void
+  onDuplicateModuleItem: (itemId: string) => void
+  onReorderModuleItem: (itemId: string, toIndex: number) => void
+  onRemoveModuleItem: (itemId: string) => void
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -545,6 +572,12 @@ const measureDealCards = (root: Document): MarkedBlockRect[] =>
 const measureDealCardPieces = (root: Document): MarkedBlockRect[] =>
   measureMarkedBlocks(root, DEAL_CARD_PIECE_OPEN_RE, DEAL_CARD_PIECE_CLOSE_RE)
 
+/** `type` acá es el id del BLOQUE dueño (TITLE, etc.), no un tipo de molécula
+ *  — mismo shape que measureDealCards (ver wrapWithModuleItemMarkers en
+ *  template/contentBlocks.ts). Sin merge por id: cada molécula es un
+ *  fragmento contiguo único, igual que una pieza de banner. */
+const measureModuleItems = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, MODULE_ITEM_OPEN_RE, MODULE_ITEM_CLOSE_RE)
+
 /**
  * El email completo en un iframe. Va con `allow-same-origin` (sin
  * `allow-scripts`, así que el HTML del mail no ejecuta nada) para poder medir
@@ -574,6 +607,10 @@ function EmailFrame({
   onRemoveDealCard,
   onReorderDealCardPiece,
   onChangeDealCard,
+  onInsertModuleItem,
+  onDuplicateModuleItem,
+  onReorderModuleItem,
+  onRemoveModuleItem,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
@@ -583,6 +620,7 @@ function EmailFrame({
   const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
   const [dealCardRects, setDealCardRects] = useState<MarkedBlockRect[]>([])
   const [dealCardPieceRects, setDealCardPieceRects] = useState<MarkedBlockRect[]>([])
+  const [moduleItemRects, setModuleItemRects] = useState<MarkedBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
 
   const syncFrame = useCallback(() => {
@@ -595,6 +633,7 @@ function EmailFrame({
     setBannerItemRects(measureBannerItems(root))
     setDealCardRects(measureDealCards(root))
     setDealCardPieceRects(measureDealCardPieces(root))
+    setModuleItemRects(measureModuleItems(root))
   }, [clientScheme])
 
   // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
@@ -668,6 +707,43 @@ function EmailFrame({
     return resolveDropIndex(order, rectsById, dropY)
   }
 
+  /**
+   * Índice de destino dentro del área libre de UN bloque — las moléculas se
+   * apilan en una sola columna, sin ambigüedad de X (mismo criterio que
+   * resolveIndexForDealCardPieceDrop). La usan tanto el reordenamiento de una
+   * molécula existente (el bloque/área salen de buscarla, ver más abajo) como
+   * la inserción de una nueva desde el catálogo (el bloque/área salen de
+   * resolveModuleBlockForDrop).
+   */
+  const resolveIndexForModuleItemArea = (e: React.DragEvent, blockId: string, areaKey: string): number => {
+    const block = contenidos.find((b) => b.id === blockId)
+    if (!block || !frameElRef.current) return 0
+    const items = (block.fields as { items?: { id: string; areaKey: string }[] }).items ?? []
+    const order = items.filter((it) => it.areaKey === areaKey).map((it) => it.id)
+    const own = new Set(order)
+    const rectsById = new Map(moduleItemRects.filter((r) => own.has(r.id)).map((r) => [r.id, r]))
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    return resolveDropIndex(order, rectsById, dropY)
+  }
+
+  /**
+   * Bloque+área de destino para una molécula NUEVA arrastrada desde el
+   * catálogo — a diferencia del reorden, no hay item existente del que deducir
+   * el bloque dueño: se detecta geométricamente cuál blockRect (de los que usan
+   * el motor de módulos, ver contentBlockRegistry.ts `usesModuleItems`)
+   * contiene el cursor. `'main'` es la convención de área única de un módulo
+   * de body de una sola zona (hoy TITLE) — un futuro módulo con más de un
+   * área necesitaría detectar CUÁL geométricamente; no hace falta todavía.
+   */
+  const resolveModuleBlockForDrop = (e: React.DragEvent): { blockId: string; areaKey: string } | null => {
+    if (!frameElRef.current) return null
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    const target = blockRects.find(
+      (r) => getContentBlockDef(r.type)?.usesModuleItems && dropY >= r.top && dropY <= r.top + r.height,
+    )
+    return target ? { blockId: target.id, areaKey: 'main' } : null
+  }
+
   return (
     <div className="viewport-canvas">
       <div
@@ -689,12 +765,14 @@ function EmailFrame({
             BANNER_ITEM_REORDER_DRAG_TYPE,
             DEAL_CARD_REORDER_DRAG_TYPE,
             DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
+            MODULE_ITEM_REORDER_DRAG_TYPE,
           ]
           const allTypes = [
             SLOT_DRAG_TYPE,
             CONTENT_BLOCK_DRAG_TYPE,
             BANNER_TYPE_DRAG_TYPE,
             BANNER_ITEM_DRAG_TYPE,
+            MODULE_ITEM_DRAG_TYPE,
             ...reorderTypes,
           ]
           if (allTypes.some((t) => types.includes(t))) {
@@ -763,6 +841,32 @@ function EmailFrame({
             const cardId = reorderPieceRaw.slice(0, sep)
             const pieceType = reorderPieceRaw.slice(sep + 1) as DealCardPieceType
             onReorderDealCardPiece(cardId, pieceType, resolveIndexForDealCardPieceDrop(e, cardId))
+            return
+          }
+
+          const newModuleItemType = e.dataTransfer.getData(MODULE_ITEM_DRAG_TYPE)
+          if (newModuleItemType) {
+            e.preventDefault()
+            const target = resolveModuleBlockForDrop(e)
+            if (target) {
+              onInsertModuleItem(
+                target.blockId,
+                target.areaKey,
+                newModuleItemType as ModuleItemType,
+                resolveIndexForModuleItemArea(e, target.blockId, target.areaKey),
+              )
+            }
+            return
+          }
+
+          const reorderModuleItemId = e.dataTransfer.getData(MODULE_ITEM_REORDER_DRAG_TYPE)
+          if (reorderModuleItemId) {
+            e.preventDefault()
+            const found = findModuleBlockByItem(contenidos, reorderModuleItemId)
+            const item = found?.items.find((it) => it.id === reorderModuleItemId)
+            if (found && item) {
+              onReorderModuleItem(reorderModuleItemId, resolveIndexForModuleItemArea(e, found.block.id, item.areaKey))
+            }
           }
         }}
       >
@@ -1006,6 +1110,86 @@ function EmailFrame({
             </div>
           )
         })}
+        {/* Moléculas del área libre de un módulo de body (ej. TITLE) —
+            DESPUÉS de blockRects por el mismo motivo que dealCardRects/piezas
+            de banner: el overlay del bloque dueño las contiene geométricamente
+            y taparía sus clicks. Mismo tratamiento visual que bannerItemRects
+            (badge + arrastre + duplicar + eliminar): a diferencia de las 7
+            piezas fijas de un deal, acá SÍ hay duplicar — es una lista libre,
+            no slots fijos. */}
+        {moduleItemRects.map((rect) => {
+          const { id, top, left, width, height: h } = rect
+          const found = findModuleBlockByItem(contenidos, id)
+          const item = found?.items.find((it) => it.id === id)
+          const itemDef = item ? getModuleItemDef(item.type) : undefined
+          return (
+            <div
+              key={id}
+              className={`slot-hit block-hit${isModuleItemSelected(selected, id) ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(MODULE_ITEM_REORDER_DRAG_TYPE, id)
+                e.dataTransfer.effectAllowed = 'move'
+              }}
+            >
+              <button
+                type="button"
+                className="slot-select"
+                aria-label={`Seleccionar ${itemDef?.label ?? item?.type ?? id}`}
+                aria-pressed={isModuleItemSelected(selected, id)}
+                onClick={() => onSelect(selectModuleItem(id))}
+              >
+                <span className="slot-badge">{itemDef?.label ?? item?.type}</span>
+              </button>
+              <button
+                type="button"
+                className="slot-duplicate"
+                aria-label="Duplicar"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDuplicateModuleItem(id)
+                }}
+              >
+                ⧉
+              </button>
+              <button
+                type="button"
+                className="slot-delete"
+                aria-label="Eliminar"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemoveModuleItem(id)
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
+        {/* Badge del bloque redibujado al final para todo bloque que use el
+            motor de módulos (ej. TITLE) — sus propias moléculas lo cubren por
+            completo (la 1ra arranca justo en la esquina del bloque), mismo
+            motivo/mismo patrón que el redibujado de DEALS/BANNER de acá abajo. */}
+        {blockRects
+          .filter((r) => getContentBlockDef(r.type)?.usesModuleItems)
+          .map(({ id, type, top, left, width, height: h }) => (
+            <div
+              key={`${id}-controls`}
+              className={`slot-hit-controls${isBlockSelected(selected, id) ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+            >
+              <button
+                type="button"
+                className="slot-badge slot-badge-button"
+                aria-label={`Seleccionar ${getContentBlockDef(type)?.label ?? type}`}
+                aria-pressed={isBlockSelected(selected, id)}
+                onClick={() => onSelect(selectBlock(id))}
+              >
+                {getContentBlockDef(type)?.label ?? type}
+              </button>
+            </div>
+          ))}
         {/* Y el badge del bloque DEALS redibujado al final, por la misma razón
             que el del BANNER más abajo: sus tarjetas lo cubren por completo (la
             primera arranca justo en la esquina del bloque), así que sin esta

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { defaultHeaderFields } from '../components/header/schema'
 import { defaultBannerFields } from '../components/banner/schema'
 import { defaultGlobalFields } from '../global/schema'
-import { bannerBackgroundEnabledForTheme, ctaStyleForTheme, headerPatchForTheme } from '../themeDefaults'
+import { bannerBackgroundEnabledForTheme, ctaStyleForTheme, headerPatchForTheme, moduleBackgroundEnabledForTheme } from '../themeDefaults'
 
 // prevTema=null en la mayoría de estos tests = "primer render, sin tema
 // anterior" (mismo criterio que el chequeo original contra el default). Los
@@ -190,5 +190,39 @@ describe('bannerBackgroundEnabledForTheme', () => {
   it('does not re-disable a manually-enabled pastel background on an unrelated theme change between 2 pastel themes', () => {
     const bannerManuallyEnabled = { ...defaultBannerFields, backgroundEnabled: true }
     expect(bannerBackgroundEnabledForTheme(bannerManuallyEnabled, 'rosa100', 'beige100')).toBeNull()
+  })
+})
+
+describe('moduleBackgroundEnabledForTheme', () => {
+  // Dirección OPUESTA a bannerBackgroundEnabledForTheme: acá el default es
+  // `false` en 9 temas y `true` SOLO en Pro/ProBlack (modulo-titulo.html:
+  // "Viene por defecto sin fondo, solo viene con fondo por defecto para el
+  // tema Pro y ProBlack").
+  it('turns it on while entering pro/problack from the schema default (false)', () => {
+    expect(moduleBackgroundEnabledForTheme(false, 'pro', null)).toBe(true)
+    expect(moduleBackgroundEnabledForTheme(false, 'problack', null)).toBe(true)
+  })
+
+  it('returns null for every non-Pro/ProBlack theme — false is already the schema default', () => {
+    expect(moduleBackgroundEnabledForTheme(false, 'beige100', null)).toBeNull()
+    expect(moduleBackgroundEnabledForTheme(false, 'darkturbo', null)).toBeNull()
+  })
+
+  it('reverts pro -> beige100 back to false, since the user never touched the checkbox', () => {
+    const afterPro = moduleBackgroundEnabledForTheme(false, 'pro', null)
+    expect(afterPro).toBe(true)
+    expect(moduleBackgroundEnabledForTheme(afterPro!, 'beige100', 'pro')).toBe(false)
+  })
+
+  it('does not revert a manually-enabled background when leaving a non-premium theme', () => {
+    // Usuario prendió el fondo a mano estando en beige100 (donde el default
+    // es false) — moverse a otro tema no-premium no debe apagarlo de nuevo.
+    expect(moduleBackgroundEnabledForTheme(true, 'darkturbo', 'beige100')).toBeNull()
+  })
+
+  it('does not re-enable a manually-disabled background on pro itself', () => {
+    // El usuario apagó el checkbox a mano estando ya en Pro (donde el default
+    // es true) — no debe volver a prenderse solo por seguir en el mismo tema.
+    expect(moduleBackgroundEnabledForTheme(false, 'pro', 'pro')).toBeNull()
   })
 })

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { colorFooterForTheme, groupedThemes, parseThemes, PASTEL_THEME_SLUGS, THEME_SLUGS, THEMES, themeLabel, themeVars } from '../themes'
+import {
+  colorFooterForTheme,
+  groupedThemes,
+  MODULE_BACKGROUND_VAR_NAMES,
+  moduleBackgroundVarsForTheme,
+  parseThemes,
+  PASTEL_THEME_SLUGS,
+  THEME_SLUGS,
+  THEMES,
+  themeLabel,
+  themeVars,
+} from '../themes'
 
 describe('parseThemes', () => {
   it('pairs each theme branch with the color_footer_mail_general inside it', () => {
@@ -114,6 +125,63 @@ describe('themeVars', () => {
     }
     // Pro/ProBlack usan otra corona (la dorada), los otros 9 comparten una.
     expect(themeVars('pro').coronapro_mail_body).not.toBe(themeVars('beige100').coronapro_mail_body)
+  })
+
+  it('captures the 2 link-interno vars (no hyphen, no {% if %} around them) in every theme', () => {
+    for (const slug of THEME_SLUGS) {
+      const vars = themeVars(slug)
+      expect(vars.bg_solid_generico50_mail_body, slug).toMatch(/^rgba\(/)
+      expect(vars.icon_link_generico_mail_body, slug).toMatch(/^https:\/\//)
+    }
+  })
+
+  it('captures the "sin fondo" (off) variant of the 3 body_container_background_* vars — see the long comment on EXTRA_THEME_VAR_NAMES for why not the "con fondo" one', () => {
+    for (const slug of THEME_SLUGS) {
+      const vars = themeVars(slug)
+      // El maestro asigna el radius/padding "con fondo" primero y lo PISA
+      // dentro de `{% if body_container_background == 'Sinfondo' %}` sin
+      // `{% else %}` — el parseo de acá no entiende `{% if %}`, así que se
+      // queda con el último assign leído, que siempre es el "0".
+      expect(vars.body_container_background_radius, slug).toBe('0px')
+      expect(vars.body_container_background_padding, slug).toBe('0px')
+      expect(vars.body_container_background_border, slug).toMatch(/^ 0px solid/)
+    }
+  })
+})
+
+describe('moduleBackgroundVarsForTheme', () => {
+  it('exposes BOTH variants of the 4 vars for every theme, "on" different from "off"', () => {
+    for (const slug of THEME_SLUGS) {
+      const { on, off } = moduleBackgroundVarsForTheme(slug)
+      for (const name of MODULE_BACKGROUND_VAR_NAMES) {
+        expect(on[name], `${slug}.on.${name}`).toBeTruthy()
+        expect(off[name], `${slug}.off.${name}`).toBeTruthy()
+        expect(on[name], slug).not.toBe(off[name])
+      }
+    }
+  })
+
+  it('"off" matches what themeVars() already returns for these names (last-write-wins)', () => {
+    for (const slug of THEME_SLUGS) {
+      const { off } = moduleBackgroundVarsForTheme(slug)
+      const vars = themeVars(slug)
+      for (const name of MODULE_BACKGROUND_VAR_NAMES) {
+        expect(vars[name], `${slug}.${name}`).toBe(off[name])
+      }
+    }
+  })
+
+  it('"on" is the real theme color/radius/padding/border, e.g. beige100', () => {
+    const { on, off } = moduleBackgroundVarsForTheme('beige100')
+    expect(on.bg_contenedor1_mail_general).toBe('rgba(242,211,174,0.5)')
+    expect(on.body_container_background_radius).toBe(' 16px')
+    expect(on.body_container_background_padding).toBe('10px')
+    expect(off.bg_contenedor1_mail_general).toBe('rgba(0,0,0,0.0)')
+    expect(off.body_container_background_radius).toBe('0px')
+  })
+
+  it('returns empty maps for an unknown theme', () => {
+    expect(moduleBackgroundVarsForTheme('no-existe')).toEqual({ on: {}, off: {} })
   })
 })
 

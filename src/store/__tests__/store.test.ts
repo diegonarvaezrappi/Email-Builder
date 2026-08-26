@@ -3,8 +3,10 @@ import { useBuilder } from '../store'
 import { defaultCtaFields } from '../../components/cta/schema'
 import { defaultTagsFields } from '../../components/banner/items/schemas'
 import { defaultDealCardFields, type DealCardFields } from '../../components/deals/schema'
+import { defaultGeneralModuleFields } from '../../components/contentModules/generalFields'
 import { richTextFromPlain } from '../../richText/model'
-import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock } from '../../model'
+import type { ModuleItem } from '../../moduleItems/schemas'
+import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, TitleBlock } from '../../model'
 
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
@@ -450,6 +452,28 @@ function dealCardIds(blockIndex = 0): string[] {
   return block.type === 'DEALS' ? block.fields.items.map((c) => c.id) : []
 }
 
+const moduleItem = (id: string, areaKey = 'main', text = id): ModuleItem => ({
+  id,
+  areaKey,
+  type: 'TITULO_TEXTO',
+  fields: { text },
+})
+
+const titleBlock = (id: string, items: ModuleItem[]): TitleBlock => ({
+  id,
+  type: 'TITLE',
+  fields: { ...defaultGeneralModuleFields, items },
+})
+
+function setTitleBlock(items: ModuleItem[], blockId = 'title-1') {
+  useBuilder.setState((s) => ({ document: { ...s.document, contenidos: [titleBlock(blockId, items)] } }))
+}
+
+function moduleItemIds(blockIndex = 0): string[] {
+  const block = useBuilder.getState().document.contenidos[blockIndex]
+  return block.type === 'TITLE' ? block.fields.items.map((it) => it.id) : []
+}
+
 describe('insertDealCard', () => {
   it('inserta una tarjeta con sus campos por defecto en el índice pedido', () => {
     // Un bloque DEALS es una fila de hasta 2 (DEALS_MAX_CARDS) — se arranca
@@ -585,6 +609,114 @@ describe('updateDealCardFields', () => {
     useBuilder.getState().updateDealCardFields('x', { ...defaultDealCardFields, copy1: 'Editada' })
     const block = useBuilder.getState().document.contenidos[1] as DealsBlock
     expect(block.fields.items[0].fields.copy1).toBe('Editada')
+    expect(useBuilder.getState().document.contenidos[0]).toEqual(ctaBlock('cta-1'))
+  })
+})
+
+describe('insertModuleItem', () => {
+  it('inserta una molécula con sus campos por defecto en el índice pedido, dentro del área indicada', () => {
+    setTitleBlock([moduleItem('a')])
+    useBuilder.getState().insertModuleItem('title-1', 'main', 'SUBTITULO_TEXTO', 0)
+    const ids = moduleItemIds()
+    expect(ids).toHaveLength(2)
+    expect(ids[1]).toBe('a')
+    const block = useBuilder.getState().document.contenidos[0] as TitleBlock
+    expect(block.fields.items[0].type).toBe('SUBTITULO_TEXTO')
+  })
+
+  it('acota atIndex a los items de la MISMA área, sin tocar los de otra', () => {
+    setTitleBlock([moduleItem('above-1', 'above'), moduleItem('main-1', 'main')])
+    useBuilder.getState().insertModuleItem('title-1', 'main', 'SEPARADOR_LINEA', 0)
+    const block = useBuilder.getState().document.contenidos[0] as TitleBlock
+    // 'above-1' sigue siendo el 1ro del array entero (no lo desplazó la
+    // inserción en 'main'); dentro de 'main', el nuevo item queda primero.
+    expect(block.fields.items.map((it) => it.id)).toEqual(['above-1', expect.any(String), 'main-1'])
+    expect(block.fields.items[1].areaKey).toBe('main')
+  })
+
+  it('no hace nada si el bloque no existe o no usa el motor de módulos', () => {
+    setContenidos([ctaBlock('cta-1')])
+    useBuilder.getState().insertModuleItem('cta-1', 'main', 'SUBTITULO_TEXTO', 0)
+    expect(useBuilder.getState().document.contenidos).toEqual([ctaBlock('cta-1')])
+  })
+})
+
+describe('duplicateModuleItem', () => {
+  it('copia la molécula justo después, con un id nuevo y los mismos campos', () => {
+    setTitleBlock([moduleItem('a', 'main', 'Mi título')])
+    useBuilder.getState().duplicateModuleItem('a')
+    const ids = moduleItemIds()
+    expect(ids).toHaveLength(2)
+    expect(ids[0]).toBe('a')
+    expect(ids[1]).not.toBe('a')
+    const block = useBuilder.getState().document.contenidos[0] as TitleBlock
+    expect(block.fields.items[1].fields).toEqual({ text: 'Mi título' })
+  })
+
+  it('ignora un itemId que no existe', () => {
+    setTitleBlock([moduleItem('a')])
+    useBuilder.getState().duplicateModuleItem('zzz')
+    expect(moduleItemIds()).toEqual(['a'])
+  })
+})
+
+describe('reorderModuleItem', () => {
+  it('mueve una molécula hacia adelante (toIndex contra el array ANTES de sacarla)', () => {
+    setTitleBlock([moduleItem('a'), moduleItem('b'), moduleItem('c')])
+    useBuilder.getState().reorderModuleItem('a', 2)
+    expect(moduleItemIds()).toEqual(['b', 'a', 'c'])
+  })
+
+  it('mueve una molécula hacia atrás', () => {
+    setTitleBlock([moduleItem('a'), moduleItem('b'), moduleItem('c')])
+    useBuilder.getState().reorderModuleItem('c', 0)
+    expect(moduleItemIds()).toEqual(['c', 'a', 'b'])
+  })
+
+  it('acota el reordenamiento a los items de la MISMA área que el arrastrado', () => {
+    setTitleBlock([moduleItem('above-1', 'above'), moduleItem('main-1', 'main'), moduleItem('main-2', 'main')])
+    useBuilder.getState().reorderModuleItem('main-2', 0)
+    expect(moduleItemIds()).toEqual(['above-1', 'main-2', 'main-1'])
+  })
+
+  it('ignora un id que no existe', () => {
+    setTitleBlock([moduleItem('a'), moduleItem('b')])
+    useBuilder.getState().reorderModuleItem('zzz', 0)
+    expect(moduleItemIds()).toEqual(['a', 'b'])
+  })
+})
+
+describe('removeModuleItem', () => {
+  it('elimina solo la molécula apuntada', () => {
+    setTitleBlock([moduleItem('a'), moduleItem('b'), moduleItem('c')])
+    useBuilder.getState().removeModuleItem('b')
+    expect(moduleItemIds()).toEqual(['a', 'c'])
+  })
+
+  it('puede dejar el área/bloque sin moléculas (el bloque no se borra solo) — "solo título" es un caso real', () => {
+    setTitleBlock([moduleItem('a')])
+    useBuilder.getState().removeModuleItem('a')
+    expect(moduleItemIds()).toEqual([])
+    expect(useBuilder.getState().document.contenidos).toHaveLength(1)
+  })
+})
+
+describe('updateModuleItemFields', () => {
+  it('actualiza solo la molécula apuntada, dejando las otras intactas', () => {
+    setTitleBlock([moduleItem('a', 'main', 'A original'), moduleItem('b', 'main', 'B original')])
+    useBuilder.getState().updateModuleItemFields('a', { text: 'A editada' })
+    const block = useBuilder.getState().document.contenidos[0] as TitleBlock
+    expect(block.fields.items[0].fields).toEqual({ text: 'A editada' })
+    expect(block.fields.items[1].fields).toEqual({ text: 'B original' })
+  })
+
+  it('encuentra el item aunque el bloque TITLE no sea el primero de contenidos', () => {
+    useBuilder.setState((s) => ({
+      document: { ...s.document, contenidos: [ctaBlock('cta-1'), titleBlock('title-2', [moduleItem('x')])] },
+    }))
+    useBuilder.getState().updateModuleItemFields('x', { text: 'Editada' })
+    const block = useBuilder.getState().document.contenidos[1] as TitleBlock
+    expect(block.fields.items[0].fields).toEqual({ text: 'Editada' })
     expect(useBuilder.getState().document.contenidos[0]).toEqual(ctaBlock('cta-1'))
   })
 })

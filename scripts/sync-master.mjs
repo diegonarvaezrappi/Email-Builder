@@ -16,16 +16,17 @@
 //    `color_footer_mail_general` de cada uno — ver src/themes/themes.ts. Así
 //    los temas siguen viviendo SOLO en el repo (Regla de oro #4), y si David
 //    agrega un tema nuevo la app lo levanta sin tocar código.
-// 3b. Copia NN-components/banners/big-banner-{horizontal,vertical}.html + 17
-//    de los 22 archivos de banners/banner_moleculas/ → src/assets/templates/banners/,
+// 3b. Copia NN-components/banners/big-banner-{horizontal,vertical}.html + 19
+//    de los 23 archivos de banners/banner_moleculas/ → src/assets/templates/banners/,
 //    preservando la subcarpeta — ver src/components/banner/shell.ts (que
 //    parsea los 2 shells) y src/components/banner/items/render.ts (que carga
-//    las 17 piezas vía import.meta.glob). Los 4 archivos excluidos a
+//    las 19 piezas vía import.meta.glob). Los 4 archivos excluidos a
 //    propósito (2 duplicados byte a byte, 2 que son solo un content-block de
-//    CTA) están documentados junto a BANNER_MOLECULA_FILES más abajo; el 5to
-//    archivo real (molecula_texto_pastilla.html) queda sin sincronizar porque
-//    todavía no se decidió si agregarlo como pieza — el warning de "archivo
-//    nuevo sin sincronizar" más abajo lo recuerda en cada corrida.
+//    CTA) están documentados junto a BANNER_MOLECULA_FILES más abajo.
+//    molecula_separadores.html y molecula_texto_pastilla.html (los 2 que hasta
+//    la fase 1 del plan de nuevos módulos de contenido quedaban sin decisión,
+//    ver [[project_body_modules_plan_2026-08-26]]) ya se sincronizan: la app
+//    los usa como las piezas SEPARADOR y TEXTO_PASTILLA del banner.
 // 3c. Copia NN-components/NN_content-modules/deals/deal_columnas.html →
 //    src/assets/templates/deals/ — ver src/components/deals/render.ts, que lo
 //    carga y arma con él los pares de tarjetas de deal. Los 2 archivos
@@ -35,6 +36,15 @@
 //    modelan otra cosa (un deal único de motor de recomendación, con variables
 //    smalldeal_*/deal_recommendation_* y legales por país), no el par de
 //    tarjetas de copy manual que implementa la app.
+// 3d. Copia NN-components/NN_content-modules/content_moleculas/molecula_franja_logos.html
+//    → src/assets/templates/content-modules/content_moleculas/ — ver
+//    src/components/banner/items/render.ts, FRANJA_LOGOS: es una "molécula
+//    compartida" banner+body (pedido explícito del usuario, ver la sección B
+//    del plan de fase 1), así que su primer consumidor real es una pieza de
+//    banner, aunque el archivo maestro viva en content-modules/. Los otros 15
+//    archivos de esa carpeta quedan LISTADOS (para no disparar el warning de
+//    "archivo nuevo sin sincronizar") pero SIN COPIAR — son la materia prima
+//    de los módulos de body de fases futuras del mismo plan.
 // 4. VALIDA el contrato antes de escribir nada:
 //    - Los marcadores `<!-- FOOTER -->` y `<!-- CIERRES -->` (los slots
 //      simples ya implementados) deben aparecer EXACTAMENTE una vez cada uno
@@ -224,6 +234,16 @@ const CONTENT_MODULES_DIR = CONTENT_MODULES_SUBDIR_NAME && path.join(COMPONENTS_
 /** `deals/` tampoco lleva prefijo numérico dentro de NN_content-modules/ — nombre fijo. */
 const DEALS_DIR_NAME = 'deals'
 const DEALS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, DEALS_DIR_NAME)
+/** `content_moleculas/` tampoco lleva prefijo numérico — nombre fijo (mismo
+ *  criterio que banner_moleculas/ y deals/). */
+const CONTENT_MOLECULAS_DIR_NAME = 'content_moleculas'
+const CONTENT_MOLECULAS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, CONTENT_MOLECULAS_DIR_NAME)
+/** `title/` tampoco lleva prefijo numérico — nombre fijo, mismo criterio.
+ *  Fase 2 del plan de nuevos módulos de contenido — ver
+ *  src/components/title/render.ts. */
+const TITLE_DIR_NAME = 'title'
+const TITLE_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, TITLE_DIR_NAME)
+const TITLE_FILE = 'modulo-titulo.html'
 
 /**
  * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
@@ -265,9 +285,8 @@ const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/g
 const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
 
 /**
- * Las 17 piezas que la app importa de banner_moleculas/ (22 archivos reales).
- * Quedan FUERA a propósito 4 de los 22 (+ 1 más, ver nota arriba sobre
- * molecula_texto_pastilla.html):
+ * Las 19 piezas que la app importa de banner_moleculas/ (23 archivos reales).
+ * Quedan FUERA a propósito 4 de los 23:
  *  - molecula_texto_M_horizontal.html / _vertical.html: duplicados byte a
  *    byte de molecula_textom_*, marcados como "posible duplicado sin
  *    resolver" en 05-docs/INDICE-DE-COMPONENTES.md. Sincronizar los 2 pares
@@ -283,6 +302,12 @@ const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
  * lo promovió de "modulo" a "molecula" (ver 06-examples/template_maestro_original.html).
  * Nuevo contenido real: `<h2 style="color: {{color_texto_mail_general}} ">`,
  * ya no hardcodeado — ver components/banner/items/render.ts.
+ *
+ * molecula_separadores.html (pieza SEPARADOR) y molecula_texto_pastilla.html
+ * (pieza TEXTO_PASTILLA) se sumaron en la fase 1 del plan de nuevos módulos de
+ * contenido (ver [[project_body_modules_plan_2026-08-26]]) — hasta entonces
+ * quedaban sin sincronizar (ver el warning de "archivo nuevo" de más abajo,
+ * que hasta esa fase los señalaba en cada corrida).
  */
 const BANNER_MOLECULA_FILES = [
   'molecula_promo_horizontal.html',
@@ -302,6 +327,8 @@ const BANNER_MOLECULA_FILES = [
   'modulo_img_automatica_horizontal.html',
   'modulo_tags_horizontal.html',
   'modulo_tags_vertical.html',
+  'molecula_separadores.html',
+  'molecula_texto_pastilla.html',
 ]
 
 /** No se copian, solo se validan: si el maestro cambia el cta_alineado fijo
@@ -330,9 +357,89 @@ const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
  *  regex real de la app) para que este script no dependa de src/. */
 const TAG_PILL_DISCRIMINATOR = '> tag 1 </h4>'
 
+/** Los 3 `<div>` de tamaño fijo que components/banner/items/render.ts (pieza
+ *  SEPARADOR) recorta literalmente de molecula_separadores.html — cada uno
+ *  debe aparecer EXACTAMENTE 1 vez (verificado). */
+const SEPARADOR_DIV_LITERALS = ['<div class="separador"></div>', '<div class="separador-M"></div>', '<div class="separador-S"></div>']
+
+/** molecula_texto_pastilla.html (pieza TEXTO_PASTILLA): 2 tablas alternas
+ *  (pastilla a la derecha / a la izquierda) — components/banner/items/render.ts
+ *  elige UNA según `pillPosition` y sustituye estos 2 textos literales dentro
+ *  de ella. Cada literal debe aparecer 2 veces (una por tabla). */
+const TEXTO_PASTILLA_TABLE_COUNT = 2
+const TEXTO_PASTILLA_TEXT_LITERALS = { '>Supermercados<': 2, '>Martes<': 2 }
+
 /** El único archivo de deals/ que la app usa (ver la nota 3c del encabezado
  *  sobre los 2 .backup.html excluidos). */
 const DEALS_FILE = 'deal_columnas.html'
+
+/**
+ * content_moleculas/ (16 archivos reales) — se COPIAN molecula_franja_logos.html
+ * (fase 1, ver la nota 3d del encabezado: primer consumidor real es la pieza
+ * FRANJA_LOGOS del banner) y molecula_separador_s.html (fase 2: la molécula
+ * SEPARADOR_LINEA del Título — ver bodyMoleculeRegistry.ts, moduleItems/render.ts.
+ * NO confundir con molecula_separadores.html: esa es el espaciador invisible
+ * S/M/general que ya usa la pieza SEPARADOR del banner desde fase 1; esta es
+ * una línea decorativa con `role="molecula-separador"`, un archivo distinto).
+ * El resto queda LISTADO pero SIN COPIAR: son la materia prima de los módulos
+ * de body de fases futuras del plan de nuevos módulos de contenido (ver
+ * [[project_body_modules_plan_2026-08-26]]) — listarlos ya evita el warning de
+ * "archivo nuevo sin sincronizar" antes de que exista el código que los
+ * consuma (mismo criterio que BANNER_MOLECULA_KNOWN_EXTRA_FILES).
+ */
+const CONTENT_MOLECULAS_FILES_TO_COPY = ['molecula_franja_logos.html', 'molecula_separador_s.html']
+const CONTENT_MOLECULAS_KNOWN_PENDING_FILES = [
+  'modificadores-texto.html',
+  'molecula_bullet_icono_l.html',
+  'molecula_bullet_icono_m.html',
+  'molecula_bullet_icono_s.html',
+  'molecula_bullet_numerado.html',
+  'molecula_icono.html',
+  'molecula_img_automatica.html',
+  'molecula_link_interno.html',
+  'molecula_separadores.html',
+  'molecula_tag_basico.html',
+  'molecula_tag_icono.html',
+  'molecula_tag_promo.html',
+  'molecula_tag_verde.html',
+  'molecula_texto_pastilla.html',
+]
+
+/** `molecula_franja_logos.html`: 1 sola `<td>` de logo, clonada 4 veces en el
+ *  archivo real ("se agregan o quitan `<td>` para agregar o quitar logos") —
+ *  components/banner/items/render.ts (FRANJA_LOGOS) toma la 1ra como plantilla
+ *  para generar N logos, así que el discriminador de celda debe seguir
+ *  apareciendo (cualquier cantidad ≥ 1, no un número fijo: agregar/quitar
+ *  logos en el maestro es válido). El link y el ícono SÍ tienen que seguir
+ *  ahí en cada celda encontrada. */
+const FRANJA_LOGOS_CELL_RE = /<td style="padding:0px 2px; max-width: 80px;">[\s\S]*?<\/td>/g
+const FRANJA_LOGOS_LINK_PLACEHOLDER = 'LINKLOGO'
+const FRANJA_LOGOS_ICON_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'
+
+/** molecula_separador_s.html (pieza SEPARADOR_LINEA, ver moduleItems/render.ts):
+ *  debe traer exactamente 1 vez su único role propio. */
+const SEPARADOR_LINEA_ANCHOR = 'role="molecula-separador"'
+
+/**
+ * Anclas que components/title/render.ts (el shell del bloque) y
+ * moduleItems/render.ts (las piezas TITULO_TEXTO/SUBTITULO_TEXTO que se
+ * extraen del mismo archivo) necesitan en modulo-titulo.html — todas deben
+ * aparecer exactamente 1 vez, contando sobre el archivo SIN COMENTARIOS
+ * (mismo criterio que DEALS_ANCHOR_COUNTS).
+ */
+const TITLE_ANCHOR_COUNTS = {
+  LINKMODULO: 1,
+  // El <td> único que envuelve el área libre de moléculas — components/title/render.ts
+  // reemplaza el <div> que sigue entero por el HTML de fields.items.
+  '<td height="100%" valign="top" bgcolor="" role="">': 1,
+  '{{bg_contenedor1_mail_general}}': 1,
+  '{{body_container_background_radius}}': 1,
+  '{{body_container_background_padding}}': 1,
+  '{{body_alineado_molecular}}': 1,
+  '>Titulo<': 1,
+  'bloque de texto bloque de texto bloque de texto': 1,
+  [SEPARADOR_LINEA_ANCHOR]: 1,
+}
 
 /**
  * Cuántas veces debe aparecer cada ancla de deal_columnas.html, contando sobre
@@ -346,7 +453,10 @@ const DEALS_FILE = 'deal_columnas.html'
  * El archivo trae las 2 celdas del par byte a byte iguales, así que casi todo
  * va 2 veces (1 por celda); los 2 tags y su texto van 4 (2 por celda).
  */
-const DEALS_COMMENT_RE = /<!--[\s\S]*?-->/g
+/** Genérico — también lo usan las validaciones de molecula_separadores.html y
+ *  molecula_texto_pastilla.html más abajo (mismo criterio: contar sobre el
+ *  archivo sin comentarios, que es lo que ven sus renders). */
+const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 const DEALS_ANCHOR_COUNTS = {
   // Aperturas/cierres de celda: components/deals/render.ts los usa para
   // extraer las 3 plantillas de celda (imágenes / textos / legales). Los
@@ -638,6 +748,48 @@ if (BANNER_MOLECULAS_DIR) {
     }
   }
 
+  // molecula_separadores.html (pieza SEPARADOR): cada uno de los 3 <div> de
+  // tamaño fijo debe aparecer exactamente 1 vez — components/banner/items/render.ts
+  // los recorta por literal exacto, sin comentarios (mismo criterio que el resto
+  // de los renders de pieza).
+  {
+    const content = bannerMoleculaFileContents['molecula_separadores.html']
+    if (content) {
+      const stripped = content.replace(HTML_COMMENT_RE, '')
+      for (const literal of SEPARADOR_DIV_LITERALS) {
+        const count = stripped.split(literal).length - 1
+        if (count !== 1) {
+          fail(
+            `${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/molecula_separadores.html: "${literal}" aparece ${count} veces sin comentarios (se esperaba 1) — revisar components/banner/items/render.ts`,
+          )
+        }
+      }
+    }
+  }
+
+  // molecula_texto_pastilla.html (pieza TEXTO_PASTILLA): 2 tablas alternas +
+  // 2 textos literales, 2 veces cada uno (una por tabla) — mismo criterio.
+  {
+    const content = bannerMoleculaFileContents['molecula_texto_pastilla.html']
+    if (content) {
+      const stripped = content.replace(HTML_COMMENT_RE, '')
+      const tableCount = (stripped.match(/<table>/g) ?? []).length
+      if (tableCount !== TEXTO_PASTILLA_TABLE_COUNT) {
+        fail(
+          `${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/molecula_texto_pastilla.html: hay ${tableCount} tablas "<table>" sin comentarios (se esperaban ${TEXTO_PASTILLA_TABLE_COUNT}) — revisar components/banner/items/render.ts`,
+        )
+      }
+      for (const [literal, expected] of Object.entries(TEXTO_PASTILLA_TEXT_LITERALS)) {
+        const count = stripped.split(literal).length - 1
+        if (count !== expected) {
+          fail(
+            `${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${BANNER_MOLECULAS_DIR_NAME}/molecula_texto_pastilla.html: "${literal}" aparece ${count} veces sin comentarios (se esperaban ${expected}) — revisar components/banner/items/render.ts`,
+          )
+        }
+      }
+    }
+  }
+
   // molecula_cta_interno_*: no se copian (ver nota de CTA_INTERNO_FIXED_ALIGN),
   // pero si el maestro cambió su cta_alineado fijo hay que enterarse: el
   // hardcode de components/banner/items/render.ts quedaría desactualizado en
@@ -680,7 +832,7 @@ if (DEALS_DIR) {
     fail(`No se encontró ${label} en ${MASTER_DIR}`)
   } else {
     const content = fs.readFileSync(fp, 'utf8')
-    const stripped = content.replace(DEALS_COMMENT_RE, '')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
     for (const [anchor, expected] of Object.entries(DEALS_ANCHOR_COUNTS)) {
       const actual = stripped.split(anchor).length - 1
       if (actual !== expected) {
@@ -703,6 +855,104 @@ if (DEALS_DIR) {
   if (unknownDealsFiles.length > 0) {
     console.warn(
       `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownDealsFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
+// --- NN-components/NN_content-modules/content_moleculas/ -----------------------
+const contentMoleculaFileContents = {}
+if (CONTENT_MOLECULAS_DIR) {
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENT_MOLECULAS_DIR_NAME}`
+  for (const name of CONTENT_MOLECULAS_FILES_TO_COPY) {
+    const fp = path.join(CONTENT_MOLECULAS_DIR, name)
+    if (!fs.existsSync(fp)) {
+      fail(`No se encontró ${label}/${name} en ${MASTER_DIR}`)
+      continue
+    }
+    contentMoleculaFileContents[name] = fs.readFileSync(fp, 'utf8')
+  }
+
+  // molecula_franja_logos.html: al menos 1 celda de logo, cada una con su
+  // link y su ícono — components/banner/items/render.ts (FRANJA_LOGOS) toma la
+  // 1ra como plantilla, así que ninguna puede faltar esas 2 anclas.
+  const franjaLogosContent = contentMoleculaFileContents['molecula_franja_logos.html']
+  if (franjaLogosContent) {
+    const stripped = franjaLogosContent.replace(HTML_COMMENT_RE, '')
+    const cells = [...stripped.matchAll(FRANJA_LOGOS_CELL_RE)]
+    if (cells.length === 0) {
+      fail(`${label}/molecula_franja_logos.html: no se encontró ninguna celda de logo sin comentarios — revisar components/banner/items/render.ts`)
+    }
+    for (const [i, cell] of cells.entries()) {
+      if (!cell[0].includes(FRANJA_LOGOS_LINK_PLACEHOLDER)) {
+        fail(`${label}/molecula_franja_logos.html: la celda de logo ${i + 1} ya no trae "${FRANJA_LOGOS_LINK_PLACEHOLDER}" — revisar components/banner/items/render.ts`)
+      }
+      if (!cell[0].includes(FRANJA_LOGOS_ICON_PLACEHOLDER)) {
+        fail(`${label}/molecula_franja_logos.html: la celda de logo ${i + 1} ya no trae "${FRANJA_LOGOS_ICON_PLACEHOLDER}" — revisar components/banner/items/render.ts`)
+      }
+    }
+  }
+
+  // molecula_separador_s.html (pieza SEPARADOR_LINEA): su único role propio
+  // debe seguir apareciendo exactamente 1 vez sin comentarios.
+  const separadorLineaContent = contentMoleculaFileContents['molecula_separador_s.html']
+  if (separadorLineaContent) {
+    const stripped = separadorLineaContent.replace(HTML_COMMENT_RE, '')
+    const count = stripped.split(SEPARADOR_LINEA_ANCHOR).length - 1
+    if (count !== 1) {
+      fail(`${label}/molecula_separador_s.html: "${SEPARADOR_LINEA_ANCHOR}" aparece ${count} veces sin comentarios (se esperaba 1) — revisar moduleItems/render.ts`)
+    }
+  }
+
+  // Aviso (no aborta): mismo criterio que banner_moleculas/ y deals/ — un
+  // archivo nuevo en content_moleculas/ que el script no conoce pasaría
+  // desapercibido.
+  let actualContentMoleculaFiles = []
+  try {
+    actualContentMoleculaFiles = fs.readdirSync(CONTENT_MOLECULAS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${label}: ${e.message}`)
+  }
+  const knownContentMoleculaFiles = new Set([...CONTENT_MOLECULAS_FILES_TO_COPY, ...CONTENT_MOLECULAS_KNOWN_PENDING_FILES])
+  const unknownContentMoleculaFiles = actualContentMoleculaFiles.filter((f) => !knownContentMoleculaFiles.has(f))
+  if (unknownContentMoleculaFiles.length > 0) {
+    console.warn(`${DIM}⚠ ${label}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownContentMoleculaFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`)
+  }
+}
+
+// --- NN-components/NN_content-modules/title/modulo-titulo.html -----------------
+// Fase 2 del plan de nuevos módulos de contenido — primer ContentBlockType
+// nuevo desde CTA/DEALS, ver components/title/render.ts + moduleItems/render.ts.
+let titleFileContent = ''
+if (TITLE_DIR) {
+  const fp = path.join(TITLE_DIR, TITLE_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}/${TITLE_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(TITLE_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/title/render.ts y moduleItems/render.ts`)
+      }
+    }
+    titleFileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que deals/ — un archivo nuevo en title/
+  // que el script no conoce pasaría desapercibido.
+  const knownTitleFiles = new Set([TITLE_FILE])
+  let actualTitleFiles = []
+  try {
+    actualTitleFiles = fs.readdirSync(TITLE_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}: ${e.message}`)
+  }
+  const unknownTitleFiles = actualTitleFiles.filter((f) => !knownTitleFiles.has(f))
+  if (unknownTitleFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownTitleFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
     )
   }
 }
@@ -788,6 +1038,18 @@ if (dealsFileContent) {
   fs.writeFileSync(path.join(DEALS_ASSETS_DIR, DEALS_FILE), dealsFileContent, 'utf8')
 }
 
+const CONTENT_MOLECULAS_ASSETS_DIR = path.join(ASSETS_DIR, 'content-modules', CONTENT_MOLECULAS_DIR_NAME)
+fs.mkdirSync(CONTENT_MOLECULAS_ASSETS_DIR, { recursive: true })
+for (const [name, content] of Object.entries(contentMoleculaFileContents)) {
+  fs.writeFileSync(path.join(CONTENT_MOLECULAS_ASSETS_DIR, name), content, 'utf8')
+}
+
+if (titleFileContent) {
+  const TITLE_ASSETS_DIR = path.join(ASSETS_DIR, TITLE_DIR_NAME)
+  fs.mkdirSync(TITLE_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(TITLE_ASSETS_DIR, TITLE_FILE), titleFileContent, 'utf8')
+}
+
 const HEADERS_ASSETS_DIR = path.join(ASSETS_DIR, 'headers')
 fs.mkdirSync(HEADERS_ASSETS_DIR, { recursive: true })
 fs.writeFileSync(path.join(HEADERS_ASSETS_DIR, HEADER_WRAPPER_FILE), headerWrapperContent, 'utf8')
@@ -812,6 +1074,12 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${DEALS_DIR_NAME}/ (${Object.keys(DEALS_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} ${Object.keys(contentMoleculaFileContents).length} archivo(s) de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENT_MOLECULAS_DIR_NAME}/ (${CONTENT_MOLECULAS_KNOWN_PENDING_FILES.length} más listados, pendientes de fases futuras)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${TITLE_DIR_NAME}/ (${Object.keys(TITLE_ANCHOR_COUNTS).length} anclas OK)`,
 )
 if (themesMissingColorFooter.length === themeCount) {
   console.warn(

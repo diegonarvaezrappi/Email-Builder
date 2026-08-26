@@ -42,6 +42,8 @@ import type { EmailDocument } from '../../model'
 import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
 import { escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
 import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
+import * as htmlEdits from '../../template/htmlEdits'
+import type { Bounds, Edit } from '../../template/htmlEdits'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../richText/render'
 import {
@@ -88,116 +90,17 @@ function fixDealCell2DisplayTypo(html: string): string {
 }
 
 // --- Utilidades de corte/reemplazo ------------------------------------------
-
-interface Bounds {
-  start: number
-  end: number
-}
-
-interface Edit extends Bounds {
-  replacement: string
-}
-
-/**
- * Aplica una lista de ediciones calculadas TODAS sobre el mismo texto pristino,
- * de atrás hacia adelante: así ningún reemplazo puede correr los índices de
- * otro, ni hacer que el `indexOf` de una pieza caiga sobre texto que acabó de
- * escribir el usuario en otra (un `copy1` que dijera literalmente `LINKDEAL` o
- * `role="MARKDOWN"` no puede confundir a nadie).
- *
- * El chequeo de superposición es una red de seguridad real: cortar el `<h4>` del
- * badge MARKDOWN y a la vez el `<img>` de la Corona Pro que vive adentro
- * produciría HTML corrupto, así que la lógica de arriba nunca debe emitir las 2
- * ediciones juntas — y si algún día lo hace, esto lo grita en vez de exportar un
- * mail roto.
- */
-function applyEdits(html: string, edits: Edit[]): string {
-  const sorted = [...edits].sort((a, b) => b.start - a.start)
-  let previousStart = html.length
-  let out = html
-  for (const edit of sorted) {
-    if (edit.end > previousStart) {
-      throw new Error(
-        `${FILE_NAME}: ediciones superpuestas (${edit.start}-${edit.end} contra ${previousStart}) — revisar components/deals/render.ts`,
-      )
-    }
-    out = out.slice(0, edit.start) + edit.replacement + out.slice(edit.end)
-    previousStart = edit.start
-  }
-  return out
-}
-
-/** Igual criterio que substituteOnce en components/banner/items/vars.ts: si el
- *  maestro ya no trae el literal, falla ruidoso en vez de seguir de largo. */
-function indexOfOrThrow(html: string, literal: string, from = 0): number {
-  const index = html.indexOf(literal, from)
-  if (index === -1) {
-    throw new Error(`${FILE_NAME}: ya no contiene "${literal}" — revisar components/deals/render.ts`)
-  }
-  return index
-}
-
-/**
- * Límites del elemento `<tag>` que contiene `anchorIndex`, contando anidamiento.
- * El contador hace falta de verdad: el `<div role="molecula-tag">` de cada tag
- * envuelve otro `<div>` (el pill), así que buscar el primer `</div>` cortaría en
- * el cierre del hijo y dejaría un `</div>` huérfano en el mail exportado.
- */
-function elementBounds(html: string, anchorIndex: number, tag: string): Bounds {
-  const open = `<${tag}`
-  const close = `</${tag}>`
-  const start = html.lastIndexOf(open, anchorIndex)
-  if (start === -1) {
-    throw new Error(`${FILE_NAME}: no se encontró la apertura ${open} antes de la posición ${anchorIndex} — revisar components/deals/render.ts`)
-  }
-
-  let depth = 0
-  let cursor = start
-  for (;;) {
-    const nextOpen = html.indexOf(open, cursor)
-    const nextClose = html.indexOf(close, cursor)
-    if (nextClose === -1) {
-      throw new Error(`${FILE_NAME}: no se encontró el cierre ${close} del elemento que abre en ${start} — revisar components/deals/render.ts`)
-    }
-    if (nextOpen !== -1 && nextOpen < nextClose) {
-      depth++
-      cursor = nextOpen + open.length
-    } else {
-      depth--
-      cursor = nextClose + close.length
-      if (depth === 0) return { start, end: cursor }
-    }
-  }
-}
-
-/** Elemento sin cierre (`<img>`): de su apertura hasta el `>` que la termina. */
-function voidElementBounds(html: string, anchorIndex: number, tag: string): Bounds {
-  const open = `<${tag}`
-  const start = html.lastIndexOf(open, anchorIndex)
-  if (start === -1) {
-    throw new Error(`${FILE_NAME}: no se encontró la apertura ${open} antes de la posición ${anchorIndex} — revisar components/deals/render.ts`)
-  }
-  const end = html.indexOf('>', anchorIndex)
-  if (end === -1) {
-    throw new Error(`${FILE_NAME}: no se encontró el cierre ">" de ${open} en ${start} — revisar components/deals/render.ts`)
-  }
-  return { start, end: end + 1 }
-}
-
-/**
- * El texto que va inmediatamente antes del cierre de un elemento: desde el
- * último `>` de su contenido hasta el `</tag>`. Reemplazar "todo el contenido"
- * no serviría en las piezas que mezclan un `<img>` con texto (el badge
- * MARKDOWN, RATING, TIEMPO, los pills de tag): borraría también el ícono.
- */
-function textRunBounds(html: string, bounds: Bounds, tag: string): Bounds {
-  const closeStart = bounds.end - `</${tag}>`.length
-  const lastGt = html.lastIndexOf('>', closeStart - 1)
-  if (lastGt === -1 || lastGt < bounds.start) {
-    throw new Error(`${FILE_NAME}: no se encontró el texto de <${tag}> en ${bounds.start}-${bounds.end} — revisar components/deals/render.ts`)
-  }
-  return { start: lastGt + 1, end: closeStart }
-}
+// Promovidas a template/htmlEdits.ts (fase 1 del plan de nuevos módulos de
+// contenido, ver [[project_body_modules_plan_2026-08-26]]): cada módulo nuevo
+// va a necesitar el mismo toolkit contra su propio maestro sin `{% if %}`
+// alrededor de sus piezas opcionales. Los alias de acá solo fijan `FILE_NAME`
+// (deal_columnas.html) para no tener que pasarlo en cada uno de los ~25 call
+// sites de este archivo.
+const applyEdits = (html: string, edits: Edit[]): string => htmlEdits.applyEdits(html, edits, FILE_NAME)
+const indexOfOrThrow = (html: string, literal: string, from = 0): number => htmlEdits.indexOfOrThrow(html, literal, FILE_NAME, from)
+const elementBounds = (html: string, anchorIndex: number, tag: string): Bounds => htmlEdits.elementBounds(html, anchorIndex, tag, FILE_NAME)
+const voidElementBounds = (html: string, anchorIndex: number, tag: string): Bounds => htmlEdits.voidElementBounds(html, anchorIndex, tag, FILE_NAME)
+const textRunBounds = (html: string, bounds: Bounds, tag: string): Bounds => htmlEdits.textRunBounds(html, bounds, tag, FILE_NAME)
 
 /**
  * El patrón que comparten casi todas las piezas: apagada se corta el elemento

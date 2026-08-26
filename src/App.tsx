@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { useBuilder, useTemporal } from './store/store'
-import { headerPatchForTheme, ctaStyleForTheme, bannerBackgroundEnabledForTheme } from './themeDefaults'
+import { headerPatchForTheme, ctaStyleForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme } from './themeDefaults'
+import { contentBlockRegistry } from './contentBlockRegistry'
+import type { ContentBlock } from './model'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
@@ -31,6 +33,11 @@ function App() {
   const removeDealCard = useBuilder((s) => s.removeDealCard)
   const updateDealCardFields = useBuilder((s) => s.updateDealCardFields)
   const reorderDealCardPiece = useBuilder((s) => s.reorderDealCardPiece)
+  const insertModuleItem = useBuilder((s) => s.insertModuleItem)
+  const duplicateModuleItem = useBuilder((s) => s.duplicateModuleItem)
+  const reorderModuleItem = useBuilder((s) => s.reorderModuleItem)
+  const removeModuleItem = useBuilder((s) => s.removeModuleItem)
+  const updateModuleItemFields = useBuilder((s) => s.updateModuleItemFields)
   const setDocument = useBuilder((s) => s.setDocument)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
@@ -65,6 +72,24 @@ function App() {
 
     const backgroundEnabled = bannerBackgroundEnabledForTheme(doc.banner, doc.global.tema, prevTema)
     if (backgroundEnabled !== null) setSlotFields('banner', { ...doc.banner, backgroundEnabled })
+
+    // Mismo ajuste, un nivel más adentro: cada bloque de CONTENIDOS que
+    // spreadee generalModuleFieldsSchema (ver contentBlockRegistry.ts,
+    // hasGeneralModuleFields) tiene su PROPIO backgroundEnabled independiente
+    // — no hay un solo campo que pisar como banner.backgroundEnabled, así que
+    // se arma un solo `contenidos` nuevo con todos los patches a la vez (un
+    // único setSlotFields, no uno por bloque: igual motivo que headerPatch de
+    // arriba junta brand+logoBackground en un solo patch).
+    let contenidosChanged = false
+    const nextContenidos = doc.contenidos.map((block): ContentBlock => {
+      if (!contentBlockRegistry[block.type]?.hasGeneralModuleFields) return block
+      const fields = block.fields as { backgroundEnabled: boolean }
+      const backgroundEnabled = moduleBackgroundEnabledForTheme(fields.backgroundEnabled, doc.global.tema, prevTema)
+      if (backgroundEnabled === null) return block
+      contenidosChanged = true
+      return { ...block, fields: { ...fields, backgroundEnabled } } as ContentBlock
+    })
+    if (contenidosChanged) setSlotFields('contenidos', nextContenidos)
 
     prevTemaRef.current = doc.global.tema
     // Deliberadamente solo depende del tema: si el usuario edita header.brand
@@ -117,6 +142,10 @@ function App() {
           onRemoveDealCard={removeDealCard}
           onReorderDealCardPiece={reorderDealCardPiece}
           onChangeDealCard={updateDealCardFields}
+          onInsertModuleItem={insertModuleItem}
+          onDuplicateModuleItem={duplicateModuleItem}
+          onReorderModuleItem={reorderModuleItem}
+          onRemoveModuleItem={removeModuleItem}
           onImportDocument={setDocument}
         />
         <InspectorPanel
@@ -131,6 +160,8 @@ function App() {
           onSetBannerImageModule={setBannerImageModule}
           onChangeDealCard={updateDealCardFields}
           onInsertDealCard={insertDealCard}
+          onChangeModuleItem={updateModuleItemFields}
+          onInsertModuleItem={insertModuleItem}
         />
       </div>
     </div>

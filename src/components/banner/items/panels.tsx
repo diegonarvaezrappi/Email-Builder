@@ -5,18 +5,33 @@ import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import type { RichTextColorMap } from '../../../richText/model'
 import { themeVars } from '../../../themes/themes'
-import { CREDITOS_VARIANT_LABELS, CREDITOS_VARIANT_VALUES, defaultTagItem } from './schemas'
+import {
+  CREDITOS_VARIANT_LABELS,
+  CREDITOS_VARIANT_VALUES,
+  defaultFranjaLogoItem,
+  defaultTagItem,
+  FRANJA_LOGOS_SIZE_LABELS,
+  FRANJA_LOGOS_SIZE_VALUES,
+  SEPARADOR_SIZE_LABELS,
+  SEPARADOR_SIZE_VALUES,
+  TEXTO_PASTILLA_POSITION_LABELS,
+  TEXTO_PASTILLA_POSITION_VALUES,
+} from './schemas'
 import type {
   CreditosFields,
   CtaInternoFields,
+  FranjaLogoItem,
+  FranjaLogosFields,
   ImgAutomaticaModuloFields,
   ImgAutomaticaMoleculaFields,
   ImgFijaFields,
   PromoFields,
+  SeparadorFields,
   TagItem,
   TagsFields,
   TextoComplementarioFields,
   TextoMFields,
+  TextoPastillaFields,
   TextoXlFields,
 } from './schemas'
 
@@ -305,6 +320,113 @@ export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<Ta
       {value.tags.length < 3 && (
         <button type="button" onClick={addTag}>
           + Agregar tag
+        </button>
+      )}
+    </div>
+  )
+}
+
+export function SeparadorPropertiesPanel({ value, onChange }: BannerItemPanelProps<SeparadorFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Tamaño</span>
+        <select value={value.size} onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ size: e.target.value as SeparadorFields['size'] })}>
+          {SEPARADOR_SIZE_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {SEPARADOR_SIZE_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+export function TextoPastillaPropertiesPanel({ value, onChange }: BannerItemPanelProps<TextoPastillaFields>) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, text: e.target.value })} />
+      </label>
+      <label className="field">
+        <span>Texto de la pastilla</span>
+        <input type="text" value={value.pillText} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, pillText: e.target.value })} />
+      </label>
+      <label className="field">
+        <span>Posición de la pastilla</span>
+        <select
+          value={value.pillPosition}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ ...value, pillPosition: e.target.value as TextoPastillaFields['pillPosition'] })}
+        >
+          {TEXTO_PASTILLA_POSITION_VALUES.map((p) => (
+            <option key={p} value={p}>
+              {TEXTO_PASTILLA_POSITION_LABELS[p]}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+export function FranjaLogosPropertiesPanel({ value, onChange }: BannerItemPanelProps<FranjaLogosFields>) {
+  const setLogo = (index: number, patch: Partial<FranjaLogoItem>) => {
+    onChange({ ...value, logos: value.logos.map((l, i) => (i === index ? { ...l, ...patch } : l)) })
+  }
+  const addLogo = () => {
+    if (value.logos.length >= 10) return
+    onChange({ ...value, logos: [...value.logos, defaultFranjaLogoItem()] })
+  }
+  const removeLogo = (index: number) => {
+    if (value.logos.length <= 1) return
+    onChange({ ...value, logos: value.logos.filter((_, i) => i !== index) })
+  }
+
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Tamaño (aplica a todos los logos)</span>
+        <select
+          value={value.size}
+          onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ ...value, size: e.target.value as FranjaLogosFields['size'] })}
+        >
+          {FRANJA_LOGOS_SIZE_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {FRANJA_LOGOS_SIZE_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {value.logos.map((logo, index) => (
+        <div key={index}>
+          <p className="field-group-label">Logo {index + 1}</p>
+          <label className="field">
+            <span>URL de la imagen</span>
+            <div className="field-row">
+              <input type="text" value={logo.imageUrl} onChange={(e: ChangeEvent<HTMLInputElement>) => setLogo(index, { imageUrl: e.target.value })} />
+              {value.logos.length > 1 && (
+                <button type="button" onClick={() => removeLogo(index)} aria-label={`Eliminar logo ${index + 1}`}>
+                  ×
+                </button>
+              )}
+            </div>
+          </label>
+          <label className="field">
+            <span>Enlace</span>
+            <input
+              type="text"
+              placeholder="https://..."
+              value={logo.link}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setLogo(index, { link: e.target.value })}
+            />
+          </label>
+        </div>
+      ))}
+      {value.logos.length < 10 && (
+        <button type="button" onClick={addLogo}>
+          + Agregar logo
         </button>
       )}
     </div>

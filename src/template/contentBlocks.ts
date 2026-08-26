@@ -76,3 +76,27 @@ export function wrapWithDealCardPieceMarkers(cardId: string, pieceType: string, 
 
 export const DEAL_CARD_PIECE_OPEN_RE = /^\s*DPIECE:([^:]+):(.+?)\s*$/
 export const DEAL_CARD_PIECE_CLOSE_RE = /^\s*\/DPIECE:([^:]+):(.+?)\s*$/
+
+/**
+ * Quinto prefijo distinto ("MITEM") — una pieza del área libre de moléculas de
+ * un módulo de body (ver components/title/render.ts y bodyMoleculeRegistry.ts,
+ * fase 2 del plan de nuevos módulos de contenido) nunca debe confundirse con
+ * ninguno de los otros 4 marcadores en ui/Viewport.tsx.
+ *
+ * Mismo shape que DCARD (el primer campo es el id del BLOQUE dueño, no un
+ * tipo) y por el mismo motivo: los ids de item son únicos en todo el
+ * documento (newId()), así que el bloque dueño se deduce buscando quién lo
+ * contiene (ver findModuleBlockByItem en store/store.ts) — lo que hace falta
+ * codificar acá es de qué BLOQUE es cada item, para poder agrupar sus rects
+ * por dueño (Viewport.tsx necesita saber qué bloques tienen items para
+ * redibujar su badge encima, mismo criterio que ya usa con blockRects filtrado
+ * por 'DEALS'). A diferencia de DCARD, una pieza de módulo SÍ es un fragmento
+ * contiguo único (un solo par de marcadores, nunca repetido) — no hace falta
+ * mergeRectsById.
+ */
+export function wrapWithModuleItemMarkers(blockId: string, itemId: string, innerHtml: string): string {
+  return `<!-- MITEM:${blockId}:${itemId} -->\n${innerHtml}\n<!-- /MITEM:${blockId}:${itemId} -->`
+}
+
+export const MODULE_ITEM_OPEN_RE = /^\s*MITEM:([^:]+):(.+?)\s*$/
+export const MODULE_ITEM_CLOSE_RE = /^\s*\/MITEM:([^:]+):(.+?)\s*$/

@@ -25,11 +25,15 @@ import type { GlobalFields } from '../global/schema'
 import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
+import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import { selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
 import { BannerImageTypeSelector } from '../components/banner/ImageTypeSelector'
 import { BannerItemCatalog } from '../components/banner/ItemCatalog'
+import { ModuleItemCatalog } from '../components/contentModules/ModuleItemCatalog'
+import { findModuleBlockByItem } from '../components/contentModules/blocks'
 import { IMAGE_MODULE_TYPES, type ImageModuleType } from '../components/banner/exclusivity'
 import type { BannerItemType } from '../components/banner/items/schemas'
+import type { ModuleItemType } from '../moduleItems/schemas'
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { DealCardPiecePropertiesPanel, DealCardPropertiesPanel } from '../components/deals/panels'
 import { DEAL_CARD_PIECE_LABELS, DEALS_MAX_CARDS } from '../components/deals/schema'
@@ -46,6 +50,8 @@ interface InspectorPanelProps {
   onSetBannerImageModule: (type: ImageModuleType) => void
   onChangeDealCard: (dealCardId: string, fields: unknown) => void
   onInsertDealCard: (blockId: string, atIndex: number) => void
+  onChangeModuleItem: (moduleItemId: string, fields: unknown) => void
+  onInsertModuleItem: (blockId: string, areaKey: string, type: ModuleItemType, atIndex: number) => void
 }
 
 function EmptyHint({ text }: { text: string }) {
@@ -68,9 +74,38 @@ export function InspectorPanel({
   onSetBannerImageModule,
   onChangeDealCard,
   onInsertDealCard,
+  onChangeModuleItem,
+  onInsertModuleItem,
 }: InspectorPanelProps) {
   if (!selected) {
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
+  }
+
+  // Una molécula puntual del área libre de un módulo de body (ej. TITLE) — se
+  // resuelve ANTES del bloque de CONTENIDOS genérico, mismo criterio que una
+  // tarjeta de deal o una pieza de banner. La selección solo trae el id de la
+  // molécula, el bloque dueño se deduce (ver components/contentModules/blocks.ts).
+  if (selected.slot === 'CONTENIDOS' && selected.moduleItemId) {
+    const found = findModuleBlockByItem(doc.contenidos, selected.moduleItemId)
+    const item = found?.items.find((it) => it.id === selected.moduleItemId)
+    const def = item ? getModuleItemDef(item.type) : undefined
+    if (!found || !item || !def) {
+      return <EmptyHint text="Selecciona una molécula para ver sus opciones." />
+    }
+    return (
+      <aside className="panel-inspector">
+        <button type="button" className="inspector-back" onClick={() => onSelect(selectBlock(found.block.id))}>
+          ← Volver a {contentBlockRegistry[found.block.type]?.label ?? found.block.type}
+        </button>
+        <h2>{def.label}</h2>
+        <def.PropertiesPanel
+          value={item.fields}
+          onChange={(next) => onChangeModuleItem(item.id, next)}
+          doc={doc}
+          onChangeGlobal={onChangeGlobal}
+        />
+      </aside>
+    )
   }
 
   // Una tarjeta de deal puntual — se resuelve ANTES del bloque de CONTENIDOS
@@ -147,6 +182,23 @@ export function InspectorPanel({
           >
             + Agregar deal
           </button>
+        )}
+        {/* Igual que el botón "+ Agregar deal" de arriba: insertar necesita
+            onInsertModuleItem, una acción del store que
+            ContentBlockDef.PropertiesPanel no recibe. `'main'` es la
+            convención de área única de un módulo de una sola zona (hoy
+            TITLE) — ver la nota de resolveModuleBlockForDrop en Viewport.tsx. */}
+        {contentBlockRegistry[block.type]?.usesModuleItems && (
+          <ModuleItemCatalog
+            onInsert={(type) =>
+              onInsertModuleItem(
+                block.id,
+                'main',
+                type,
+                (block.fields as { items: { areaKey: string }[] }).items.filter((it) => it.areaKey === 'main').length,
+              )
+            }
+          />
         )}
       </aside>
     )

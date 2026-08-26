@@ -4,17 +4,20 @@ import type { EmailDocument } from '../../../model'
 import { richTextFromPlain } from '../../../richText/model'
 import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
-import { defaultTagItem, tagsFieldsSchema } from '../items/schemas'
+import { defaultFranjaLogoItem, defaultTagItem, tagsFieldsSchema } from '../items/schemas'
 import {
   renderCreditosSnippet,
   renderCtaInternoSnippet,
+  renderFranjaLogosSnippet,
   renderImgAutomaticaModuloSnippet,
   renderImgAutomaticaMoleculaSnippet,
   renderImgFijaSnippet,
   renderPromoSnippet,
+  renderSeparadorSnippet,
   renderTagsSnippet,
   renderTextoComplementarioSnippet,
   renderTextoMSnippet,
+  renderTextoPastillaSnippet,
   renderTextoXlSnippet,
 } from '../items/render'
 
@@ -523,6 +526,110 @@ describe('renderTagsSnippet', () => {
   it('migrates a legacy plain-string tag (pre-icon documents) into the new shape', () => {
     const parsed = tagsFieldsSchema.parse({ tags: ['legacy tag'] })
     expect(parsed.tags).toEqual([defaultTagItem('legacy tag')])
+  })
+})
+
+describe('renderSeparadorSnippet', () => {
+  it.each([
+    ['general', 'separador'],
+    ['M', 'separador-M'],
+    ['S', 'separador-S'],
+  ] as const)('%s -> class="%s"', (size, className) => {
+    expect(renderSeparadorSnippet({ size })).toBe(`<div class="${className}"></div>`)
+  })
+
+  it('has no Liquid left — a plain empty div, nothing to resolve', () => {
+    const html = renderSeparadorSnippet({ size: 'general' })
+    expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+    expect(html).not.toMatch(/\{\{/)
+  })
+})
+
+describe('renderTextoPastillaSnippet', () => {
+  const fields = (over: Partial<{ text: string; pillText: string; pillPosition: 'derecha' | 'izquierda' }> = {}) => ({
+    text: 'Supermercados',
+    pillText: 'Martes',
+    pillPosition: 'derecha' as const,
+    ...over,
+  })
+
+  it('substitutes both texts', () => {
+    const html = renderTextoPastillaSnippet(fields({ text: 'Restaurantes', pillText: 'Hoy' }))
+    expect(html).toContain('>Restaurantes<')
+    expect(html).toContain('>Hoy<')
+    expect(html).not.toContain('>Supermercados<')
+    expect(html).not.toContain('>Martes<')
+  })
+
+  it('renders only ONE table (the chosen position), not both alternatives', () => {
+    const html = renderTextoPastillaSnippet(fields())
+    expect((html.match(/<table/g) ?? []).length).toBe(1)
+  })
+
+  it('pillPosition selects which of the 2 alternate tables is used', () => {
+    const right = renderTextoPastillaSnippet(fields({ pillPosition: 'derecha' }))
+    const left = renderTextoPastillaSnippet(fields({ pillPosition: 'izquierda' }))
+    expect(right).not.toBe(left)
+    // Misma diferencia estructural que el maestro: la celda de pastilla va
+    // primero en la variante "izquierda".
+    expect(left.indexOf('bg_tag_contenedor_mail_general')).toBeLessThan(left.indexOf('Martes'))
+    expect(right.indexOf('Supermercados')).toBeLessThan(right.indexOf('bg_tag_contenedor_mail_general'))
+  })
+
+  it('escapes HTML-significant characters in both texts', () => {
+    const html = renderTextoPastillaSnippet(fields({ text: '<b>x</b>', pillText: '<i>y</i>' }))
+    expect(html).toContain('&lt;b&gt;x&lt;/b&gt;')
+    expect(html).toContain('&lt;i&gt;y&lt;/i&gt;')
+  })
+
+  it('has no Liquid tags left; the 3 _mail_general color vars survive for the final theme pass', () => {
+    const html = renderTextoPastillaSnippet(fields())
+    expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+    expect(html).toContain('{{color_texto_mail_general}}')
+    expect(html).toContain('{{bg_tag_contenedor_mail_general}}')
+    expect(html).toContain('{{color_tag_tipografia_mail_general}}')
+  })
+})
+
+describe('renderFranjaLogosSnippet', () => {
+  const logo = (over: Partial<{ imageUrl: string; link: string }> = {}) => ({ ...defaultFranjaLogoItem(), ...over })
+
+  it.each([1, 2, 4, 6])('renders exactly %i logo cell(s) for %i logo(s)', (n) => {
+    const logos = Array.from({ length: n }, () => logo())
+    const html = renderFranjaLogosSnippet({ logos, size: 'L' })
+    expect((html.match(/<td style="padding:0px 2px; max-width: 80px;">/g) ?? []).length).toBe(n)
+  })
+
+  it('substitutes each logo image URL and link independently', () => {
+    const html = renderFranjaLogosSnippet({
+      logos: [logo({ imageUrl: 'https://x.test/a.png', link: 'https://x.test/link-a' }), logo({ imageUrl: 'https://x.test/b.png', link: 'https://x.test/link-b' })],
+      size: 'L',
+    })
+    expect(html).toContain('src="https://x.test/a.png"')
+    expect(html).toContain('src="https://x.test/b.png"')
+    expect(html).toContain('href="https://x.test/link-a"')
+    expect(html).toContain('href="https://x.test/link-b"')
+  })
+
+  it('removes the <img> entirely when a logo URL is blank, same convention as every other <img> field', () => {
+    const html = renderFranjaLogosSnippet({ logos: [logo({ imageUrl: '' })], size: 'L' })
+    expect(html).not.toContain('<img')
+  })
+
+  it.each([
+    ['S', 15],
+    ['M', 25],
+    ['L', 50],
+  ] as const)('size %s -> %ipx width on every logo', (size, px) => {
+    const html = renderFranjaLogosSnippet({ logos: [logo(), logo()], size })
+    expect((html.match(new RegExp(`width="${px}"`, 'g')) ?? []).length).toBe(2)
+    expect((html.match(new RegExp(`width:${px}px`, 'g')) ?? []).length).toBe(2)
+  })
+
+  it('has no Liquid tags left; the decorative badge background var survives for the final theme pass', () => {
+    const html = renderFranjaLogosSnippet({ logos: [logo()], size: 'L' })
+    expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+    expect(html).not.toMatch(/\{\{\s*alineado_molecular_mail_body\s*\}\}/)
   })
 })
 

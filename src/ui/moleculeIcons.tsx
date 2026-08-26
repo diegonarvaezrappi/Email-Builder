@@ -15,6 +15,7 @@
 import type { ComponentType, SVGProps } from 'react'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
+import type { ModuleItemType } from '../moduleItems/schemas'
 
 type IconProps = SVGProps<SVGSVGElement>
 
@@ -140,6 +141,41 @@ export function TagsIcon(props: IconProps) {
   )
 }
 
+/** Una sola línea horizontal fina y corta, centrada — mirror de
+ *  molecula_separadores.html: un <div> vacío de altura fija, sin texto ni
+ *  ícono. */
+export function SeparadorIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <line x1="16" y1="20" x2="48" y2="20" stroke="currentColor" strokeWidth="3" opacity="0.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Fila de círculos pequeños lado a lado — mirror de
+ *  content_moleculas/molecula_franja_logos.html (N logos circulares en fila,
+ *  a diferencia de las 3 píldoras rectangulares de TagsIcon). */
+export function FranjaLogosIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <circle cx="14" cy="20" r="8" fill="currentColor" opacity="0.7" />
+      <circle cx="32" cy="20" r="8" fill="currentColor" opacity="0.7" />
+      <circle cx="50" cy="20" r="8" fill="currentColor" opacity="0.7" />
+    </svg>
+  )
+}
+
+/** Línea de texto + una píldora chica al lado — mirror de
+ *  molecula_texto_pastilla.html (texto + tag). */
+export function TextoPastillaIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="6" y="16" width="28" height="8" rx="4" fill="currentColor" opacity="0.85" />
+      <rect x="38" y="14" width="20" height="12" rx="6" fill="currentColor" opacity="0.4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
 /** Silueta portrait (una sola columna, contenido apilado) — mirror de
  *  big-banner-vertical.html: la tabla "MODULO MOLECULAS" ocupa todo el ancho
  *  y las piezas se apilan una sobre otra en un único <td>. */
@@ -173,6 +209,51 @@ export const BANNER_TYPE_ICONS: Record<BannerType, ComponentType<IconProps>> = {
   horizontal: BannerHorizontalIcon,
 }
 
+/** Título grueso + una línea fina abajo — mirror de modulo-titulo.html: un
+ *  <h2> corto (título), no un párrafo largo como TextoComplementarioIcon. */
+export function TituloTextoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="8" y="12" width="36" height="10" rx="3" fill="currentColor" opacity="0.9" />
+      <rect x="8" y="26" width="24" height="4" rx="2" fill="currentColor" opacity="0.4" />
+    </svg>
+  )
+}
+
+/** 2 líneas finas de párrafo, más chicas que TituloTextoIcon — mirror del
+ *  <h3> subtítulo de modulo-titulo.html. */
+export function SubtituloTextoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="8" y="14" width="48" height="5" rx="2.5" fill="currentColor" opacity="0.7" />
+      <rect x="8" y="23" width="34" height="5" rx="2.5" fill="currentColor" opacity="0.5" />
+    </svg>
+  )
+}
+
+/** Línea corta con color de acento — mirror de molecula_separador_s.html (la
+ *  línea decorativa, NO el espaciador invisible de SeparadorIcon). */
+export function SeparadorLineaIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <line x1="18" y1="20" x2="46" y2="20" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Íconos de las moléculas del área libre de un módulo de body
+ *  (bodyMoleculeRegistry.ts) — 3 nuevos (TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA)
+ *  + los mismos 3 componentes que ya usa MOLECULE_ICONS para SEPARADOR/
+ *  FRANJA_LOGOS/TEXTO_PASTILLA (misma molécula, reusada tal cual). */
+export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>> = {
+  TITULO_TEXTO: TituloTextoIcon,
+  SUBTITULO_TEXTO: SubtituloTextoIcon,
+  SEPARADOR_LINEA: SeparadorLineaIcon,
+  SEPARADOR: SeparadorIcon,
+  FRANJA_LOGOS: FranjaLogosIcon,
+  TEXTO_PASTILLA: TextoPastillaIcon,
+}
+
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {
   PROMO: PromoIcon,
   CREDITOS: CreditosIcon,
@@ -184,4 +265,7 @@ export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = 
   IMG_FIJA: ImgFijaIcon,
   IMG_AUTOMATICA_MODULO: ImgAutomaticaModuloIcon,
   TAGS: TagsIcon,
+  SEPARADOR: SeparadorIcon,
+  FRANJA_LOGOS: FranjaLogosIcon,
+  TEXTO_PASTILLA: TextoPastillaIcon,
 }

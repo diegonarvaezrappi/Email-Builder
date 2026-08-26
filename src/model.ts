@@ -4,6 +4,7 @@ import { headerSchema, type HeaderFields } from './components/header/schema'
 import { cierreSchema, type CierreFields } from './components/cierre/schema'
 import { ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { dealsFieldsSchema, type DealsFields } from './components/deals/schema'
+import { titleFieldsSchema, type TitleFields } from './components/title/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -26,9 +27,10 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * Tipos de bloque de contenido que puede alojar CONTENIDOS (ver el comentario
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
- * implementen los demás — hoy CTA y DEALS.
+ * implementen los demás — hoy CTA, DEALS y TITLE (fase 2 del plan de nuevos
+ * módulos de contenido, ver [[project_body_modules_plan_2026-08-26]]).
  */
-export type ContentBlockType = 'CTA' | 'DEALS'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE'
 
 export interface CtaBlock {
   id: string
@@ -49,8 +51,21 @@ export interface DealsBlock {
   fields: DealsFields
 }
 
+/**
+ * El primer módulo de body real (fase 2 del plan de nuevos módulos de
+ * contenido): a diferencia de DEALS (2 tarjetas de forma FIJA), `fields.items`
+ * es una lista LIBRE de cualquier molécula del catálogo compartido
+ * (bodyMoleculeRegistry.ts) — el motor que valida ese diseño para los 7
+ * módulos que le siguen. Ver components/title/.
+ */
+export interface TitleBlock {
+  id: string
+  type: 'TITLE'
+  fields: TitleFields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock
+export type ContentBlock = CtaBlock | DealsBlock | TitleBlock
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -64,7 +79,13 @@ const dealsBlockSchema = z.object({
   fields: dealsFieldsSchema,
 })
 
-export const contentBlockSchema = z.discriminatedUnion('type', [ctaBlockSchema, dealsBlockSchema])
+const titleBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('TITLE'),
+  fields: titleFieldsSchema,
+})
+
+export const contentBlockSchema = z.discriminatedUnion('type', [ctaBlockSchema, dealsBlockSchema, titleBlockSchema])
 
 /**
  * Estado completo de un email en construcción. A diferencia de inapps-builder

@@ -41,3 +41,13 @@ export const DEAL_CARD_REORDER_DRAG_TYPE = 'application/x-email-deal-card-reorde
  * nunca contiene ":".
  */
 export const DEAL_CARD_PIECE_REORDER_DRAG_TYPE = 'application/x-email-deal-card-piece-reorder'
+
+/** Insertar una MOLÉCULA nueva en el área libre de un módulo de body (ej.
+ *  Título) desde su catálogo — ver bodyMoleculeRegistry.ts. Payload = el
+ *  ModuleItemType (ej. 'TITULO_TEXTO'). */
+export const MODULE_ITEM_DRAG_TYPE = 'application/x-email-module-item'
+
+/** Reordenar una molécula ya existente dentro del área libre de un módulo de
+ *  body. Payload = el id de la instancia (único en todo el documento, mismo
+ *  criterio que BANNER_ITEM_REORDER_DRAG_TYPE). */
+export const MODULE_ITEM_REORDER_DRAG_TYPE = 'application/x-email-module-item-reorder'

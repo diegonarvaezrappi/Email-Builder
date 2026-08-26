@@ -9,8 +9,11 @@ import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
 import { DEALS_MAX_CARDS, defaultDealCardFields, type DealCardFields, type DealCardPieceType } from '../components/deals/schema'
 import { findDealsBlockByCard } from '../components/deals/blocks'
+import { findModuleBlockByItem } from '../components/contentModules/blocks'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
+import { getModuleItemDef } from '../bodyMoleculeRegistry'
+import type { ModuleItem, ModuleItemType } from '../moduleItems/schemas'
 import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType } from '../components/banner/exclusivity'
 import { enforceHorizontalItemOrder } from '../components/banner/horizontalOrder'
 import { newId } from '../ids'
@@ -93,6 +96,23 @@ interface BuilderState {
   reorderDealCardPiece: (cardId: string, pieceType: DealCardPieceType, toIndex: number) => void
 
   /**
+   * Operaciones sobre las moléculas del ÁREA LIBRE de un módulo de body (hoy
+   * TITLE, ver components/contentModules/blocks.ts) — mismo espíritu que las
+   * de banner/deals, pero el bloque dueño se busca en vez de recibirse (mismo
+   * criterio que las de tarjeta de deal: los ids de item son únicos en todo el
+   * documento). `insertModuleItem` sí recibe `blockId` + `areaKey` porque para
+   * INSERTAR hace falta saber DÓNDE — no hay ningún item existente del que
+   * deducirlo. `atIndex`/`toIndex` se interpretan contra los items de esa
+   * MISMA área (no contra la lista completa del bloque, que puede tener más de
+   * un área en un módulo futuro).
+   */
+  insertModuleItem: (blockId: string, areaKey: string, type: ModuleItemType, atIndex: number) => void
+  duplicateModuleItem: (itemId: string) => void
+  reorderModuleItem: (itemId: string, toIndex: number) => void
+  removeModuleItem: (itemId: string) => void
+  updateModuleItemFields: (itemId: string, fields: unknown) => void
+
+  /**
    * Reemplaza el documento ENTERO — usado por la pestaña "Importar" (subir un
    * .json exportado antes con "Descargar JSON", ver ui/ImportPanel.tsx). El
    * JSON ya llega VALIDADO por `emailDocumentSchema.safeParse` antes de
@@ -111,6 +131,17 @@ function withDealCards(document: EmailDocument, blockIndex: number, items: DealC
   const block = document.contenidos[blockIndex] as DealsBlock
   const contenidos = [...document.contenidos]
   contenidos[blockIndex] = { ...block, fields: { ...block.fields, items } }
+  return { ...document, contenidos }
+}
+
+/** Mismo patrón que withDealCards, un nivel más arriba: el bloque dueño puede
+ *  ser cualquier tipo que marque `usesModuleItems` (hoy solo TITLE), no un
+ *  único tipo fijo — por eso castea contra `ContentBlock` genérico en vez de
+ *  un tipo de bloque puntual. */
+function withModuleItems(document: EmailDocument, blockIndex: number, items: ModuleItem[]): EmailDocument {
+  const block = document.contenidos[blockIndex]
+  const contenidos = [...document.contenidos]
+  contenidos[blockIndex] = { ...block, fields: { ...block.fields, items } } as ContentBlock
   return { ...document, contenidos }
 }
 
@@ -334,6 +365,66 @@ export const useBuilder = create<BuilderState>()(
             c.id === cardId ? { ...c, fields: { ...c.fields, pieceOrder: nextOrder } } : c,
           )
           return { document: withDealCards(s.document, found.index, items) }
+        }),
+
+      insertModuleItem: (blockId, areaKey, type, atIndex) =>
+        set((s) => {
+          const index = s.document.contenidos.findIndex((b) => b.id === blockId && contentBlockRegistry[b.type]?.usesModuleItems)
+          if (index === -1) return s
+          const def = getModuleItemDef(type)
+          if (!def) return s
+          const allItems = (s.document.contenidos[index].fields as { items: ModuleItem[] }).items
+          const areaItems = allItems.filter((it) => it.areaKey === areaKey)
+          const otherItems = allItems.filter((it) => it.areaKey !== areaKey)
+          const newItem = { id: newId(), areaKey, type, fields: def.defaultFields } as ModuleItem
+          const nextAreaItems = [...areaItems]
+          nextAreaItems.splice(Math.max(0, Math.min(atIndex, nextAreaItems.length)), 0, newItem)
+          return { document: withModuleItems(s.document, index, [...otherItems, ...nextAreaItems]) }
+        }),
+
+      duplicateModuleItem: (itemId) =>
+        set((s) => {
+          const found = findModuleBlockByItem(s.document.contenidos, itemId)
+          if (!found) return s
+          const itemIndex = found.items.findIndex((it) => it.id === itemId)
+          const copy = { ...found.items[itemIndex], id: newId() } as ModuleItem
+          const items = [...found.items]
+          items.splice(itemIndex + 1, 0, copy)
+          return { document: withModuleItems(s.document, found.index, items) }
+        }),
+
+      /** `toIndex` se interpreta contra los items de la MISMA área que el item
+       *  arrastrado (no toda la lista del bloque) — misma convención que
+       *  reorderDealCardPiece acotado a las 7 piezas de su propia tarjeta. */
+      reorderModuleItem: (itemId, toIndex) =>
+        set((s) => {
+          const found = findModuleBlockByItem(s.document.contenidos, itemId)
+          if (!found) return s
+          const item = found.items.find((it) => it.id === itemId)
+          if (!item) return s
+          const areaItems = found.items.filter((it) => it.areaKey === item.areaKey)
+          const otherItems = found.items.filter((it) => it.areaKey !== item.areaKey)
+          const from = areaItems.findIndex((it) => it.id === itemId)
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const nextAreaItems = [...areaItems]
+          const [moved] = nextAreaItems.splice(from, 1)
+          nextAreaItems.splice(Math.max(0, Math.min(adjusted, nextAreaItems.length)), 0, moved)
+          return { document: withModuleItems(s.document, found.index, [...otherItems, ...nextAreaItems]) }
+        }),
+
+      removeModuleItem: (itemId) =>
+        set((s) => {
+          const found = findModuleBlockByItem(s.document.contenidos, itemId)
+          if (!found) return s
+          return { document: withModuleItems(s.document, found.index, found.items.filter((it) => it.id !== itemId)) }
+        }),
+
+      updateModuleItemFields: (itemId, fields) =>
+        set((s) => {
+          const found = findModuleBlockByItem(s.document.contenidos, itemId)
+          if (!found) return s
+          const items = found.items.map((it) => (it.id === itemId ? ({ ...it, fields } as ModuleItem) : it))
+          return { document: withModuleItems(s.document, found.index, items) }
         }),
 
       setDocument: (doc) => set(() => ({ document: doc })),

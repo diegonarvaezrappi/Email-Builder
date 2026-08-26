@@ -48,6 +48,22 @@ describe('resolveThemeVars', () => {
       }),
     ).toBe('<div style="border-radius:  8px;">')
   })
+
+  it('also resolves the 5 vars added for the new content-modules (fase 1, sin guión y sin _mail_general)', () => {
+    const html =
+      '<div style="border-radius:{{body_container_background_radius}}; padding:{{body_container_background_padding}}; border:{{body_container_background_border}}; background:{{bg_solid_generico50_mail_body}};"><img src="{{icon_link_generico_mail_body}}"></div>'
+    expect(
+      resolveThemeVars(html, {
+        body_container_background_radius: '0px',
+        body_container_background_padding: '0px',
+        body_container_background_border: ' 0px solid rgba(255, 255, 255, 0.0)',
+        bg_solid_generico50_mail_body: 'rgba(255,255,255,0.5)',
+        icon_link_generico_mail_body: 'https://x.test/icon.png',
+      }),
+    ).toBe(
+      '<div style="border-radius:0px; padding:0px; border: 0px solid rgba(255, 255, 255, 0.0); background:rgba(255,255,255,0.5);"><img src="https://x.test/icon.png"></div>',
+    )
+  })
 })
 
 describe('stripThemeDefinitions', () => {

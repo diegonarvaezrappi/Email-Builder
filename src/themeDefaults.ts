@@ -155,3 +155,36 @@ export function bannerBackgroundEnabledForTheme(banner: BannerFields, tema: stri
   const backgroundEnabled = expectedBackgroundEnabledForTema(tema)
   return backgroundEnabled !== banner.backgroundEnabled ? backgroundEnabled : null
 }
+
+/**
+ * El fondo del CONTENEDOR de un módulo de body (generalModuleFieldsSchema.backgroundEnabled)
+ * es la dirección CONTRARIA de banner.backgroundEnabled: "viene por defecto
+ * sin fondo, solo viene con fondo por defecto para el tema Pro y ProBlack"
+ * (comentario literal de modulo-titulo.html) — 9 temas en `false`, 2 en `true`
+ * (el banner es al revés: 9 en `true`, pastel en `false`). Mismo patrón de "no
+ * tocado desde el tema anterior" que el resto de este archivo — el default del
+ * schema (`false`, generalFields.ts) ya es el correcto para
+ * defaultEmailDocument (arranca en 'beige100').
+ */
+function expectedModuleBackgroundEnabledForTema(tema: string): boolean {
+  return tema === 'pro' || tema === 'problack'
+}
+
+/**
+ * Análogo a bannerBackgroundEnabledForTheme, pero para UN campo suelto (no un
+ * slot completo): el caller (App.tsx) lo llama por cada bloque de CONTENIDOS
+ * que use el motor de módulos (`usesModuleItems`, ver contentBlockRegistry.ts),
+ * pasando el `backgroundEnabled` actual de ESE bloque — no hay un
+ * `defaultTitleFields.backgroundEnabled` único que sirva de referencia para
+ * TODOS los bloques (cada instancia es independiente, a diferencia de
+ * banner/header que son singletons), así que el "sin tocar" de un bloque
+ * recién insertado se compara contra `false` (el default real del schema)
+ * cuando `prevTema` es null, igual que el resto de este archivo.
+ */
+export function moduleBackgroundEnabledForTheme(current: boolean, tema: string, prevTema: string | null): boolean | null {
+  const untouchedSincePrevTema = current === (prevTema === null ? false : expectedModuleBackgroundEnabledForTema(prevTema))
+  if (!untouchedSincePrevTema) return null
+
+  const backgroundEnabled = expectedModuleBackgroundEnabledForTema(tema)
+  return backgroundEnabled !== current ? backgroundEnabled : null
+}

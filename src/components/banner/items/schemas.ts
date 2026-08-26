@@ -27,6 +27,14 @@ export const BANNER_ITEM_TYPE_VALUES = [
   'IMG_FIJA',
   'IMG_AUTOMATICA_MODULO',
   'TAGS',
+  // Las 3 de la fase 1 del plan de nuevos módulos de contenido (ver
+  // [[project_body_modules_plan_2026-08-26]]) — "moléculas compartidas"
+  // banner+body: acá se implementan por primera vez como pieza de BANNER
+  // (cierran un sync gap real, ver scripts/sync-master.mjs); un futuro
+  // bodyMoleculeRegistry las va a envolver reusando este mismo render.
+  'SEPARADOR',
+  'FRANJA_LOGOS',
+  'TEXTO_PASTILLA',
 ] as const
 export type BannerItemType = (typeof BANNER_ITEM_TYPE_VALUES)[number]
 
@@ -204,8 +212,84 @@ export const ctaInternoFieldsSchema = z.object({
 export type CtaInternoFields = z.infer<typeof ctaInternoFieldsSchema>
 export const defaultCtaInternoFields: CtaInternoFields = ctaInternoFieldsSchema.parse({})
 
+/**
+ * SEPARADOR — molecula_separadores.html: 3 tamaños fijos de espaciador vacío
+ * (sin texto, sin color, nada que resolver por tema), documentados en el
+ * propio maestro: 'general' (sin sufijo de clase, 16px, entre módulos/secciones),
+ * 'M' (10px, entre moléculas de un mismo módulo) y 'S' (4px, separación mínima
+ * dentro de una celda). Sin campo de alineado: un `<div>` vacío no tiene nada
+ * que alinear.
+ */
+export const SEPARADOR_SIZE_VALUES = ['general', 'M', 'S'] as const
+export type SeparadorSize = (typeof SEPARADOR_SIZE_VALUES)[number]
+export const SEPARADOR_SIZE_LABELS: Record<SeparadorSize, string> = {
+  general: 'General (16px)',
+  M: 'Mediano (10px)',
+  S: 'Chico (4px)',
+}
+export const separadorFieldsSchema = z.object({ size: z.enum(SEPARADOR_SIZE_VALUES).default('general') })
+export type SeparadorFields = z.infer<typeof separadorFieldsSchema>
+export const defaultSeparadorFields: SeparadorFields = separadorFieldsSchema.parse({})
+
+/**
+ * FRANJA_LOGOS — content_moleculas/molecula_franja_logos.html: "se agregan o
+ * quitan <td> para agregar o quitar logos" (lista abierta, no un conteo fijo
+ * como TAGS) + "los logos tienen por defecto tamaño L, se debe poder cambiar,
+ * todos al tiempo" (un solo tamaño para todos, no por logo). El archivo real
+ * trae 4 logos por defecto, todos con la misma URL de ejemplo — se reproduce
+ * ese default acá. `size` reusa las mismas 3 medidas de content_moleculas/
+ * molecula_icono.html (S=15px/M=25px/L=50px — ver items/render.ts), aunque el
+ * maestro de franja de logos en sí no las repite: es la fuente real de "S/M/L"
+ * que sí menciona por nombre.
+ */
+export const FRANJA_LOGOS_SIZE_VALUES = ['S', 'M', 'L'] as const
+export type FranjaLogosSize = (typeof FRANJA_LOGOS_SIZE_VALUES)[number]
+export const FRANJA_LOGOS_SIZE_LABELS: Record<FranjaLogosSize, string> = { S: 'Chico', M: 'Mediano', L: 'Grande' }
+export const FRANJA_LOGOS_ICON_DEFAULT_URL = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'
+
+export const franjaLogoItemSchema = z.object({
+  imageUrl: z.string().default(FRANJA_LOGOS_ICON_DEFAULT_URL),
+  link: z.string().default(''),
+})
+export type FranjaLogoItem = z.infer<typeof franjaLogoItemSchema>
+export const defaultFranjaLogoItem = (): FranjaLogoItem => franjaLogoItemSchema.parse({})
+
+export const franjaLogosFieldsSchema = z.object({
+  logos: z
+    .array(franjaLogoItemSchema)
+    .min(1)
+    .max(10)
+    .default(() => [defaultFranjaLogoItem(), defaultFranjaLogoItem(), defaultFranjaLogoItem(), defaultFranjaLogoItem()]),
+  size: z.enum(FRANJA_LOGOS_SIZE_VALUES).default('L'),
+})
+export type FranjaLogosFields = z.infer<typeof franjaLogosFieldsSchema>
+export const defaultFranjaLogosFields: FranjaLogosFields = franjaLogosFieldsSchema.parse({})
+
+/**
+ * TEXTO_PASTILLA — banner_moleculas/molecula_texto_pastilla.html: "se puede
+ * cambiar el orden de las celdas th" — el archivo real trae 2 tablas
+ * alternas completas (pastilla a la derecha / a la izquierda), no un solo
+ * layout con un `order` CSS; `pillPosition` elige cuál de las 2 se usa (ver
+ * items/render.ts). Los 2 textos son literales fijos del maestro ("Supermercados"/
+ * "Martes"), no variables Liquid — mismo criterio que TAGS/PROMO "Ahora":
+ * strings simples, no RichText (el maestro no pide modificadores acá).
+ */
+export const TEXTO_PASTILLA_POSITION_VALUES = ['derecha', 'izquierda'] as const
+export type TextoPastillaPosition = (typeof TEXTO_PASTILLA_POSITION_VALUES)[number]
+export const TEXTO_PASTILLA_POSITION_LABELS: Record<TextoPastillaPosition, string> = {
+  derecha: 'Pastilla a la derecha',
+  izquierda: 'Pastilla a la izquierda',
+}
+export const textoPastillaFieldsSchema = z.object({
+  text: z.string().default('Supermercados'),
+  pillText: z.string().default('Martes'),
+  pillPosition: z.enum(TEXTO_PASTILLA_POSITION_VALUES).default('derecha'),
+})
+export type TextoPastillaFields = z.infer<typeof textoPastillaFieldsSchema>
+export const defaultTextoPastillaFields: TextoPastillaFields = textoPastillaFieldsSchema.parse({})
+
 /** Unión discriminada derivada de zod (no interfaces a mano como CtaBlock en
- *  model.ts): con 10 tipos, mantener 2 fuentes de verdad a mano se desincroniza. */
+ *  model.ts): con 13 tipos, mantener 2 fuentes de verdad a mano se desincroniza. */
 export const bannerItemSchema = z.discriminatedUnion('type', [
   z.object({ id: z.string(), type: z.literal('PROMO'), fields: promoFieldsSchema }),
   z.object({ id: z.string(), type: z.literal('CREDITOS'), fields: creditosFieldsSchema }),
@@ -217,5 +301,8 @@ export const bannerItemSchema = z.discriminatedUnion('type', [
   z.object({ id: z.string(), type: z.literal('IMG_FIJA'), fields: imgFijaFieldsSchema }),
   z.object({ id: z.string(), type: z.literal('IMG_AUTOMATICA_MODULO'), fields: imgAutomaticaModuloFieldsSchema }),
   z.object({ id: z.string(), type: z.literal('TAGS'), fields: tagsFieldsSchema }),
+  z.object({ id: z.string(), type: z.literal('SEPARADOR'), fields: separadorFieldsSchema }),
+  z.object({ id: z.string(), type: z.literal('FRANJA_LOGOS'), fields: franjaLogosFieldsSchema }),
+  z.object({ id: z.string(), type: z.literal('TEXTO_PASTILLA'), fields: textoPastillaFieldsSchema }),
 ])
 export type BannerItem = z.infer<typeof bannerItemSchema>

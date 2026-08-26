@@ -8,6 +8,9 @@ import { CtaPropertiesPanel } from './components/cta/PropertiesPanel'
 import { cloneDealsFields, createDefaultDealsFields, defaultDealsFields, dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { renderDealsSnippet } from './components/deals/render'
 import { DealsPropertiesPanel } from './components/deals/panels'
+import { cloneTitleFields, createDefaultTitleFields, defaultTitleFields, titleFieldsSchema, type TitleFields } from './components/title/schema'
+import { renderTitleSnippet } from './components/title/render'
+import { TitlePropertiesPanel } from './components/title/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -50,6 +53,27 @@ export interface ContentBlockDef<TFields> {
    * `createDefaultFields`.
    */
   cloneFields?: (fields: TFields) => TFields
+  /**
+   * `true` si `fields.items` es una lista de ModuleItem (el motor de área
+   * libre de moléculas compartido, ver bodyMoleculeRegistry.ts) — hoy solo
+   * TITLE. Lo consultan components/contentModules/blocks.ts
+   * (findModuleBlockByItem) y ui/InspectorPanel.tsx (para saber si mostrar el
+   * catálogo "+ Agregar molécula"), en vez de cada uno mantener su propia
+   * lista de tipos — una sola fuente de verdad. DEALS NO lo marca aunque
+   * también tenga `fields.items`: es una lista de DealCard, otra forma
+   * (`{id, fields}`, sin `type`/`areaKey`), un motor completamente distinto.
+   */
+  usesModuleItems?: boolean
+  /**
+   * `true` si `fields` spreadea generalModuleFieldsSchema (align/fondo/link
+   * generales, ver components/contentModules/generalFields.ts) — hoy también
+   * solo TITLE, pero es un flag DISTINTO de `usesModuleItems` a propósito: un
+   * futuro módulo puede tener uno sin el otro (Cupones, fase 8 del plan,
+   * usa el motor de área libre PERO su schema NO spreadea esto — el maestro
+   * dice explícito que ahí fondo/alineado no son togglables). App.tsx lo
+   * consulta para saber a qué bloques aplicarles moduleBackgroundEnabledForTheme.
+   */
+  hasGeneralModuleFields?: boolean
   render: (fields: TFields, doc: EmailDocument, ctx: ContentBlockRenderCtx) => string
   PropertiesPanel: ComponentType<{
     value: TFields
@@ -79,11 +103,25 @@ const dealsBlockDef: ContentBlockDef<DealsFields> = {
   PropertiesPanel: DealsPropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy CTA y DEALS; TITLE/LOGOS/etc. se suman acá
- *  cuando se implementen. */
+const titleBlockDef: ContentBlockDef<TitleFields> = {
+  type: 'TITLE',
+  label: 'Título',
+  schema: titleFieldsSchema,
+  defaultFields: defaultTitleFields,
+  createDefaultFields: createDefaultTitleFields,
+  cloneFields: cloneTitleFields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  render: renderTitleSnippet,
+  PropertiesPanel: TitlePropertiesPanel,
+}
+
+/** Tipos de bloque registrados — hoy CTA, DEALS y TITLE; LOGOS/etc. se suman
+ *  acá cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
+  TITLE: titleBlockDef,
 }
 
 /**

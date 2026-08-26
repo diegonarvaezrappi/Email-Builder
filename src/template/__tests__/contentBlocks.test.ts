@@ -6,9 +6,12 @@ import {
   BLOCK_OPEN_RE,
   DEAL_CARD_CLOSE_RE,
   DEAL_CARD_OPEN_RE,
+  MODULE_ITEM_CLOSE_RE,
+  MODULE_ITEM_OPEN_RE,
   wrapWithBannerItemMarkers,
   wrapWithBlockMarkers,
   wrapWithDealCardMarkers,
+  wrapWithModuleItemMarkers,
 } from '../contentBlocks'
 
 describe('wrapWithBlockMarkers', () => {
@@ -112,5 +115,37 @@ describe('wrapWithDealCardMarkers', () => {
     // Solo las aperturas: el `<!-- ` inicial las distingue de `<!-- /DCARD:...`.
     expect(joined.match(/<!-- DCARD:blk-1:card-9 -->/g)).toHaveLength(3)
     expect(joined.match(/<!-- \/DCARD:blk-1:card-9 -->/g)).toHaveLength(3)
+  })
+})
+
+describe('wrapWithModuleItemMarkers', () => {
+  it('wraps the html in a matched pair of comments carrying the OWNING BLOCK id and the item id (mismo shape que DCARD)', () => {
+    const wrapped = wrapWithModuleItemMarkers('blk-1', 'item-9', '<h2>Titulo</h2>')
+    expect(wrapped).toBe('<!-- MITEM:blk-1:item-9 -->\n<h2>Titulo</h2>\n<!-- /MITEM:blk-1:item-9 -->')
+  })
+
+  it('produces open/close comments matched by MODULE_ITEM_*_RE with the right captures', () => {
+    const lines = wrapWithModuleItemMarkers('blk-1', 'item-9', 'x').split('\n')
+    const strip = (line: string) => line.replace(/^<!--\s*/, '').replace(/\s*-->$/, '')
+    const open = strip(lines[0]).match(MODULE_ITEM_OPEN_RE)
+    expect(open?.[1]).toBe('blk-1')
+    expect(open?.[2]).toBe('item-9')
+    const close = strip(lines[lines.length - 1]).match(MODULE_ITEM_CLOSE_RE)
+    expect(close?.[1]).toBe('blk-1')
+    expect(close?.[2]).toBe('item-9')
+  })
+
+  it('MODULE_ITEM_OPEN_RE does not match a close marker and vice versa', () => {
+    expect('/MITEM:blk-1:item-9'.match(MODULE_ITEM_OPEN_RE)).toBeNull()
+    expect('MITEM:blk-1:item-9'.match(MODULE_ITEM_CLOSE_RE)).toBeNull()
+  })
+
+  it('never cross-matches the other 4 marker systems (los 5 conviven en el mismo documento)', () => {
+    expect('MITEM:blk-1:item-9'.match(BLOCK_OPEN_RE)).toBeNull()
+    expect('MITEM:blk-1:item-9'.match(BANNER_ITEM_OPEN_RE)).toBeNull()
+    expect('MITEM:blk-1:item-9'.match(DEAL_CARD_OPEN_RE)).toBeNull()
+    expect('DCARD:blk-1:card-9'.match(MODULE_ITEM_OPEN_RE)).toBeNull()
+    expect('BITEM:PROMO:a'.match(MODULE_ITEM_OPEN_RE)).toBeNull()
+    expect('BLOCK:TITLE:blk-1'.match(MODULE_ITEM_OPEN_RE)).toBeNull()
   })
 })

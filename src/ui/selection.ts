@@ -24,6 +24,11 @@ export interface Selection {
    *  LÍNEA, no toda la tarjeta (isDealCardSelected exige que esto sea
    *  undefined, igual que isSlotSelected exige bannerItemId undefined). */
   dealCardPieceType?: DealCardPieceType
+  /** Solo tiene sentido con `slot === 'CONTENIDOS'` — identifica una molécula
+   *  dentro del área libre de un módulo de body (ej. TITLE). Mismo criterio
+   *  que `dealCardId`: sin `blockId` propio, el id de item es único en todo el
+   *  documento (ver findModuleBlockByItem en components/contentModules/blocks.ts). */
+  moduleItemId?: string
 }
 
 export const selectSlot = (slot: SlotName): Selection => ({ slot })
@@ -35,6 +40,7 @@ export const selectDealCardPiece = (dealCardId: string, dealCardPieceType: DealC
   dealCardId,
   dealCardPieceType,
 })
+export const selectModuleItem = (moduleItemId: string): Selection => ({ slot: 'CONTENIDOS', moduleItemId })
 
 export function isSlotSelected(selected: Selection | null, slot: SlotName): boolean {
   return (
@@ -63,4 +69,8 @@ export function isDealCardPieceSelected(
 
 export function isBannerItemSelected(selected: Selection | null, bannerItemId: string): boolean {
   return selected?.slot === 'BANNER' && selected.bannerItemId === bannerItemId
+}
+
+export function isModuleItemSelected(selected: Selection | null, moduleItemId: string): boolean {
+  return selected?.slot === 'CONTENIDOS' && selected.moduleItemId === moduleItemId
 }
