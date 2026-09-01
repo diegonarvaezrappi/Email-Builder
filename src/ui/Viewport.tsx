@@ -36,7 +36,7 @@ import type { BannerType } from '../components/banner/schema'
 import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
 import type { ModuleItemType } from '../moduleItems/schemas'
 import { registry, SLOT_LABELS } from '../registry'
-import { getContentBlockDef } from '../contentBlockRegistry'
+import { getContentBlockDef, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import { assembleEmailHtml } from '../template/assemble'
@@ -731,9 +731,17 @@ function EmailFrame({
    * catálogo — a diferencia del reorden, no hay item existente del que deducir
    * el bloque dueño: se detecta geométricamente cuál blockRect (de los que usan
    * el motor de módulos, ver contentBlockRegistry.ts `usesModuleItems`)
-   * contiene el cursor. `'main'` es la convención de área única de un módulo
-   * de body de una sola zona (hoy TITLE) — un futuro módulo con más de un
-   * área necesitaría detectar CUÁL geométricamente; no hace falta todavía.
+   * contiene el cursor.
+   *
+   * El área siempre es la PRIMERA que declara el módulo (`getModuleAreas(def)[0]`)
+   * — para TITLE/BULLET/BENEFICIOS es la única ('main'), sin ambigüedad. Para
+   * un módulo con más de un área (COL1 en adelante, fase 4) esto es una
+   * simplificación deliberada: un drop geométrico no puede distinguir 'arriba'
+   * de 'abajo' cuando esa área está vacía (no hay rect propio que medir — a
+   * diferencia de reordenar un item YA existente, que sí conoce su areaKey).
+   * Apuntar a una área que NO es la primera requiere el catálogo scoped de esa
+   * área en el panel de propiedades (ver ui/InspectorPanel.tsx), que sí sabe
+   * exactamente a cuál área insertar sin depender de geometría.
    */
   const resolveModuleBlockForDrop = (e: React.DragEvent): { blockId: string; areaKey: string } | null => {
     if (!frameElRef.current) return null
@@ -741,7 +749,9 @@ function EmailFrame({
     const target = blockRects.find(
       (r) => getContentBlockDef(r.type)?.usesModuleItems && dropY >= r.top && dropY <= r.top + r.height,
     )
-    return target ? { blockId: target.id, areaKey: 'main' } : null
+    if (!target) return null
+    const def = getContentBlockDef(target.type)!
+    return { blockId: target.id, areaKey: getModuleAreas(def)[0].key }
   }
 
   return (

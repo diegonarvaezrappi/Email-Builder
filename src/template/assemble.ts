@@ -1,5 +1,5 @@
 import templateBaseRaw from '../assets/templates/template_base.html?raw'
-import { SLOT_ORDER, type EmailDocument, type SlotName } from '../model'
+import { SLOT_ORDER, type EmailDocument } from '../model'
 import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
@@ -38,15 +38,18 @@ const WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]
 const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/
 
 /**
- * Slots cuyo marcador real no es `<!-- ${slot} -->` literal. El maestro
- * (estructura_general.html) usa el plural "CIERRES" para el slot Cierre —
- * inconsistencia real del repo, no un typo de acá. Debe quedar sincronizado
- * con SLOT_MARKERS de scripts/sync-master.mjs, que valida esta misma forma
- * antes de sincronizar.
+ * El maestro (estructura_general.html) usa el plural "CIERRES" para el
+ * marcador del slot Cierre — inconsistencia real del repo, no un typo de acá.
+ * Debe quedar sincronizado con SLOT_MARKERS de scripts/sync-master.mjs, que
+ * valida esta misma forma antes de sincronizar.
+ *
+ * Cierre ya NO se planta ahí: desde el pedido explícito del usuario
+ * (2026-08-31) de unificar Título/Bullet/CTA/Deals/Beneficios y Cierre en una
+ * sola tabla, su HTML se inserta dentro del snippet de CONTENIDOS (ver
+ * components/contenidos/render.ts, _contenidos_wrapper.html) — este marcador
+ * se deja vacío a propósito, ver el branch `slot === 'CIERRE'` más abajo.
  */
-const SLOT_MARKER_TEXT: Partial<Record<SlotName, string>> = {
-  CIERRE: 'CIERRES',
-}
+const CIERRE_MARKER = '<!-- CIERRES -->'
 
 /**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
@@ -57,8 +60,9 @@ const SLOT_MARKER_TEXT: Partial<Record<SlotName, string>> = {
  * Reemplazo literal (no DOMParser) a propósito: preserva el Liquid+HTML del
  * template maestro byte a byte — ver decisión de arquitectura en el plan.
  *
- * Los 4 `replace` usan SIEMPRE la forma función (`() => rendered`), nunca un
- * string de reemplazo directo: `String.replace` con un string interpreta
+ * Los `replace` de contenido variable usan SIEMPRE la forma función
+ * (`() => rendered`), nunca un string de reemplazo directo: `String.replace`
+ * con un string interpreta
  * `$&`/`$$`/`` $` ``/`$'` como patrones especiales, y `rendered` puede traer
  * texto libre de usuario con un `$` real (ej. el default de Banner/PROMO es
  * literalmente '$14.000', o un usuario podría escribir "$&" en un campo de
@@ -81,6 +85,17 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
     if (!def) continue
+
+    if (slot === 'CIERRE') {
+      // Su HTML ya se insertó como parte del snippet de CONTENIDOS (misma
+      // tabla, ver components/contenidos/render.ts) — nunca se vuelve a
+      // invocar renderCierreSnippet acá, el marcador queda vacío a propósito.
+      if (!html.includes(CIERRE_MARKER)) {
+        throw new Error(`No se encontró el marcador ${CIERRE_MARKER} en template_base.html`)
+      }
+      html = html.replace(CIERRE_MARKER, () => '')
+      continue
+    }
 
     const fields = doc[def.docKey]
     const rendered = def.render(fields, doc)
@@ -109,7 +124,9 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       continue
     }
 
-    const marker = `<!-- ${SLOT_MARKER_TEXT[slot] ?? slot} -->`
+    // Único slot que llega hasta acá hoy: FOOTER (HEADER/CONTENIDOS/BANNER/
+    // CIERRE ya se resolvieron arriba, cada uno con su propio branch).
+    const marker = `<!-- ${slot} -->`
     if (!html.includes(marker)) {
       throw new Error(`No se encontró el marcador ${marker} en template_base.html`)
     }

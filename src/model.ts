@@ -7,6 +7,7 @@ import { dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { titleFieldsSchema, type TitleFields } from './components/title/schema'
 import { bulletFieldsSchema, type BulletFields } from './components/bullet/schema'
 import { beneficiosFieldsSchema, type BeneficiosFields } from './components/benefits/schema'
+import { col1FieldsSchema, type Col1Fields } from './components/col1/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -29,11 +30,11 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * Tipos de bloque de contenido que puede alojar CONTENIDOS (ver el comentario
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
- * implementen los demás — hoy CTA, DEALS, TITLE, BULLET y BENEFICIOS (fases 2
- * y 3 del plan de nuevos módulos de contenido, ver
- * [[project_body_modules_plan_2026-08-26]]).
+ * implementen los demás — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS (fases 2 y
+ * 3) y COL1 (fase 4) del plan de nuevos módulos de contenido, ver
+ * [[project_body_modules_plan_2026-08-26]].
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1'
 
 export interface CtaBlock {
   id: string
@@ -88,8 +89,22 @@ export interface BeneficiosBlock {
   fields: BeneficiosFields
 }
 
+/**
+ * Fase 4: primer módulo con MÁS de un área libre (`fields.items` mezcla
+ * `areaKey: 'above'|'below'` en el mismo array plano — mismo motor, solo un
+ * segundo valor de areaKey, ya anticipado por moduleItemSchema). También el
+ * primero con una imagen FIJA (como Beneficios) que además es REMOVIBLE
+ * (URL en blanco = sin imagen), a diferencia de la de Beneficios. Ver
+ * components/col1/.
+ */
+export interface Col1Block {
+  id: string
+  type: 'COL1'
+  fields: Col1Fields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock
+export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -121,12 +136,19 @@ const beneficiosBlockSchema = z.object({
   fields: beneficiosFieldsSchema,
 })
 
+const col1BlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('COL1'),
+  fields: col1FieldsSchema,
+})
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   ctaBlockSchema,
   dealsBlockSchema,
   titleBlockSchema,
   bulletBlockSchema,
   beneficiosBlockSchema,
+  col1BlockSchema,
 ])
 
 /**

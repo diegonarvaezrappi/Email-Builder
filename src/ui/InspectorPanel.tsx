@@ -23,7 +23,7 @@
 import type { EmailDocument } from '../model'
 import type { GlobalFields } from '../global/schema'
 import { registry, SLOT_LABELS } from '../registry'
-import { contentBlockRegistry } from '../contentBlockRegistry'
+import { contentBlockRegistry, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import { selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
@@ -185,21 +185,26 @@ export function InspectorPanel({
         )}
         {/* Igual que el botón "+ Agregar deal" de arriba: insertar necesita
             onInsertModuleItem, una acción del store que
-            ContentBlockDef.PropertiesPanel no recibe. `'main'` es la
-            convención de área única de un módulo de una sola zona (hoy
-            TITLE) — ver la nota de resolveModuleBlockForDrop en Viewport.tsx. */}
-        {contentBlockRegistry[block.type]?.usesModuleItems && (
-          <ModuleItemCatalog
-            onInsert={(type) =>
-              onInsertModuleItem(
-                block.id,
-                'main',
-                type,
-                (block.fields as { items: { areaKey: string }[] }).items.filter((it) => it.areaKey === 'main').length,
-              )
-            }
-          />
-        )}
+            ContentBlockDef.PropertiesPanel no recibe. Un catálogo POR ÁREA
+            (getModuleAreas resuelve ['main'] sin label para los módulos de
+            una sola zona — TITLE/BULLET/BENEFICIOS — y las áreas reales de
+            COL1 en adelante). */}
+        {contentBlockRegistry[block.type]?.usesModuleItems &&
+          getModuleAreas(contentBlockRegistry[block.type]!).map((area) => (
+            <div key={area.key} className="module-area-catalog">
+              {area.label && <p className="field-group-label">{area.label}</p>}
+              <ModuleItemCatalog
+                onInsert={(type) =>
+                  onInsertModuleItem(
+                    block.id,
+                    area.key,
+                    type,
+                    (block.fields as { items: { areaKey: string }[] }).items.filter((it) => it.areaKey === area.key).length,
+                  )
+                }
+              />
+            </div>
+          ))}
       </aside>
     )
   }

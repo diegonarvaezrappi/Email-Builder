@@ -3,17 +3,25 @@ import { defaultEmailDocument } from '../../../registry'
 import type { ContentBlock } from '../../../model'
 import { defaultCtaFields } from '../../cta/schema'
 import { defaultDealsFields } from '../../deals/schema'
-import { renderContenidosSnippet } from '../render'
+import { defaultCierreFields } from '../../cierre/schema'
+import { defaultCol1Fields } from '../../col1/schema'
+import { renderContentBlocksSnippet, renderContenidosSnippet } from '../render'
 
 const SEPARADOR = '<div class="separador"></div>'
 
 const cta = (id: string): ContentBlock => ({ id, type: 'CTA', fields: { ...defaultCtaFields, text: id } })
 const deals = (id: string): ContentBlock => ({ id, type: 'DEALS', fields: defaultDealsFields })
+const col1 = (id: string): ContentBlock => ({ id, type: 'COL1', fields: defaultCol1Fields })
 
-const render = (blocks: ContentBlock[]) => renderContenidosSnippet(blocks, { ...defaultEmailDocument, contenidos: blocks })
+/** Cierre removido a propósito en todos estos casos: son pruebas puras de
+ *  cómo se unen los bloques ENTRE SÍ, sin acoplarse a lo que
+ *  renderContenidosSnippet le agrega después (ver describe de más abajo). */
+const cierreRemovido = { ...defaultCierreFields, removed: true }
+const render = (blocks: ContentBlock[]) =>
+  renderContentBlocksSnippet(blocks, { ...defaultEmailDocument, contenidos: blocks, cierre: cierreRemovido })
 const count = (html: string, literal: string) => html.split(literal).length - 1
 
-describe('renderContenidosSnippet · separadores', () => {
+describe('renderContentBlocksSnippet · separadores', () => {
   it('pone un separador entre 2 bloques normales, y ninguno en los extremos', () => {
     const html = render([cta('a'), cta('b')])
     expect(count(html, SEPARADOR)).toBe(1)
@@ -62,5 +70,71 @@ describe('renderContenidosSnippet · separadores', () => {
 
   it('sin bloques devuelve vacío', () => {
     expect(render([])).toBe('')
+  })
+})
+
+describe('renderContenidosSnippet · tabla compartida con Cierre', () => {
+  // Marcador único del `<td>` de área libre en _contenidos_wrapper.html.
+  const WRAPPER_TD = '<td style="padding:0px;margin:0px;border-spacing:0;">'
+
+  const doc = (overrides: Partial<typeof defaultEmailDocument> = {}) => ({ ...defaultEmailDocument, ...overrides })
+
+  it('envuelve los bloques en la tabla de _contenidos_wrapper.html', () => {
+    const html = renderContenidosSnippet([cta('a')], doc({ contenidos: [cta('a')], cierre: cierreRemovido }))
+    expect(html).toContain(WRAPPER_TD)
+    expect(html).toContain('BLOCK:CTA:a')
+  })
+
+  it('agrega Cierre DESPUÉS de los bloques, dentro de la misma tabla (no una tabla aparte)', () => {
+    const html = renderContenidosSnippet([cta('a')], doc({ contenidos: [cta('a')] }))
+    expect(html.indexOf('BLOCK:CTA:a')).toBeLessThan(html.indexOf('alt="RappiFirma"'))
+    // Una sola tabla-wrapper (no 2 <table> hermanas): el <td> de área libre
+    // aparece una sola vez y contiene tanto el CTA como la firma.
+    expect(count(html, WRAPPER_TD)).toBe(1)
+  })
+
+  it('no duplica el separador entre el último bloque y Cierre (Cierre ya trae el suyo propio)', () => {
+    const html = renderContenidosSnippet([cta('a')], doc({ contenidos: [cta('a')] }))
+    const betweenCtaAndCierre = html.slice(html.indexOf('BLOCK:CTA:a'), html.indexOf('alt="RappiFirma"'))
+    expect(count(betweenCtaAndCierre, SEPARADOR)).toBe(1)
+  })
+
+  it('renderiza solo Cierre, ya envuelto en la tabla, cuando no hay bloques', () => {
+    const html = renderContenidosSnippet([], doc({ contenidos: [] }))
+    expect(html).toContain(WRAPPER_TD)
+    expect(html).toContain('alt="RappiFirma"')
+  })
+
+  it('sin bloques y con Cierre oculto (removido a mano) devuelve vacío entero, sin tabla', () => {
+    const html = renderContenidosSnippet([], doc({ contenidos: [], cierre: cierreRemovido }))
+    expect(html).toBe('')
+  })
+
+  it('sin bloques y con Cierre oculto por tema Pro devuelve vacío entero, sin tabla', () => {
+    const html = renderContenidosSnippet(
+      [],
+      doc({ contenidos: [], global: { ...defaultEmailDocument.global, tema: 'pro' } }),
+    )
+    expect(html).toBe('')
+  })
+
+  it('con bloques y Cierre oculto, la tabla sigue apareciendo (solo con los bloques)', () => {
+    const html = renderContenidosSnippet([cta('a')], doc({ contenidos: [cta('a')], cierre: cierreRemovido }))
+    expect(html).toContain(WRAPPER_TD)
+    expect(html).toContain('BLOCK:CTA:a')
+    expect(html).not.toContain('alt="RappiFirma"')
+  })
+
+  // Pedido explícito del usuario al arrancar la fase 4: confirmar que COL1
+  // (el primer módulo nuevo desde el merge de tablas) también queda DENTRO de
+  // la misma tabla compartida, no en una tabla hermana aparte.
+  it('COL1 (fase 4) también queda dentro de la misma tabla que CTA/DEALS y Cierre', () => {
+    const blocks = [cta('a'), col1('c'), deals('d')]
+    const html = renderContenidosSnippet(blocks, doc({ contenidos: blocks }))
+    expect(count(html, WRAPPER_TD)).toBe(1)
+    expect(html).toContain('BLOCK:COL1:c')
+    expect(html.indexOf('BLOCK:CTA:a')).toBeLessThan(html.indexOf('BLOCK:COL1:c'))
+    expect(html.indexOf('BLOCK:COL1:c')).toBeLessThan(html.indexOf('BLOCK:DEALS:d'))
+    expect(html.indexOf('BLOCK:DEALS:d')).toBeLessThan(html.indexOf('alt="RappiFirma"'))
   })
 })

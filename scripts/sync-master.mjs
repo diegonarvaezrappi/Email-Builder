@@ -253,6 +253,18 @@ const BULLET_FILE = 'modulo_bullet.html'
 const BENEFITS_DIR_NAME = 'benefits'
 const BENEFITS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, BENEFITS_DIR_NAME)
 const BENEFITS_FILE = 'modulo-beneficios.html'
+/** `1columna/` — fase 4 del plan de nuevos módulos de contenido, ver
+ *  components/col1/render.ts. Nombre de carpeta calcado del maestro (dígito
+ *  inicial incluido — es solo un segmento de ruta, no un identificador JS). */
+const COL1_DIR_NAME = '1columna'
+const COL1_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL1_DIR_NAME)
+const COL1_FILE = 'modulo-1columna.html'
+/** Vive directo en la raíz de NN_content-modules/, sin subcarpeta propia (a
+ *  diferencia de title/bullet/benefits) — nombre fijo. Pedido explícito del
+ *  usuario 2026-08-31: Título/Bullet/CTA/Deals/Beneficios y Cierre deben vivir
+ *  todos dentro de ESTA tabla (ver components/contenidos/render.ts), no en
+ *  tablas hermanas independientes como hasta ahora. */
+const CONTENIDOS_WRAPPER_FILE = '_contenidos_wrapper.html'
 
 /**
  * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
@@ -507,9 +519,37 @@ const BULLET_ANCHOR_COUNTS = {
  * content_moleculas/molecula_icono.html) — por eso no se ancla el icono de
  * fábrica acá.
  */
+/**
+ * Anclas que components/col1/render.ts necesita en modulo-1columna.html —
+ * el `<div role="divcomponentes">` del área "arriba" (reusado literal para
+ * CONSTRUIR el área "abajo" cuando hace falta, ver la nota grande de ese
+ * archivo), el `<div role="contenedorgeneral">` donde se ancla esa
+ * inserción, LINKMODULO y la URL de fábrica de la imagen.
+ */
+const COL1_DIVCOMPONENTES_ANCHOR = '<div role="divcomponentes" style="display: inline-block; padding: {{body_container_background_padding}};">'
+const COL1_CONTENEDORGENERAL_ANCHOR =
+  '<div role="contenedorgeneral" style="background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;">'
+const COL1_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1OEXxNDtUklgU4W8sta2zOzdZ4rZYq7PO'
+const COL1_ANCHOR_COUNTS = {
+  LINKMODULO: 1,
+  [COL1_DIVCOMPONENTES_ANCHOR]: 1,
+  [COL1_CONTENEDORGENERAL_ANCHOR]: 1,
+  [COL1_IMAGE_URL_PLACEHOLDER]: 1,
+}
+
 const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
 const BENEFICIOS_TITULO_LITERAL = '>Descuentos de hasta xxx<'
 const BENEFICIOS_TEXTO_LITERAL = 'En todos tus pedidos en la app, pidiendo desde $XXXXXX'
+/**
+ * Ancla que components/contenidos/render.ts necesita en _contenidos_wrapper.html
+ * — el <td> único del área libre ("MOLECULAS BODY" en el maestro) donde se
+ * insertan los bloques de CONTENIDOS + Cierre, ambos dentro de esta misma
+ * tabla (ver la nota grande en components/contenidos/render.ts).
+ */
+const CONTENIDOS_WRAPPER_ANCHOR_COUNTS = {
+  '<td style="padding:0px;margin:0px;border-spacing:0;">': 1,
+}
+
 const BENEFICIOS_ANCHOR_COUNTS = {
   LINKMODULO: 1,
   '{{body_container_background_radius}}': 1,
@@ -1151,6 +1191,63 @@ if (BENEFITS_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/1columna/modulo-1columna.html ------------
+// Fase 4 del plan de nuevos módulos de contenido — ver components/col1/render.ts.
+let col1FileContent = ''
+if (COL1_DIR) {
+  const fp = path.join(COL1_DIR, COL1_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL1_DIR_NAME}/${COL1_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(COL1_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/col1/render.ts`)
+      }
+    }
+    col1FileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/bullet/benefits.
+  const knownCol1Files = new Set([COL1_FILE])
+  let actualCol1Files = []
+  try {
+    actualCol1Files = fs.readdirSync(COL1_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL1_DIR_NAME}: ${e.message}`)
+  }
+  const unknownCol1Files = actualCol1Files.filter((f) => !knownCol1Files.has(f))
+  if (unknownCol1Files.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL1_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownCol1Files.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
+// --- NN-components/NN_content-modules/_contenidos_wrapper.html -----------------
+// Pedido explícito del usuario 2026-08-31 — ver components/contenidos/render.ts.
+let contenidosWrapperFileContent = ''
+if (CONTENT_MODULES_DIR) {
+  const fp = path.join(CONTENT_MODULES_DIR, CONTENIDOS_WRAPPER_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(CONTENIDOS_WRAPPER_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/contenidos/render.ts`)
+      }
+    }
+    contenidosWrapperFileContent = content
+  }
+}
+
 // --- NN-components/NN_headers/** --------------------------------------------------
 // 10 marcas × 4 archivos (fondo × disposición) + el wrapper compartido.
 /** `{ [brand]: { [fileName]: content } }`. */
@@ -1256,6 +1353,20 @@ if (beneficiosFileContent) {
   fs.writeFileSync(path.join(BENEFITS_ASSETS_DIR, BENEFITS_FILE), beneficiosFileContent, 'utf8')
 }
 
+if (col1FileContent) {
+  const COL1_ASSETS_DIR = path.join(ASSETS_DIR, 'col1')
+  fs.mkdirSync(COL1_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(COL1_ASSETS_DIR, COL1_FILE), col1FileContent, 'utf8')
+}
+
+if (contenidosWrapperFileContent) {
+  // Carpeta propia (`contenidos/`) — mismo criterio que title/bullet/benefits:
+  // nombre calcado del componente de app/src que lo consume.
+  const CONTENIDOS_ASSETS_DIR = path.join(ASSETS_DIR, 'contenidos')
+  fs.mkdirSync(CONTENIDOS_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(CONTENIDOS_ASSETS_DIR, CONTENIDOS_WRAPPER_FILE), contenidosWrapperFileContent, 'utf8')
+}
+
 const HEADERS_ASSETS_DIR = path.join(ASSETS_DIR, 'headers')
 fs.mkdirSync(HEADERS_ASSETS_DIR, { recursive: true })
 fs.writeFileSync(path.join(HEADERS_ASSETS_DIR, HEADER_WRAPPER_FILE), headerWrapperContent, 'utf8')
@@ -1292,6 +1403,12 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${BENEFITS_DIR_NAME}/ (${Object.keys(BENEFICIOS_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL1_DIR_NAME}/ (${Object.keys(COL1_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE} (${Object.keys(CONTENIDOS_WRAPPER_ANCHOR_COUNTS).length} anclas OK)`,
 )
 if (themesMissingColorFooter.length === themeCount) {
   console.warn(

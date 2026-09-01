@@ -23,6 +23,9 @@ import {
 } from './components/benefits/schema'
 import { renderBeneficiosSnippet } from './components/benefits/render'
 import { BeneficiosPropertiesPanel } from './components/benefits/PropertiesPanel'
+import { cloneCol1Fields, createDefaultCol1Fields, defaultCol1Fields, col1FieldsSchema, COL1_AREA_ABOVE, COL1_AREA_BELOW, type Col1Fields } from './components/col1/schema'
+import { renderCol1Snippet } from './components/col1/render'
+import { Col1PropertiesPanel } from './components/col1/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -86,6 +89,15 @@ export interface ContentBlockDef<TFields> {
    * consulta para saber a qué bloques aplicarles moduleBackgroundEnabledForTheme.
    */
   hasGeneralModuleFields?: boolean
+  /**
+   * Áreas libres del módulo, cada una con su propio `areaKey` (el que viajan
+   * en `ModuleItem.areaKey`) + un `label` para el catálogo "+ Agregar
+   * molécula" de cada una (ver ui/InspectorPanel.tsx). Ausente en TITLE/
+   * BULLET/BENEFICIOS (una sola área implícita, `getModuleAreas` resuelve el
+   * default `'main'` sin label) — COL1 (fase 4) es el primero en declararlo
+   * explícito, con 2 áreas reales ('above'/'below' de la imagen).
+   */
+  moduleAreas?: { key: string; label: string }[]
   render: (fields: TFields, doc: EmailDocument, ctx: ContentBlockRenderCtx) => string
   PropertiesPanel: ComponentType<{
     value: TFields
@@ -154,14 +166,41 @@ const beneficiosBlockDef: ContentBlockDef<BeneficiosFields> = {
   PropertiesPanel: BeneficiosPropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET y BENEFICIOS;
- *  LOGOS/etc. se suman acá cuando se implementen. */
+const col1BlockDef: ContentBlockDef<Col1Fields> = {
+  type: 'COL1',
+  label: '1 columna',
+  schema: col1FieldsSchema,
+  defaultFields: defaultCol1Fields,
+  createDefaultFields: createDefaultCol1Fields,
+  cloneFields: cloneCol1Fields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  moduleAreas: [
+    { key: COL1_AREA_ABOVE, label: 'Arriba de la imagen' },
+    { key: COL1_AREA_BELOW, label: 'Debajo de la imagen' },
+  ],
+  render: renderCol1Snippet,
+  PropertiesPanel: Col1PropertiesPanel,
+}
+
+/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS y
+ *  COL1; LOGOS/CUPONES/etc. se suman acá cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
   TITLE: titleBlockDef,
   BULLET: bulletBlockDef,
   BENEFICIOS: beneficiosBlockDef,
+  COL1: col1BlockDef,
+}
+
+/** Áreas libres de un bloque `usesModuleItems` — default `'main'` sin label
+ *  para los módulos de una sola área (compat con TITLE/BULLET/BENEFICIOS, que
+ *  no declaran `moduleAreas`). Usado por ui/InspectorPanel.tsx (un catálogo
+ *  "+ Agregar molécula" por área) y ui/Viewport.tsx (destino por defecto de un
+ *  drop geométrico en el canvas — ver la nota en resolveModuleBlockForDrop). */
+export function getModuleAreas(def: ContentBlockDef<any>): { key: string; label: string }[] {
+  return def.moduleAreas ?? [{ key: 'main', label: '' }]
 }
 
 /**
