@@ -104,21 +104,41 @@ const PNG_WIDTH = 600
 /**
  * html2canvas no soporta `writing-mode` (no está en su lista de props
  * CSS soportadas) — lo único que lo usa en todo el proyecto es la celda
- * vertical "Ahora" de PROMO (`writing-mode: vertical-rl`, ver
- * molecula_promo_*.html / components/banner/render.ts), que sale distorsionada
- * en el PNG aunque en el iframe de Preview se vea bien (ahí sí la interpreta
- * el motor CSS real del navegador — solo al rasterizar con html2canvas se
- * rompe). Se neutraliza en el DOM justo antes de capturar: el contenido se
- * mueve a un <div> interno con ancho/alto intercambiados y
- * `transform: rotate(90deg)` (que html2canvas sí soporta) — para texto latino
- * de una sola línea, vertical-rl equivale visualmente a rotar el texto
- * horizontal 90° en sentido horario. El <div> externo conserva su tamaño y
- * `position` original, así el layout de la celda que lo contiene no cambia.
- * Selector genérico (no acoplado a PROMO) para no perderse si el día de
- * mañana otra pieza reusa vertical-rl.
+ * vertical "Ahora"/"Desde" de PROMO (ver molecula_promo_*.html /
+ * components/banner/render.ts), que sale distorsionada en el PNG aunque en el
+ * iframe de Preview se vea bien (ahí sí la interpreta el motor CSS real del
+ * navegador — solo al rasterizar con html2canvas se rompe). Se neutraliza en
+ * el DOM justo antes de capturar: el contenido se mueve a un <div> interno
+ * con ancho/alto intercambiados y un `transform: rotate(...)` (que html2canvas
+ * sí soporta) que reproduce visualmente el mismo writing-mode, para texto
+ * latino de una sola línea. Selector genérico (no acoplado a PROMO) para no
+ * perderse si el día de mañana otra pieza reusa esto.
+ *
+ * El ÁNGULO depende del valor exacto de `writing-mode` — no son
+ * intercambiables: `vertical-rl` rota el texto 90° en sentido HORARIO,
+ * `sideways-lr` lo rota 90° ANTIHORARIO (dirección de lectura opuesta), y el
+ * maestro cambió de uno a otro sin avisar (pull 2026-09-01, "orientación del
+ * texto del tag de promo", `cda7b3f`) — confirmado visualmente vía CDP
+ * (comparación lado a lado de sideways-lr real contra cada rotación posible)
+ * después de que ese pull dejara el PNG exportado con el texto invertido
+ * respecto al preview en vivo. Se falla ruidoso ante cualquier otro valor en
+ * vez de asumir una rotación que podría estar al revés otra vez.
  */
-function neutralizeVerticalWritingModeForCapture(frameDoc: Document): void {
+const WRITING_MODE_ROTATION_DEG: Record<string, number> = {
+  'vertical-rl': 90,
+  'sideways-lr': -90,
+}
+
+export function neutralizeVerticalWritingModeForCapture(frameDoc: Document): void {
   frameDoc.querySelectorAll<HTMLElement>('[style*="writing-mode"]').forEach((el) => {
+    const writingMode = el.style.writingMode
+    const rotationDeg = WRITING_MODE_ROTATION_DEG[writingMode]
+    if (rotationDeg === undefined) {
+      throw new Error(
+        `neutralizeVerticalWritingModeForCapture: writing-mode "${writingMode}" no está mapeado en WRITING_MODE_ROTATION_DEG — revisar qué dirección de rotación le corresponde antes de exportar el PNG (una elegida al azar puede salir invertida)`,
+      )
+    }
+
     const { height, fontSize, lineHeight, color } = el.style
     const innerHtml = el.innerHTML
 
@@ -139,7 +159,7 @@ function neutralizeVerticalWritingModeForCapture(frameDoc: Document): void {
     if (fontSize) rotated.style.fontSize = fontSize
     if (lineHeight) rotated.style.lineHeight = lineHeight
     if (color) rotated.style.color = color
-    rotated.style.transform = 'translate(-50%, -50%) rotate(90deg)'
+    rotated.style.transform = `translate(-50%, -50%) rotate(${rotationDeg}deg)`
     rotated.style.transformOrigin = 'center center'
     el.appendChild(rotated)
   })

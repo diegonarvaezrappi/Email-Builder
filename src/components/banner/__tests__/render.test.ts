@@ -284,13 +284,14 @@ describe('renderBannerSnippet', () => {
       expect(textomHtml).toContain('text-align: left')
     })
 
-    it('"left" does NOT flip PROMO\'s vertical "Ahora" label cell (writing-mode: vertical-rl — text-align there is vertical centering, not horizontal)', () => {
+    it('"left" does NOT flip PROMO\'s vertical "Ahora" label cell (writing-mode: sideways-lr — text-align there is vertical centering, not horizontal)', () => {
       const d = withItems([promo('a')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
       const html = renderBannerSnippet(d.banner, d)
       const promoHtml = html.slice(html.indexOf('BITEM:PROMO:a'), html.indexOf('/BITEM:PROMO:a'))
-      // La celda "Ahora" (writing-mode: vertical-rl) conserva su text-align:
-      // center intacto...
-      const ahoraTd = promoHtml.match(/<td[^>]*>\s*<div[^>]*writing-mode:\s*vertical-rl[\s\S]*?<\/td>/)?.[0]
+      // La celda "Ahora" (writing-mode: sideways-lr desde el pull 2026-09-01,
+      // "orientación del texto del tag de promo" — antes vertical-rl, ver
+      // project_master_upstream_state) conserva su text-align: center intacto...
+      const ahoraTd = promoHtml.match(/<td[^>]*>\s*<div[^>]*writing-mode:\s*sideways-lr[\s\S]*?<\/td>/)?.[0]
       expect(ahoraTd).toBeDefined()
       expect(ahoraTd).toContain('text-align: center')
       // ...mientras que la celda del monto sí pasa a la izquierda.

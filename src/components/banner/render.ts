@@ -125,7 +125,9 @@ const MOLECULE_CENTER_MARGIN_RE = /margin:\s*0\s*auto\s*;/g
  * COMPLEMENTARIO.
  *
  * El único `text-align: center` que NO hay que tocar es la celda vertical
- * "Ahora" de PROMO (`writing-mode: vertical-rl`): ahí text-align controla la
+ * "Ahora" de PROMO (`writing-mode: sideways-lr` desde el pull 2026-09-01,
+ * antes `vertical-rl` — el mecanismo de abajo no depende del valor exacto, ver
+ * la nota siguiente): ahí text-align controla la
  * posición VERTICAL de la palabra rotada dentro de su caja de 70px de alto,
  * no una alineación horizontal — cambiarlo la movería de su centro vertical
  * hacia arriba, una regresión no pedida. Se distingue sin acoplarse a PROMO

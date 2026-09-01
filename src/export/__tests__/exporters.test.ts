@@ -6,7 +6,7 @@
 // globals a mano en cada caso en vez de usar vi.spyOn (no hay nada
 // preexistente para "espiar").
 import { afterEach, describe, expect, it } from 'vitest'
-import { copyHtmlToClipboard } from '../exporters'
+import { copyHtmlToClipboard, neutralizeVerticalWritingModeForCapture } from '../exporters'
 import { assembleEmailHtml } from '../../template/assemble'
 import { defaultEmailDocument } from '../../registry'
 
@@ -71,5 +71,53 @@ describe('copyHtmlToClipboard', () => {
     await expect(copyHtmlToClipboard(defaultEmailDocument)).rejects.toThrow()
     // ni en el camino de error debe quedar el <textarea> temporal colgado
     expect(document.querySelector('textarea')).toBeNull()
+  })
+})
+
+// Regresión real (pull 2026-09-01, `cda7b3f` "orientación del texto del tag
+// de promo"): el maestro cambió PROMO's "Ahora"/"Desde" de
+// `writing-mode: vertical-rl` a `sideways-lr` sin avisar — las 2 rotan en
+// SENTIDOS OPUESTOS, así que el PNG exportado quedó con el texto al revés
+// respecto al preview en vivo hasta que se detectó vía CDP (comparación lado
+// a lado) y se corrigió el mapeo ángulo↔writing-mode. Estos tests aseguran
+// que la próxima vez que el maestro cambie este valor, falle ruidoso en vez
+// de exportar en silencio con la rotación equivocada.
+describe('neutralizeVerticalWritingModeForCapture', () => {
+  const elWithWritingMode = (writingMode: string): HTMLElement => {
+    const el = document.createElement('div')
+    el.style.writingMode = writingMode
+    el.style.height = '70px'
+    el.textContent = 'Desde'
+    document.body.appendChild(el)
+    return el
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('sideways-lr (el valor actual del maestro): rota -90deg', () => {
+    elWithWritingMode('sideways-lr')
+    neutralizeVerticalWritingModeForCapture(document)
+    const inner = document.querySelector('div > div') as HTMLElement
+    expect(inner.style.transform).toContain('rotate(-90deg)')
+  })
+
+  it('vertical-rl (el valor anterior del maestro, por si vuelve): rota 90deg — dirección OPUESTA a sideways-lr', () => {
+    elWithWritingMode('vertical-rl')
+    neutralizeVerticalWritingModeForCapture(document)
+    const inner = document.querySelector('div > div') as HTMLElement
+    expect(inner.style.transform).toContain('rotate(90deg)')
+  })
+
+  it('un writing-mode no mapeado falla ruidoso en vez de asumir una rotación (que podría salir al revés)', () => {
+    elWithWritingMode('vertical-lr')
+    expect(() => neutralizeVerticalWritingModeForCapture(document)).toThrow(/vertical-lr/)
+  })
+
+  it('limpia las 3 variantes de la propiedad writing-mode del elemento original', () => {
+    const el = elWithWritingMode('sideways-lr')
+    neutralizeVerticalWritingModeForCapture(document)
+    expect(el.style.getPropertyValue('writing-mode')).toBe('')
   })
 })
