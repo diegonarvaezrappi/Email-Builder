@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyEdits, elementBounds, indexOfOrThrow, textRunBounds, voidElementBounds } from '../htmlEdits'
+import { applyEdits, elementBounds, findRepeatedElementBounds, indexOfOrThrow, textRunBounds, voidElementBounds } from '../htmlEdits'
 
 const FILE = 'fixture.html'
 
@@ -51,6 +51,27 @@ describe('textRunBounds', () => {
     const bounds = elementBounds(html, html.indexOf('img'), 'h4', FILE)
     const textBounds = textRunBounds(html, bounds, 'h4', FILE)
     expect(html.slice(textBounds.start, textBounds.end)).toBe(' hola ')
+  })
+})
+
+describe('findRepeatedElementBounds', () => {
+  it('finds N occurrences in order of appearance', () => {
+    const html = '<table><tr><td>x1</td></tr></table><table><tr><td>x1</td></tr></table>'
+    const bounds = findRepeatedElementBounds(html, 'x1', 'td', 2, FILE)
+    expect(bounds).toHaveLength(2)
+    expect(html.slice(bounds[0].start, bounds[0].end)).toBe('<td>x1</td>')
+    expect(html.slice(bounds[1].start, bounds[1].end)).toBe('<td>x1</td>')
+    expect(bounds[0].start).toBeLessThan(bounds[1].start)
+  })
+
+  it('throws (via the internal indexOfOrThrow) when there are FEWER than expected', () => {
+    const html = '<td>only-one</td>'
+    expect(() => findRepeatedElementBounds(html, 'only-one', 'td', 2, FILE)).toThrow(/fixture\.html/)
+  })
+
+  it('throws when there are MORE than expected', () => {
+    const html = '<td>x</td><td>x</td><td>x</td>'
+    expect(() => findRepeatedElementBounds(html, 'x', 'td', 2, FILE)).toThrow(/fixture\.html.*más de 2/)
   })
 })
 

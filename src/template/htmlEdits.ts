@@ -137,3 +137,34 @@ export function innerBounds(html: string, bounds: Bounds, tag: string, fileName:
   }
   return { start: openEnd, end: bounds.end - `</${tag}>`.length }
 }
+
+/**
+ * Ubica las N ocurrencias (en orden de aparición) del elemento `<tag>` que
+ * contiene cada una de las N apariciones de `literal` — generaliza el bucle
+ * "buscar desde `from`, avanzar `from` al final de cada match" que ya usan
+ * components/col3/render.ts (sus 3 celdas) y deals' `spliceRow` (sus 2 celdas
+ * por fila), para cualquier maestro que repita el MISMO fragmento N veces
+ * literalmente en vez de traer un solo slot por instancia — primer
+ * consumidor real: components/col2/render.ts, cuyo maestro replica el área
+ * libre y la celda de imagen byte-por-byte entre su tabla de escritorio y la
+ * de mobile (fase 6 del plan de nuevos módulos de contenido, ver
+ * [[project_body_modules_plan_2026-08-26]]).
+ *
+ * Lanza si `literal` aparece MÁS de `expectedCount` veces — mismo criterio
+ * "avisar fuerte" que el resto de este archivo (si aparece MENOS, ya lo grita
+ * el `indexOfOrThrow` interno antes de completar el loop).
+ */
+export function findRepeatedElementBounds(html: string, literal: string, tag: string, expectedCount: number, fileName: string): Bounds[] {
+  const bounds: Bounds[] = []
+  let from = 0
+  for (let i = 0; i < expectedCount; i++) {
+    const literalIndex = indexOfOrThrow(html, literal, fileName, from)
+    const elBounds = elementBounds(html, literalIndex, tag, fileName)
+    bounds.push(elBounds)
+    from = elBounds.end
+  }
+  if (html.indexOf(literal, from) !== -1) {
+    throw new Error(`${fileName}: "${literal}" aparece más de ${expectedCount} veces — revisar el render que la busca`)
+  }
+  return bounds
+}

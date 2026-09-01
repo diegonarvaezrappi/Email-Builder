@@ -29,6 +29,9 @@ import { Col1PropertiesPanel } from './components/col1/PropertiesPanel'
 import { cloneCol3Fields, createDefaultCol3Fields, defaultCol3Fields, col3FieldsSchema, COL3_CELL_1, COL3_CELL_2, COL3_CELL_3, type Col3Fields } from './components/col3/schema'
 import { renderCol3Snippet } from './components/col3/render'
 import { Col3PropertiesPanel } from './components/col3/PropertiesPanel'
+import { cloneCol2Fields, createDefaultCol2Fields, defaultCol2Fields, col2FieldsSchema, type Col2Fields } from './components/col2/schema'
+import { renderCol2Snippet } from './components/col2/render'
+import { Col2PropertiesPanel } from './components/col2/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -212,8 +215,28 @@ const col3BlockDef: ContentBlockDef<Col3Fields> = {
   PropertiesPanel: Col3PropertiesPanel,
 }
 
+/**
+ * COL2 ("2 columnas") — fase 6. A diferencia de COL3, SÍ marca
+ * `hasGeneralModuleFields: true` (fondo/click/alineado vuelven a ser una
+ * única variable de módulo, verificado por conteo de anclas — ver la nota
+ * grande de components/col2/schema.ts) — App.tsx lo patchea con el mismo
+ * camino genérico que TITLE/BULLET/BENEFICIOS/COL1, sin caso especial.
+ */
+const col2BlockDef: ContentBlockDef<Col2Fields> = {
+  type: 'COL2',
+  label: '2 columnas',
+  schema: col2FieldsSchema,
+  defaultFields: defaultCol2Fields,
+  createDefaultFields: createDefaultCol2Fields,
+  cloneFields: cloneCol2Fields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  render: renderCol2Snippet,
+  PropertiesPanel: Col2PropertiesPanel,
+}
+
 /** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS,
- *  COL1 y COL3; LOGOS/CUPONES/COL2 se suman acá cuando se implementen. */
+ *  COL1, COL3 y COL2; LOGOS/CUPONES se suman acá cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
@@ -222,6 +245,7 @@ export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlock
   BENEFICIOS: beneficiosBlockDef,
   COL1: col1BlockDef,
   COL3: col3BlockDef,
+  COL2: col2BlockDef,
 }
 
 /** Áreas libres de un bloque `usesModuleItems` — default `'main'` sin label

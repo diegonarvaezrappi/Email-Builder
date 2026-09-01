@@ -8,6 +8,7 @@ import { titleFieldsSchema, type TitleFields } from './components/title/schema'
 import { bulletFieldsSchema, type BulletFields } from './components/bullet/schema'
 import { beneficiosFieldsSchema, type BeneficiosFields } from './components/benefits/schema'
 import { col1FieldsSchema, type Col1Fields } from './components/col1/schema'
+import { col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
@@ -32,10 +33,10 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
  * implementen los demás — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS (fases 2 y
- * 3), COL1 (fase 4) y COL3 (fase 5) del plan de nuevos módulos de contenido,
- * ver [[project_body_modules_plan_2026-08-26]].
+ * 3), COL1 (fase 4), COL3 (fase 5) y COL2 (fase 6) del plan de nuevos
+ * módulos de contenido, ver [[project_body_modules_plan_2026-08-26]].
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3' | 'COL2'
 
 export interface CtaBlock {
   id: string
@@ -120,8 +121,23 @@ export interface Col3Block {
   fields: Col3Fields
 }
 
+/**
+ * Fase 6: primer módulo "dual-table" (escritorio + mobile, réplica byte a
+ * byte de cada pieza variable — ver components/col2/render.ts). A diferencia
+ * de COL3, vuelve a tener fondo/click/alineado como una única variable de
+ * módulo (`hasGeneralModuleFields: true`), más 2 campos propios: `imageMode`
+ * (2 markups alternativos del maestro, pick-one) y `imageBackgroundEnabled`
+ * (un SEGUNDO toggle de fondo, independiente del general, para la imagen de
+ * fondo de la celda derecha).
+ */
+export interface Col2Block {
+  id: string
+  type: 'COL2'
+  fields: Col2Fields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block | Col3Block
+export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block | Col3Block | Col2Block
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -165,6 +181,12 @@ const col3BlockSchema = z.object({
   fields: col3FieldsSchema,
 })
 
+const col2BlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('COL2'),
+  fields: col2FieldsSchema,
+})
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   ctaBlockSchema,
   dealsBlockSchema,
@@ -173,6 +195,7 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
   beneficiosBlockSchema,
   col1BlockSchema,
   col3BlockSchema,
+  col2BlockSchema,
 ])
 
 /**

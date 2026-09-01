@@ -264,6 +264,11 @@ const COL1_FILE = 'modulo-1columna.html'
 const COL3_DIR_NAME = '3columnas'
 const COL3_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL3_DIR_NAME)
 const COL3_FILE = 'modulo-3-columnas.html'
+/** `2columnas/` — mismo criterio, fase 6 del plan de nuevos módulos de
+ *  contenido, ver components/col2/render.ts. */
+const COL2_DIR_NAME = '2columnas'
+const COL2_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL2_DIR_NAME)
+const COL2_FILE = 'modulo-2-columnas.html'
 /** Vive directo en la raíz de NN_content-modules/, sin subcarpeta propia (a
  *  diferencia de title/bullet/benefits) — nombre fijo. Pedido explícito del
  *  usuario 2026-08-31: Título/Bullet/CTA/Deals/Beneficios y Cierre deben vivir
@@ -579,6 +584,38 @@ const COL3_ANCHOR_COUNTS = {
   [COL3_CELL_IMAGE_URL_PLACEHOLDERS[0]]: 1,
   [COL3_CELL_IMAGE_URL_PLACEHOLDERS[1]]: 1,
   [COL3_CELL_IMAGE_URL_PLACEHOLDERS[2]]: 1,
+}
+
+/**
+ * Anclas que components/col2/render.ts necesita en modulo-2-columnas.html —
+ * primer módulo "dual-table": TODAS las piezas variables (área libre, las 2
+ * divs de imagen, los tokens de fondo/alineado de la imagen) aparecen
+ * EXACTAMENTE 2 veces (una por tabla, escritorio+mobile, byte-idénticas),
+ * salvo `LINKMODULOCOULUMNAS`/`bg_contenedor1_mail_general` (el fondo/link
+ * general envuelve LAS 2 TABLAS ENTERAS, 1 sola vez) — esta asimetría 1-vs-2
+ * es justamente lo que separa "variable de módulo única" (fondo general,
+ * click, alineado) de "variable POR FORMATO" (todo lo demás) en este maestro.
+ */
+const COL2_LINK_TOKEN = 'LINKMODULOCOULUMNAS' // sic, typo del maestro ("COULUMNAS")
+const COL2_IMAGE_URL_FULL = 'https://lh3.googleusercontent.com/d/1Xs3HucYUDlfipuPnegf5ZXO3w2Z5m28u'
+const COL2_IMAGE_URL_MODIFICABLE = 'https://lh3.googleusercontent.com/d/14VKG5CPVNPIVbOQYkyHgtxfW1uLorjXP'
+const COL2_ANCHOR_COUNTS = {
+  [COL2_LINK_TOKEN]: 1,
+  '{{bg_contenedor1_mail_general}}': 1,
+  '{{body_container_background_radius}}': 2,
+  '{{body_container_background_padding}}': 2,
+  '{{body_alineado_molecular}}': 2,
+  '{{alineado_molecular_mail_body}}': 2,
+  '{{img_overlay_2_mail_general}}': 2,
+  '{{body_img_modulo_auto_ancho}}': 2,
+  'role="columna-textos"': 2,
+  'background-image: url({{img_overlay_2_mail_general}})': 2,
+  '>Titulo<': 2,
+  'bloque de texto bloque de texto bloque de texto': 2,
+  [COL2_IMAGE_URL_FULL]: 2,
+  [COL2_IMAGE_URL_MODIFICABLE]: 2,
+  mobile_hide: 1,
+  desktop_hide: 1,
 }
 
 const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
@@ -1307,6 +1344,42 @@ if (COL3_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/2columnas/modulo-2-columnas.html ---------
+// Fase 6 del plan de nuevos módulos de contenido — ver components/col2/render.ts.
+let col2FileContent = ''
+if (COL2_DIR) {
+  const fp = path.join(COL2_DIR, COL2_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL2_DIR_NAME}/${COL2_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(COL2_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/col2/render.ts`)
+      }
+    }
+    col2FileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/bullet/benefits/1columna/3columnas.
+  const knownCol2Files = new Set([COL2_FILE])
+  let actualCol2Files = []
+  try {
+    actualCol2Files = fs.readdirSync(COL2_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL2_DIR_NAME}: ${e.message}`)
+  }
+  const unknownCol2Files = actualCol2Files.filter((f) => !knownCol2Files.has(f))
+  if (unknownCol2Files.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL2_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownCol2Files.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_content-modules/_contenidos_wrapper.html -----------------
 // Pedido explícito del usuario 2026-08-31 — ver components/contenidos/render.ts.
 let contenidosWrapperFileContent = ''
@@ -1445,6 +1518,12 @@ if (col3FileContent) {
   fs.writeFileSync(path.join(COL3_ASSETS_DIR, COL3_FILE), col3FileContent, 'utf8')
 }
 
+if (col2FileContent) {
+  const COL2_ASSETS_DIR = path.join(ASSETS_DIR, 'col2')
+  fs.mkdirSync(COL2_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(COL2_ASSETS_DIR, COL2_FILE), col2FileContent, 'utf8')
+}
+
 if (contenidosWrapperFileContent) {
   // Carpeta propia (`contenidos/`) — mismo criterio que title/bullet/benefits:
   // nombre calcado del componente de app/src que lo consume.
@@ -1495,6 +1574,9 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL3_DIR_NAME}/ (${Object.keys(COL3_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL2_DIR_NAME}/ (${Object.keys(COL2_ANCHOR_COUNTS).length} anclas OK)`,
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE} (${Object.keys(CONTENIDOS_WRAPPER_ANCHOR_COUNTS).length} anclas OK)`,
