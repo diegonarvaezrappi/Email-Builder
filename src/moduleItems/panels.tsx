@@ -8,6 +8,7 @@ import {
   type BeneficiosTituloFields,
   type BulletIconoFields,
   type BulletNumeradoFields,
+  type ColumnaTextoFields,
   type IconoFields,
   type SeparadorLineaFields,
   type SubtituloTextoFields,
@@ -157,6 +158,23 @@ export function BeneficiosTextoPropertiesPanel({
 }: {
   value: BeneficiosTextoFields
   onChange: (next: BeneficiosTextoFields) => void
+}) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+export function ColumnaTextoPropertiesPanel({
+  value,
+  onChange,
+}: {
+  value: ColumnaTextoFields
+  onChange: (next: ColumnaTextoFields) => void
 }) {
   return (
     <div className="properties-panel">

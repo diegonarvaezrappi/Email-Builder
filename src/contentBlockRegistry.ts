@@ -26,6 +26,9 @@ import { BeneficiosPropertiesPanel } from './components/benefits/PropertiesPanel
 import { cloneCol1Fields, createDefaultCol1Fields, defaultCol1Fields, col1FieldsSchema, COL1_AREA_ABOVE, COL1_AREA_BELOW, type Col1Fields } from './components/col1/schema'
 import { renderCol1Snippet } from './components/col1/render'
 import { Col1PropertiesPanel } from './components/col1/PropertiesPanel'
+import { cloneCol3Fields, createDefaultCol3Fields, defaultCol3Fields, col3FieldsSchema, COL3_CELL_1, COL3_CELL_2, COL3_CELL_3, type Col3Fields } from './components/col3/schema'
+import { renderCol3Snippet } from './components/col3/render'
+import { Col3PropertiesPanel } from './components/col3/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -183,8 +186,34 @@ const col1BlockDef: ContentBlockDef<Col1Fields> = {
   PropertiesPanel: Col1PropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS y
- *  COL1; LOGOS/CUPONES/etc. se suman acá cuando se implementen. */
+/**
+ * COL3 ("3 columnas") — fase 5. `hasGeneralModuleFields` queda DELIBERADAMENTE
+ * ausente (a diferencia de TITLE/BULLET/BENEFICIOS/COL1): el maestro dice
+ * explícito que el fondo se apaga "celda por celda", así que `backgroundEnabled`
+ * no vive en la raíz de `fields` (ver components/col3/schema.ts) — ese flag
+ * asume exactamente eso, y marcarlo igual rompería el efecto de App.tsx (que
+ * resuelve el default por tema de COL3 aparte, con su propio caso especial
+ * `block.type === 'COL3'`, ver la nota grande ahí).
+ */
+const col3BlockDef: ContentBlockDef<Col3Fields> = {
+  type: 'COL3',
+  label: '3 columnas',
+  schema: col3FieldsSchema,
+  defaultFields: defaultCol3Fields,
+  createDefaultFields: createDefaultCol3Fields,
+  cloneFields: cloneCol3Fields,
+  usesModuleItems: true,
+  moduleAreas: [
+    { key: COL3_CELL_1, label: 'Celda 1' },
+    { key: COL3_CELL_2, label: 'Celda 2' },
+    { key: COL3_CELL_3, label: 'Celda 3' },
+  ],
+  render: renderCol3Snippet,
+  PropertiesPanel: Col3PropertiesPanel,
+}
+
+/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS,
+ *  COL1 y COL3; LOGOS/CUPONES/COL2 se suman acá cuando se implementen. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
@@ -192,6 +221,7 @@ export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlock
   BULLET: bulletBlockDef,
   BENEFICIOS: beneficiosBlockDef,
   COL1: col1BlockDef,
+  COL3: col3BlockDef,
 }
 
 /** Áreas libres de un bloque `usesModuleItems` — default `'main'` sin label

@@ -78,6 +78,19 @@ export const EXTRA_THEME_VAR_NAMES = [
    */
   'bg_solid_generico50_mail_body',
   'icon_link_generico_mail_body',
+  /**
+   * La que necesita la fase 5 del plan de nuevos módulos de contenido (ver
+   * [[project_body_modules_plan_2026-08-26]]): modulo-3-columnas.html usa el
+   * padding CHICO del contenedor (`padding: {{body_container_background_padding-peq}}`
+   * en el `divcomponentes` de cada celda) en vez del `body_container_background_padding`
+   * normal que ya usan Título/Bullet/Beneficios/COL1. Mismo caso que
+   * `body_container_background_radius-peq` (deals): un solo GUIÓN en el
+   * nombre, aparece UNA sola vez por rama (sin el doble-assign "con/sin
+   * fondo" de sus 3 primos sin "-peq" — verificado línea por línea en las 11
+   * ramas), así que va por nombre exacto y no necesita entrar a
+   * MODULE_BACKGROUND_VAR_NAMES.
+   */
+  'body_container_background_padding-peq',
 ]
 const ASSIGN_RE = new RegExp(
   `\\{%\\s*assign\\s+([a-z_0-9]+_mail_general|${EXTRA_THEME_VAR_NAMES.join('|')})\\s*=\\s*'([^']*)'\\s*%\\}`,

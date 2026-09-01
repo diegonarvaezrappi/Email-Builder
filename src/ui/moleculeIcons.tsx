@@ -301,12 +301,24 @@ export function BeneficiosTextoIcon(props: IconProps) {
   )
 }
 
+/** Línea corta y fina, centrada — mirror del `<h4 role="molecula-texto">`
+ *  "Texto corto" de modulo-3-columnas.html: deliberadamente más CORTA que
+ *  SubtituloTextoIcon/BeneficiosTextoIcon (2 líneas de párrafo) — el maestro
+ *  mismo recomienda "usar textos cortos" en las celdas de 3 columnas. */
+export function ColumnaTextoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="16" y="17" width="32" height="6" rx="3" fill="currentColor" opacity="0.8" />
+    </svg>
+  )
+}
+
 /** Íconos de las moléculas del área libre de un módulo de body
  *  (bodyMoleculeRegistry.ts) — TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA
- *  (fase 2) y BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/
- *  BENEFICIOS_TEXTO (fase 3), + los mismos 3 componentes que ya usa
- *  MOLECULE_ICONS para SEPARADOR/FRANJA_LOGOS/TEXTO_PASTILLA (misma molécula,
- *  reusada tal cual). */
+ *  (fase 2), BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/
+ *  BENEFICIOS_TEXTO (fase 3) y COLUMNA_TEXTO (fase 5), + los mismos 3
+ *  componentes que ya usa MOLECULE_ICONS para SEPARADOR/FRANJA_LOGOS/
+ *  TEXTO_PASTILLA (misma molécula, reusada tal cual). */
 export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>> = {
   TITULO_TEXTO: TituloTextoIcon,
   SUBTITULO_TEXTO: SubtituloTextoIcon,
@@ -319,6 +331,7 @@ export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>>
   ICONO: IconoIcon,
   BENEFICIOS_TITULO: BeneficiosTituloIcon,
   BENEFICIOS_TEXTO: BeneficiosTextoIcon,
+  COLUMNA_TEXTO: ColumnaTextoIcon,
 }
 
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {

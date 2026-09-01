@@ -1,8 +1,9 @@
 // ============================================================================
-// Los renders NUEVOS de fase 2 (TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA) y
-// fase 3 (BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/BENEFICIOS_TEXTO
-// — ver moduleItems/schemas.ts sobre por qué los otros 3 tipos del catálogo se
-// REUSAN de components/banner/items/render.ts en vez de vivir acá).
+// Los renders NUEVOS de fase 2 (TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA),
+// fase 3 (BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/BENEFICIOS_TEXTO)
+// y fase 5 (COLUMNA_TEXTO — ver moduleItems/schemas.ts sobre por qué los otros
+// 3 tipos del catálogo se REUSAN de components/banner/items/render.ts en vez
+// de vivir acá).
 //
 // TITULO_TEXTO y SUBTITULO_TEXTO cargan modulo-titulo.html directo (mismo
 // archivo que components/title/render.ts usa para el SHELL del módulo) y
@@ -28,6 +29,7 @@ import bulletIconoLRaw from '../assets/templates/content-modules/content_molecul
 import bulletNumeradoRaw from '../assets/templates/content-modules/content_moleculas/molecula_bullet_numerado.html?raw'
 import iconoRaw from '../assets/templates/content-modules/content_moleculas/molecula_icono.html?raw'
 import beneficiosModuleRaw from '../assets/templates/benefits/modulo-beneficios.html?raw'
+import col3ModuleRaw from '../assets/templates/col3/modulo-3-columnas.html?raw'
 import { escapeHtmlText, substituteImgSrcOrRemove } from '../template/htmlText'
 import { applyEdits, elementBounds, indexOfOrThrow, textRunBounds, voidElementBounds } from '../template/htmlEdits'
 import type {
@@ -36,6 +38,7 @@ import type {
   BulletIconoFields,
   BulletIconoSize,
   BulletNumeradoFields,
+  ColumnaTextoFields,
   IconoFields,
   IconoSize,
   SeparadorLineaFields,
@@ -223,5 +226,26 @@ export function renderBeneficiosTextoSnippet(fields: BeneficiosTextoFields): str
   const bounds = elementBounds(raw, literalIndex, 'h4', BENEFITS_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h4', BENEFITS_FILE_NAME)
+  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+}
+
+// --- COLUMNA_TEXTO -----------------------------------------------------------
+// modulo-3-columnas.html: mismo patrón que BENEFICIOS_TITULO/TEXTO — carga el
+// archivo del SHELL (mismo que components/col3/render.ts usa) y recorta su
+// propio fragmento por ancla literal. "Texto corto" aparece 3 veces en el
+// archivo (una por celda, byte-idénticas) — indexOfOrThrow toma la 1ra como
+// plantilla de referencia, mismo criterio que BENEFICIOS_TITULO/TEXTO (que
+// también asumen una única plantilla, no que el literal sea único en el
+// archivo).
+
+const COL3_FILE_NAME = 'modulo-3-columnas.html'
+const COLUMNA_TEXTO_LITERAL = '>Texto corto'
+
+export function renderColumnaTextoSnippet(fields: ColumnaTextoFields): string {
+  const raw = stripComments(col3ModuleRaw)
+  const literalIndex = indexOfOrThrow(raw, COLUMNA_TEXTO_LITERAL, COL3_FILE_NAME)
+  const bounds = elementBounds(raw, literalIndex, 'h4', COL3_FILE_NAME)
+  const template = raw.slice(bounds.start, bounds.end)
+  const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h4', COL3_FILE_NAME)
   return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
 }

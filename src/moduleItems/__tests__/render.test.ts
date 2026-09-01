@@ -4,6 +4,7 @@ import {
   renderBeneficiosTituloSnippet,
   renderBulletIconoSnippet,
   renderBulletNumeradoSnippet,
+  renderColumnaTextoSnippet,
   renderIconoSnippet,
   renderSeparadorLineaSnippet,
   renderSubtituloTextoSnippet,
@@ -165,5 +166,26 @@ describe('renderBeneficiosTituloSnippet / renderBeneficiosTextoSnippet', () => {
     expect(titulo).toContain('{{color_texto_mail_general}}')
     expect(titulo).toContain('{{body_alineado_molecular}}')
     expect(texto).toContain('{{body_alineado_molecular}}')
+  })
+})
+
+describe('renderColumnaTextoSnippet', () => {
+  it('substitutes the text into the <h4 role="molecula-texto">', () => {
+    const html = renderColumnaTextoSnippet({ text: 'Mi texto corto' })
+    expect(html).toContain('<h4')
+    expect(html).toContain('role="molecula-texto"')
+    expect(html).toContain('>Mi texto corto<')
+    expect(html).not.toContain('Texto corto')
+  })
+
+  it('escapes HTML-significant characters', () => {
+    expect(renderColumnaTextoSnippet({ text: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;')
+  })
+
+  it('has no Liquid tags left; theme/align vars survive for later passes', () => {
+    const html = renderColumnaTextoSnippet({ text: 'x' })
+    expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+    expect(html).toContain('{{color_texto_mail_general}}')
+    expect(html).toContain('{{body_alineado_molecular}}')
   })
 })

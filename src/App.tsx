@@ -3,6 +3,7 @@ import './App.css'
 import { useBuilder, useTemporal } from './store/store'
 import { headerPatchForTheme, ctaStyleForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme } from './themeDefaults'
 import { contentBlockRegistry } from './contentBlockRegistry'
+import type { Col3Fields } from './components/col3/schema'
 import type { ContentBlock } from './model'
 import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
@@ -82,12 +83,32 @@ function App() {
     // arriba junta brand+logoBackground en un solo patch).
     let contenidosChanged = false
     const nextContenidos = doc.contenidos.map((block): ContentBlock => {
-      if (!contentBlockRegistry[block.type]?.hasGeneralModuleFields) return block
-      const fields = block.fields as { backgroundEnabled: boolean }
-      const backgroundEnabled = moduleBackgroundEnabledForTheme(fields.backgroundEnabled, doc.global.tema, prevTema)
-      if (backgroundEnabled === null) return block
-      contenidosChanged = true
-      return { ...block, fields: { ...fields, backgroundEnabled } } as ContentBlock
+      if (contentBlockRegistry[block.type]?.hasGeneralModuleFields) {
+        const fields = block.fields as { backgroundEnabled: boolean }
+        const backgroundEnabled = moduleBackgroundEnabledForTheme(fields.backgroundEnabled, doc.global.tema, prevTema)
+        if (backgroundEnabled === null) return block
+        contenidosChanged = true
+        return { ...block, fields: { ...fields, backgroundEnabled } } as ContentBlock
+      }
+
+      // COL3 (fase 5): NO marca hasGeneralModuleFields — su backgroundEnabled
+      // vive POR CELDA (fields.cells[i], ver contentBlockRegistry.ts), no en
+      // la raíz de `fields`, así que el caso genérico de arriba no aplica.
+      // Mismo criterio de "no tocado desde el tema anterior" por celda.
+      if (block.type === 'COL3') {
+        let cellsChanged = false
+        const nextCells = block.fields.cells.map((cell) => {
+          const backgroundEnabled = moduleBackgroundEnabledForTheme(cell.backgroundEnabled, doc.global.tema, prevTema)
+          if (backgroundEnabled === null) return cell
+          cellsChanged = true
+          return { ...cell, backgroundEnabled }
+        }) as Col3Fields['cells']
+        if (!cellsChanged) return block
+        contenidosChanged = true
+        return { ...block, fields: { ...block.fields, cells: nextCells } }
+      }
+
+      return block
     })
     if (contenidosChanged) setSlotFields('contenidos', nextContenidos)
 

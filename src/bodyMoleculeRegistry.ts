@@ -18,10 +18,12 @@ import {
   beneficiosTituloFieldsSchema,
   bulletIconoFieldsSchema,
   bulletNumeradoFieldsSchema,
+  columnaTextoFieldsSchema,
   defaultBeneficiosTextoFields,
   defaultBeneficiosTituloFields,
   defaultBulletIconoFields,
   defaultBulletNumeradoFields,
+  defaultColumnaTextoFields,
   defaultIconoFields,
   defaultSeparadorLineaFields,
   defaultSubtituloTextoFields,
@@ -38,6 +40,7 @@ import {
   renderBeneficiosTituloSnippet,
   renderBulletIconoSnippet,
   renderBulletNumeradoSnippet,
+  renderColumnaTextoSnippet,
   renderIconoSnippet,
   renderSeparadorLineaSnippet,
   renderSubtituloTextoSnippet,
@@ -48,6 +51,7 @@ import {
   BeneficiosTituloPropertiesPanel,
   BulletIconoPropertiesPanel,
   BulletNumeradoPropertiesPanel,
+  ColumnaTextoPropertiesPanel,
   IconoPropertiesPanel,
   SeparadorLineaPropertiesPanel,
   SubtituloTextoPropertiesPanel,
@@ -193,6 +197,19 @@ export const bodyMoleculeRegistry: Record<ModuleItemType, ModuleItemDef<any>> = 
     render: (fields, _doc, _ctx) => renderBeneficiosTextoSnippet(fields),
     PropertiesPanel: BeneficiosTextoPropertiesPanel,
     Icon: MODULE_ITEM_ICONS.BENEFICIOS_TEXTO,
+  },
+  // Fase 5 (plan de nuevos módulos de contenido, ver
+  // [[project_body_modules_plan_2026-08-26]]) — nace anclada a
+  // modulo-3-columnas.html (ver moduleItems/render.ts), universal desde el día 1
+  // como el resto del catálogo.
+  COLUMNA_TEXTO: {
+    type: 'COLUMNA_TEXTO',
+    label: 'Texto corto (Columnas)',
+    schema: columnaTextoFieldsSchema,
+    defaultFields: defaultColumnaTextoFields,
+    render: (fields, _doc, _ctx) => renderColumnaTextoSnippet(fields),
+    PropertiesPanel: ColumnaTextoPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.COLUMNA_TEXTO,
   },
 }
 

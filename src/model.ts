@@ -8,6 +8,7 @@ import { titleFieldsSchema, type TitleFields } from './components/title/schema'
 import { bulletFieldsSchema, type BulletFields } from './components/bullet/schema'
 import { beneficiosFieldsSchema, type BeneficiosFields } from './components/benefits/schema'
 import { col1FieldsSchema, type Col1Fields } from './components/col1/schema'
+import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -31,10 +32,10 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
  * implementen los demás — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS (fases 2 y
- * 3) y COL1 (fase 4) del plan de nuevos módulos de contenido, ver
- * [[project_body_modules_plan_2026-08-26]].
+ * 3), COL1 (fase 4) y COL3 (fase 5) del plan de nuevos módulos de contenido,
+ * ver [[project_body_modules_plan_2026-08-26]].
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3'
 
 export interface CtaBlock {
   id: string
@@ -103,8 +104,24 @@ export interface Col1Block {
   fields: Col1Fields
 }
 
+/**
+ * Fase 5: primer módulo con celdas REPETIDAS (3, siempre las mismas, sin
+ * agregar/quitar) en vez de una sola imagen/área — y el primero cuyo fondo/
+ * click NO son una única variable de módulo, sino "celda por celda" (el
+ * maestro lo dice explícito, dos veces) — ver components/col3/. `items`
+ * sigue siendo un solo array plano a nivel de módulo, igual mecanismo que
+ * COL1's 'above'/'below': cada item lleva su propio areaKey ('cell1'|'cell2'|
+ * 'cell3'), un tercer valor tan válido como un segundo para el motor
+ * compartido.
+ */
+export interface Col3Block {
+  id: string
+  type: 'COL3'
+  fields: Col3Fields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block
+export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block | Col3Block
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -142,6 +159,12 @@ const col1BlockSchema = z.object({
   fields: col1FieldsSchema,
 })
 
+const col3BlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('COL3'),
+  fields: col3FieldsSchema,
+})
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   ctaBlockSchema,
   dealsBlockSchema,
@@ -149,6 +172,7 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
   bulletBlockSchema,
   beneficiosBlockSchema,
   col1BlockSchema,
+  col3BlockSchema,
 ])
 
 /**

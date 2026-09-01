@@ -8,17 +8,18 @@
 // más arriba (no las 10 piezas de UN banner, sino las moléculas de TODOS los
 // módulos de body).
 //
-// 3 de los 11 tipos de hoy SON las piezas de banner SEPARADOR/FRANJA_LOGOS/
+// 3 de los 12 tipos de hoy SON las piezas de banner SEPARADOR/FRANJA_LOGOS/
 // TEXTO_PASTILLA que se implementaron en la fase 1 (banner_moleculas/content_moleculas
 // compartidas) — se REUSAN acá literalmente (mismo schema, mismo default,
 // mismo render, mismo panel), no se duplican: son la misma molécula, solo que
 // ahora también instanciable dentro de un módulo de body, no solo del banner.
-// TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA (fase 2) y BULLET_ICONO/
-// BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/BENEFICIOS_TEXTO (fase 3) son
-// moléculas de BODY que no existen en el banner — cada una nace anclada a SU
-// propio archivo maestro de origen (modulo-titulo.html, molecula_bullet_*.html,
-// molecula_icono.html, modulo-beneficios.html), aunque quedan disponibles para
-// CUALQUIER módulo una vez registradas acá (mismo criterio "universal" de
+// TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA (fase 2), BULLET_ICONO/
+// BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/BENEFICIOS_TEXTO (fase 3) y
+// COLUMNA_TEXTO (fase 5) son moléculas de BODY que no existen en el banner —
+// cada una nace anclada a SU propio archivo maestro de origen
+// (modulo-titulo.html, molecula_bullet_*.html, molecula_icono.html,
+// modulo-beneficios.html, modulo-3-columnas.html), aunque quedan disponibles
+// para CUALQUIER módulo una vez registradas acá (mismo criterio "universal" de
 // arriba) — igual que TITULO_TEXTO/SUBTITULO_TEXTO no se limitan a Título.
 // ============================================================================
 import { z } from 'zod'
@@ -36,6 +37,7 @@ export const MODULE_ITEM_TYPE_VALUES = [
   'ICONO',
   'BENEFICIOS_TITULO',
   'BENEFICIOS_TEXTO',
+  'COLUMNA_TEXTO',
 ] as const
 export type ModuleItemType = (typeof MODULE_ITEM_TYPE_VALUES)[number]
 
@@ -143,6 +145,24 @@ export const beneficiosTextoFieldsSchema = z.object({
 export type BeneficiosTextoFields = z.infer<typeof beneficiosTextoFieldsSchema>
 export const defaultBeneficiosTextoFields: BeneficiosTextoFields = beneficiosTextoFieldsSchema.parse({})
 
+/**
+ * COLUMNA_TEXTO — extraída de modulo-3-columnas.html (fase 5 del plan de
+ * nuevos módulos de contenido, ver [[project_body_modules_plan_2026-08-26]]),
+ * mismo criterio que TITULO_TEXTO/BENEFICIOS_TITULO: tag FIJO (`<h4>`), texto
+ * plano (sin RichText, misma simplificación deliberada). A diferencia de
+ * BENEFICIOS_TEXTO (también un `<h4>`), este SÍ lleva `role="molecula-texto"`
+ * en el maestro — se preserva tal cual, no se unifica con Beneficios (son 2
+ * archivos de origen distintos, aunque el texto de fábrica sea corto en
+ * ambos). El texto "Texto corto" aparece 3 veces en el archivo (una por
+ * celda, todas byte-idénticas) — el render toma la 1ra ocurrencia como
+ * plantilla de referencia, mismo criterio que BENEFICIOS_TITULO/TEXTO con
+ * modulo-beneficios.html (ninguno de los 2 depende de que el texto sea único
+ * en el archivo, solo de que la 1ra copia sea una plantilla válida).
+ */
+export const columnaTextoFieldsSchema = z.object({ text: z.string().default('Texto corto') })
+export type ColumnaTextoFields = z.infer<typeof columnaTextoFieldsSchema>
+export const defaultColumnaTextoFields: ColumnaTextoFields = columnaTextoFieldsSchema.parse({})
+
 /** Unión discriminada derivada de zod — mismo criterio que bannerItemSchema.
  *  `areaKey` distingue en qué área libre del módulo vive el item (Título solo
  *  tiene 'main'; un futuro módulo con más de un área libre — ej. 1 columna,
@@ -159,5 +179,6 @@ export const moduleItemSchema = z.discriminatedUnion('type', [
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('ICONO'), fields: iconoFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BENEFICIOS_TITULO'), fields: beneficiosTituloFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BENEFICIOS_TEXTO'), fields: beneficiosTextoFieldsSchema }),
+  z.object({ id: z.string(), areaKey: z.string(), type: z.literal('COLUMNA_TEXTO'), fields: columnaTextoFieldsSchema }),
 ])
 export type ModuleItem = z.infer<typeof moduleItemSchema>

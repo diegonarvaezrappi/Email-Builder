@@ -259,6 +259,11 @@ const BENEFITS_FILE = 'modulo-beneficios.html'
 const COL1_DIR_NAME = '1columna'
 const COL1_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL1_DIR_NAME)
 const COL1_FILE = 'modulo-1columna.html'
+/** `3columnas/` — mismo criterio que `1columna/`, fase 5 del plan de nuevos
+ *  módulos de contenido, ver components/col3/render.ts. */
+const COL3_DIR_NAME = '3columnas'
+const COL3_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL3_DIR_NAME)
+const COL3_FILE = 'modulo-3-columnas.html'
 /** Vive directo en la raíz de NN_content-modules/, sin subcarpeta propia (a
  *  diferencia de title/bullet/benefits) — nombre fijo. Pedido explícito del
  *  usuario 2026-08-31: Título/Bullet/CTA/Deals/Beneficios y Cierre deben vivir
@@ -535,6 +540,45 @@ const COL1_ANCHOR_COUNTS = {
   [COL1_DIVCOMPONENTES_ANCHOR]: 1,
   [COL1_CONTENEDORGENERAL_ANCHOR]: 1,
   [COL1_IMAGE_URL_PLACEHOLDER]: 1,
+}
+
+/**
+ * Anclas que components/col3/render.ts necesita en modulo-3-columnas.html —
+ * el `<td>` de apertura de celda (idéntico en las 3, usado para CORTAR el
+ * archivo en sus 3 celdas), el `role="divcomponentes"` de cada área libre, el
+ * ícono M de fábrica (misma URL en las 3 celdas), las 3 URLs de imagen "full"
+ * (DISTINTAS entre sí, una por celda) y los 3 `{{...}}` que solo existen acá
+ * (ninguno de los módulos anteriores usa el padding CHICO del contenedor).
+ * `LINKCELDA1`/`LINKCELDA3` documentan el typo REAL del maestro (la celda 2
+ * repite el token de la celda 1 en vez de "LINKCELDA2" — ver risk #4/#6 del
+ * plan): 2 y 1 respectivamente, NO 1 y 1 — si el día de mañana el maestro
+ * corrige el typo, este conteo falla y avisa (el render en sí ya es robusto a
+ * ese cambio, ver CELL_LINK_ATTR_RE en components/col3/render.ts).
+ */
+const COL3_CELL_TD_OPEN =
+  '<td style="padding:0px 0px 0px 0px; line-height:23px; text-align:inherit; " height="100%" valign="top" bgcolor="" role="">'
+const COL3_ICONO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/13Wpazp2ezX37GZylmssneVLoF0fxq2yi'
+const COL3_CELL_IMAGE_URL_PLACEHOLDERS = [
+  'https://lh3.googleusercontent.com/d/1GvgYi4hdEYq1b71GrXp-UVfidhkEVeE1?v1',
+  'https://lh3.googleusercontent.com/d/1c5vhJ8Hvr-weWRB5n3xKICSbou2mrcxd?v1',
+  'https://lh3.googleusercontent.com/d/1Ff8AXjzhjsXyBrUwk4S4A02gjOpAg3a0?v1',
+]
+const COL3_ANCHOR_COUNTS = {
+  [COL3_CELL_TD_OPEN]: 3,
+  'role="divcomponentes"': 3,
+  '{{body_container_background_padding-peq}}': 3,
+  '{{bg_contenedor1_mail_general}}': 3,
+  '{{body_container_background_radius}}': 3,
+  '{{alineado_molecular_mail_body}}': 3,
+  '{{body_alineado_molecular}}': 3,
+  '{{color_texto_mail_general}}': 3,
+  [COL3_ICONO_URL_PLACEHOLDER]: 3,
+  'Texto corto': 3,
+  'href="LINKCELDA1"': 2, // sic, typo del maestro — la celda 2 repite el token de la celda 1
+  'href="LINKCELDA3"': 1,
+  [COL3_CELL_IMAGE_URL_PLACEHOLDERS[0]]: 1,
+  [COL3_CELL_IMAGE_URL_PLACEHOLDERS[1]]: 1,
+  [COL3_CELL_IMAGE_URL_PLACEHOLDERS[2]]: 1,
 }
 
 const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
@@ -1227,6 +1271,42 @@ if (COL1_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/3columnas/modulo-3-columnas.html ---------
+// Fase 5 del plan de nuevos módulos de contenido — ver components/col3/render.ts.
+let col3FileContent = ''
+if (COL3_DIR) {
+  const fp = path.join(COL3_DIR, COL3_FILE)
+  const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL3_DIR_NAME}/${COL3_FILE}`
+  if (!fs.existsSync(fp)) {
+    fail(`No se encontró ${label} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(COL3_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/col3/render.ts`)
+      }
+    }
+    col3FileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/bullet/benefits/1columna.
+  const knownCol3Files = new Set([COL3_FILE])
+  let actualCol3Files = []
+  try {
+    actualCol3Files = fs.readdirSync(COL3_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL3_DIR_NAME}: ${e.message}`)
+  }
+  const unknownCol3Files = actualCol3Files.filter((f) => !knownCol3Files.has(f))
+  if (unknownCol3Files.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL3_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownCol3Files.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_content-modules/_contenidos_wrapper.html -----------------
 // Pedido explícito del usuario 2026-08-31 — ver components/contenidos/render.ts.
 let contenidosWrapperFileContent = ''
@@ -1359,6 +1439,12 @@ if (col1FileContent) {
   fs.writeFileSync(path.join(COL1_ASSETS_DIR, COL1_FILE), col1FileContent, 'utf8')
 }
 
+if (col3FileContent) {
+  const COL3_ASSETS_DIR = path.join(ASSETS_DIR, 'col3')
+  fs.mkdirSync(COL3_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(COL3_ASSETS_DIR, COL3_FILE), col3FileContent, 'utf8')
+}
+
 if (contenidosWrapperFileContent) {
   // Carpeta propia (`contenidos/`) — mismo criterio que title/bullet/benefits:
   // nombre calcado del componente de app/src que lo consume.
@@ -1406,6 +1492,9 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL1_DIR_NAME}/ (${Object.keys(COL1_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL3_DIR_NAME}/ (${Object.keys(COL3_ANCHOR_COUNTS).length} anclas OK)`,
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE} (${Object.keys(CONTENIDOS_WRAPPER_ANCHOR_COUNTS).length} anclas OK)`,
