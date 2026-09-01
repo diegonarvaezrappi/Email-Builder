@@ -75,10 +75,19 @@ describe('renderDealsSnippet · armado de pares', () => {
     expect(render(cards())).toBe('')
   })
 
-  it('fixes the master\'s "display: display: table; ;" typo on cell 2 so both cards get a valid, matching display', () => {
+  // Regresión: hasta el pull 1e1ac59 ("display deals ajustado", 2026-09-01),
+  // la celda 2 traía un typo real del maestro (`display: display: table; ;`,
+  // CSS inválido que un motor descarta entero, dejando esa celda sin
+  // `display` explícito) — se parchaba en la app vía fixDealCell2DisplayTypo.
+  // El maestro ya lo arregló de verdad (confirmado leyendo deal_columnas.html
+  // directo), así que el parche se quitó — este test ahora solo confirma que
+  // el typo sigue sin volver y que ambas celdas producen un `display: table`
+  // válido (el maestro deja un espacio distinto entre las 2, cosmético, no se
+  // "corrige" — mismo criterio que el resto de la app con formato del maestro).
+  it('both cards get a valid display: table on cell 2 (no longer the master\'s broken "display: display: table; ;")', () => {
     const html = render(cards(card('a'), card('b')))
     expect(html).not.toContain('display: display')
-    expect(count(html, 'style="display: table; text-decoration: none;')).toBe(2)
+    expect(html.match(/style="display: table;\s*text-decoration: none;/g)?.length).toBe(2)
   })
 })
 
