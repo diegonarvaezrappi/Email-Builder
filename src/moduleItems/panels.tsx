@@ -7,8 +7,10 @@ import {
   type BeneficiosTextoFields,
   type BeneficiosTituloFields,
   type BulletIconoFields,
+  type BulletIconoSimpleFields,
   type BulletNumeradoFields,
   type ColumnaTextoFields,
+  type CuponMontoFields,
   type IconoFields,
   type SeparadorLineaFields,
   type SubtituloTextoFields,
@@ -180,6 +182,42 @@ export function ColumnaTextoPropertiesPanel({
     <div className="properties-panel">
       <label className="field">
         <span>Texto</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+/** Sin control de tamaño (a diferencia de BulletIconoPropertiesPanel) y sin
+ *  campo de título — ver bulletIconoSimpleFieldsSchema. URL en blanco quita el
+ *  ícono ENTERO (comentario del maestro), mismo criterio visual que el resto
+ *  de los campos de imagen de la app. */
+export function BulletIconoSimplePropertiesPanel({
+  value,
+  onChange,
+}: {
+  value: BulletIconoSimpleFields
+  onChange: (next: BulletIconoSimpleFields) => void
+}) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>URL del ícono</span>
+        <input type="text" value={value.imageUrl} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })} />
+      </label>
+      <label className="field">
+        <span>Texto</span>
+        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, text: e.target.value })} />
+      </label>
+    </div>
+  )
+}
+
+export function CuponMontoPropertiesPanel({ value, onChange }: { value: CuponMontoFields; onChange: (next: CuponMontoFields) => void }) {
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>Texto destacado</span>
         <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ text: e.target.value })} />
       </label>
     </div>

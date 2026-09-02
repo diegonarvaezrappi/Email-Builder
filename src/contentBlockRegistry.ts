@@ -35,6 +35,9 @@ import { Col2PropertiesPanel } from './components/col2/PropertiesPanel'
 import { cloneLogosFields, createDefaultLogosFields, defaultLogosFields, logosFieldsSchema, type LogosFields } from './components/logos/schema'
 import { renderLogosSnippet } from './components/logos/render'
 import { LogosPropertiesPanel } from './components/logos/PropertiesPanel'
+import { cloneCuponesFields, createDefaultCuponesFields, CUPONES_CELL_1, CUPONES_CELL_2, cuponesFieldsSchema, defaultCuponesFields, type CuponesFields } from './components/cupones/schema'
+import { renderCuponesSnippet } from './components/cupones/render'
+import { CuponesPropertiesPanel } from './components/cupones/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -256,8 +259,35 @@ const logosBlockDef: ContentBlockDef<LogosFields> = {
   PropertiesPanel: LogosPropertiesPanel,
 }
 
-/** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS,
- *  COL1, COL3, COL2 y LOGOS; CUPONES se suma acá cuando se implemente. */
+/**
+ * CUPONES ("cupones") — fase 8, última del plan. `usesModuleItems: true`
+ * (el área libre de cada celda "cupón" reusa el motor compartido), SIN
+ * `hasGeneralModuleFields` (el maestro dice, dos veces, que fondo/alineado
+ * NO son togglables acá — ver components/cupones/schema.ts, mismo criterio
+ * que COL3). `moduleAreas` declara las 2 celdas SIEMPRE (aun cuando una esté
+ * tipeada 'titulo', que no tiene área libre — simplificación aceptada, ver el
+ * comentario grande de schema.ts): evita un caso especial de CUPONES en
+ * ui/InspectorPanel.tsx.
+ */
+const cuponesBlockDef: ContentBlockDef<CuponesFields> = {
+  type: 'CUPONES',
+  label: 'Cupones',
+  schema: cuponesFieldsSchema,
+  defaultFields: defaultCuponesFields,
+  createDefaultFields: createDefaultCuponesFields,
+  cloneFields: cloneCuponesFields,
+  usesModuleItems: true,
+  moduleAreas: [
+    { key: CUPONES_CELL_1, label: 'Celda 1' },
+    { key: CUPONES_CELL_2, label: 'Celda 2' },
+  ],
+  render: renderCuponesSnippet,
+  PropertiesPanel: CuponesPropertiesPanel,
+}
+
+/** Tipos de bloque registrados — CTA, DEALS, TITLE, BULLET, BENEFICIOS, COL1,
+ *  COL3, COL2, LOGOS y CUPONES (los 9 del plan de nuevos módulos de
+ *  contenido, ver [[project_body_modules_plan_2026-08-26]]). */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
@@ -268,6 +298,7 @@ export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlock
   COL3: col3BlockDef,
   COL2: col2BlockDef,
   LOGOS: logosBlockDef,
+  CUPONES: cuponesBlockDef,
 }
 
 /** Áreas libres de un bloque `usesModuleItems` — default `'main'` sin label

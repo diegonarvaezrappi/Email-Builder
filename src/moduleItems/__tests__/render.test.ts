@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   renderBeneficiosTextoSnippet,
   renderBeneficiosTituloSnippet,
+  renderBulletIconoSimpleSnippet,
   renderBulletIconoSnippet,
   renderBulletNumeradoSnippet,
   renderColumnaTextoSnippet,
+  renderCuponMontoSnippet,
   renderIconoSnippet,
   renderSeparadorLineaSnippet,
   renderSubtituloTextoSnippet,
@@ -187,5 +189,60 @@ describe('renderColumnaTextoSnippet', () => {
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).toContain('{{color_texto_mail_general}}')
     expect(html).toContain('{{body_alineado_molecular}}')
+  })
+})
+
+describe('renderBulletIconoSimpleSnippet', () => {
+  const DEFAULT_ICON_URL = 'https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'
+
+  it('renders the icon + a single text, no title line (unlike BULLET_ICONO)', () => {
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: 'Mi cupón' })
+    expect(html).toContain(`src="${DEFAULT_ICON_URL}"`)
+    expect(html).toContain('>Mi cupón<')
+    expect(html).not.toContain('Subtitulo')
+    expect(html).not.toContain('<h3')
+  })
+
+  it('blank icon URL removes the WHOLE <td>, not just the <img> (master: "quitando todo el <td>")', () => {
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: '', text: 'Mi cupón' })
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('width="15px"')
+    expect(html).toContain('>Mi cupón<')
+  })
+
+  it('escapes HTML-significant characters', () => {
+    expect(renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;')
+  })
+
+  it('has no Liquid tags left; theme/align vars survive for later passes', () => {
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: 'x' })
+    expect(html).not.toMatch(NO_LIQUID_TAG_RE)
+    expect(html).toContain('{{color_texto_mail_general}}')
+    expect(html).toContain('{{alineado_molecular_mail_body}}')
+  })
+})
+
+describe('renderCuponMontoSnippet', () => {
+  it('substitutes the text into the <h1 role="molecula-texto"> with the fixed accent color', () => {
+    const html = renderCuponMontoSnippet({ text: 'Mi monto' })
+    expect(html).toContain('<h1')
+    expect(html).toContain('role="molecula-texto"')
+    expect(html).toContain('{{color_acento2_mail_general}}')
+    expect(html).toContain('>Mi monto<')
+    expect(html).not.toContain('Aca un markdown')
+  })
+
+  it('replaces the WHOLE h1 content, incl. the master\'s fixed "Aca un<br>" lead-in — not just the text run after it (real bug found via CDP visual check: textRunBounds alone left "Aca un" permanently baked in)', () => {
+    const html = renderCuponMontoSnippet({ text: 'Mi monto' })
+    expect(html).not.toContain('Aca un')
+    expect(html).not.toContain('<br>Mi monto')
+  })
+
+  it('escapes HTML-significant characters', () => {
+    expect(renderCuponMontoSnippet({ text: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;')
+  })
+
+  it('has no Liquid tags left', () => {
+    expect(renderCuponMontoSnippet({ text: 'x' })).not.toMatch(NO_LIQUID_TAG_RE)
   })
 })

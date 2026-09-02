@@ -91,6 +91,16 @@ export const EXTRA_THEME_VAR_NAMES = [
    * MODULE_BACKGROUND_VAR_NAMES.
    */
   'body_container_background_padding-peq',
+  /**
+   * `body_container_img_dots` — la línea de puntos decorativa que separa
+   * secciones dentro de una celda de cupón/módulo (usada por primera vez en
+   * fase 8, coupons/cupones-modulo.html y celda_cupon_titulo.html: ver
+   * components/cupones/render.ts). Verificada línea por línea: UNA sola
+   * asignación por rama, sin `{% if %}` alrededor (a diferencia de las 3
+   * `body_container_background_*` de arriba) — mismo criterio simple que
+   * `bg_solid_generico50_mail_body`.
+   */
+  'body_container_img_dots',
 ]
 const ASSIGN_RE = new RegExp(
   `\\{%\\s*assign\\s+([a-z_0-9]+_mail_general|${EXTRA_THEME_VAR_NAMES.join('|')})\\s*=\\s*'([^']*)'\\s*%\\}`,

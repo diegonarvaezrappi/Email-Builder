@@ -276,6 +276,13 @@ const LOGOS_DIR_NAME = 'logos'
 const LOGOS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, LOGOS_DIR_NAME)
 const LOGOS_MODULE_FILE = 'modulo-logos.html'
 const LOGOS_GRID_FILES = ['grilla3logos.html', 'grilla4logos.html', 'grilla6logos.html']
+/** `coupons/` — fase 8 del plan de nuevos módulos de contenido, ver
+ *  components/cupones/render.ts. 2 archivos: el shell (2 celdas "cupón" +
+ *  legales) y la celda "título" alternativa, swap-in por celda. */
+const COUPONS_DIR_NAME = 'coupons'
+const COUPONS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COUPONS_DIR_NAME)
+const COUPONS_MODULE_FILE = 'cupones-modulo.html'
+const COUPONS_TITULO_FILE = 'celda_cupon_titulo.html'
 /** Vive directo en la raíz de NN_content-modules/, sin subcarpeta propia (a
  *  diferencia de title/bullet/benefits) — nombre fijo. Pedido explícito del
  *  usuario 2026-08-31: Título/Bullet/CTA/Deals/Beneficios y Cierre deben vivir
@@ -702,6 +709,57 @@ const LOGOS_GRID_ANCHOR_COUNTS = {
     AQUIELLINKDELOGO6: 1,
     'border-radius: 7px': 6,
   },
+}
+
+/**
+ * Anclas que components/cupones/render.ts (+ las 2 moléculas nuevas
+ * BULLET_ICONO_SIMPLE/CUPON_MONTO de moduleItems/render.ts, que cargan ESTE
+ * MISMO archivo como su propia fuente — mismo criterio que BENEFICIOS_TITULO/
+ * TEXTO con modulo-beneficios.html) necesitan en cupones-modulo.html — fase 8
+ * del plan de nuevos módulos de contenido, ver
+ * [[project_body_modules_plan_2026-08-26]]. Las 2 celdas "cupón" son
+ * byte-idénticas, así que todo va ×2 (1 por celda) — igual criterio que
+ * DEALS_ANCHOR_COUNTS.
+ */
+const COUPONS_MODULE_TD_ROLE_ANCHOR = 'role="cupon"'
+const COUPONS_CUPON_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/17zBTLASXQzFtt9NtEP3h0qudKBhcZRMA'
+const COUPONS_FREE_AREA_STYLE_ANCHOR = 'word-break: break-all'
+const COUPONS_CUPON_LINK_TOKEN = 'LINKCUPON'
+const COUPONS_LEGAL_CLASS_ANCHOR = 'class="legal"'
+/** Ícono del mini-bullet de la celda "cupón" — la MISMA URL que usa el tag de
+ *  la celda "título" en celda_cupon_titulo.html (archivo distinto, se cuenta
+ *  aparte en CUPONES_TITULO_ANCHOR_COUNTS). */
+const COUPONS_BULLET_ICON_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'
+const COUPONS_BULLET_TEXT_LITERAL = 'Cupón xxxxxxxxxxx'
+const COUPONS_MONTO_COLOR_ANCHOR = '{{color_acento2_mail_general}}'
+const CUPONES_MODULE_ANCHOR_COUNTS = {
+  [COUPONS_MODULE_TD_ROLE_ANCHOR]: 2,
+  [COUPONS_CUPON_IMAGE_URL_PLACEHOLDER]: 2,
+  [COUPONS_FREE_AREA_STYLE_ANCHOR]: 2,
+  [COUPONS_CUPON_LINK_TOKEN]: 2,
+  [COUPONS_LEGAL_CLASS_ANCHOR]: 2,
+  [COUPONS_BULLET_ICON_URL_PLACEHOLDER]: 2,
+  [COUPONS_BULLET_TEXT_LITERAL]: 2,
+  [COUPONS_MONTO_COLOR_ANCHOR]: 2,
+}
+
+/**
+ * Anclas que components/cupones/render.ts necesita en celda_cupon_titulo.html
+ * — el `<td>` alternativo (celda "título", swap-in por celda "cupón") de fase
+ * 8. Un solo archivo = un solo `<td>`, así que todo va ×1.
+ */
+const COUPONS_TITULO_TD_ROLE_ANCHOR = 'role="titulocupon"'
+const COUPONS_TITULO_LINK_TOKEN = 'LINKTITULO'
+const COUPONS_TITULO_TAG_ROLE_ANCHOR = 'role="molecula-tag"'
+/** Único dentro de este archivo (el otro `<h4>` de la celda usa "color: {{...}} "
+ *  con otro espaciado) — ver components/cupones/render.ts. */
+const COUPONS_TITULO_HEADING_STYLE_ANCHOR = 'margin:0; text-align: left;'
+const CUPONES_TITULO_ANCHOR_COUNTS = {
+  [COUPONS_TITULO_TD_ROLE_ANCHOR]: 1,
+  [COUPONS_TITULO_LINK_TOKEN]: 1,
+  [COUPONS_BULLET_ICON_URL_PLACEHOLDER]: 1,
+  [COUPONS_TITULO_TAG_ROLE_ANCHOR]: 1,
+  [COUPONS_TITULO_HEADING_STYLE_ANCHOR]: 1,
 }
 
 const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
@@ -1522,6 +1580,59 @@ if (LOGOS_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/coupons/{cupones-modulo,celda_cupon_titulo}.html
+// Fase 8 del plan de nuevos módulos de contenido — ver components/cupones/render.ts.
+let couponsModuleFileContent = ''
+let couponsTituloFileContent = ''
+if (COUPONS_DIR) {
+  const moduleFp = path.join(COUPONS_DIR, COUPONS_MODULE_FILE)
+  const moduleLabel = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COUPONS_DIR_NAME}/${COUPONS_MODULE_FILE}`
+  if (!fs.existsSync(moduleFp)) {
+    fail(`No se encontró ${moduleLabel} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(moduleFp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(CUPONES_MODULE_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${moduleLabel}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/cupones/render.ts`)
+      }
+    }
+    couponsModuleFileContent = content
+  }
+
+  const tituloFp = path.join(COUPONS_DIR, COUPONS_TITULO_FILE)
+  const tituloLabel = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COUPONS_DIR_NAME}/${COUPONS_TITULO_FILE}`
+  if (!fs.existsSync(tituloFp)) {
+    fail(`No se encontró ${tituloLabel} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(tituloFp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(CUPONES_TITULO_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${tituloLabel}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/cupones/render.ts`)
+      }
+    }
+    couponsTituloFileContent = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/bullet/benefits/1-2-3columnas/logos.
+  const knownCouponsFiles = new Set([COUPONS_MODULE_FILE, COUPONS_TITULO_FILE])
+  let actualCouponsFiles = []
+  try {
+    actualCouponsFiles = fs.readdirSync(COUPONS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COUPONS_DIR_NAME}: ${e.message}`)
+  }
+  const unknownCouponsFiles = actualCouponsFiles.filter((f) => !knownCouponsFiles.has(f))
+  if (unknownCouponsFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COUPONS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownCouponsFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_content-modules/_contenidos_wrapper.html -----------------
 // Pedido explícito del usuario 2026-08-31 — ver components/contenidos/render.ts.
 let contenidosWrapperFileContent = ''
@@ -1675,6 +1786,15 @@ if (logosModuleFileContent) {
   }
 }
 
+if (couponsModuleFileContent) {
+  const COUPONS_ASSETS_DIR = path.join(ASSETS_DIR, COUPONS_DIR_NAME)
+  fs.mkdirSync(COUPONS_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(COUPONS_ASSETS_DIR, COUPONS_MODULE_FILE), couponsModuleFileContent, 'utf8')
+  if (couponsTituloFileContent) {
+    fs.writeFileSync(path.join(COUPONS_ASSETS_DIR, COUPONS_TITULO_FILE), couponsTituloFileContent, 'utf8')
+  }
+}
+
 if (contenidosWrapperFileContent) {
   // Carpeta propia (`contenidos/`) — mismo criterio que title/bullet/benefits:
   // nombre calcado del componente de app/src que lo consume.
@@ -1731,6 +1851,9 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} ${1 + LOGOS_GRID_FILES.length} archivos de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}/ (${Object.keys(LOGOS_MODULE_ANCHOR_COUNTS).length} anclas del shell OK + ${LOGOS_GRID_FILES.length} grillas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} 2 archivos de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COUPONS_DIR_NAME}/ (${Object.keys(CUPONES_MODULE_ANCHOR_COUNTS).length} anclas del shell OK + ${Object.keys(CUPONES_TITULO_ANCHOR_COUNTS).length} de la celda título OK)`,
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE} (${Object.keys(CONTENIDOS_WRAPPER_ANCHOR_COUNTS).length} anclas OK)`,

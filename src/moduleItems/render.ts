@@ -30,15 +30,18 @@ import bulletNumeradoRaw from '../assets/templates/content-modules/content_molec
 import iconoRaw from '../assets/templates/content-modules/content_moleculas/molecula_icono.html?raw'
 import beneficiosModuleRaw from '../assets/templates/benefits/modulo-beneficios.html?raw'
 import col3ModuleRaw from '../assets/templates/col3/modulo-3-columnas.html?raw'
+import cuponesModuleRaw from '../assets/templates/coupons/cupones-modulo.html?raw'
 import { escapeHtmlText, substituteImgSrcOrRemove } from '../template/htmlText'
-import { applyEdits, elementBounds, indexOfOrThrow, textRunBounds, voidElementBounds } from '../template/htmlEdits'
+import { applyEdits, elementBounds, indexOfOrThrow, innerBounds, textRunBounds, voidElementBounds } from '../template/htmlEdits'
 import type {
   BeneficiosTextoFields,
   BeneficiosTituloFields,
   BulletIconoFields,
+  BulletIconoSimpleFields,
   BulletIconoSize,
   BulletNumeradoFields,
   ColumnaTextoFields,
+  CuponMontoFields,
   IconoFields,
   IconoSize,
   SeparadorLineaFields,
@@ -248,4 +251,70 @@ export function renderColumnaTextoSnippet(fields: ColumnaTextoFields): string {
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h4', COL3_FILE_NAME)
   return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+}
+
+// --- BULLET_ICONO_SIMPLE -----------------------------------------------------
+// coupons/cupones-modulo.html: mismo patrón que BENEFICIOS_TITULO/TEXTO (carga
+// el archivo del SHELL — el mismo que components/cupones/render.ts usa — y
+// recorta su propio fragmento por ancla literal, tomando la 1ra de las 2
+// celdas "cupón" byte-idénticas como plantilla de referencia). A diferencia de
+// BULLET_ICONO, el maestro dice literal "se puede quitar el ícono quitando
+// todo el <td>" — sin ícono se borra la celda ENTERA (no solo el <img>, que
+// dejaría un <td width="15px"> vacío haciendo un hueco), así que NO se usa
+// substituteImgSrcOrRemove para el caso en blanco.
+
+const COUPONS_FILE_NAME = 'cupones-modulo.html'
+const BULLET_ICONO_SIMPLE_ICON_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'
+const BULLET_ICONO_SIMPLE_TEXT_LITERAL = 'Cupón xxxxxxxxxxx'
+/** Único literal, aparece 2 veces (una por celda "cupón") — envuelve el ícono
+ *  + el texto en una sola tabla, sin `<div>` hijo adentro (ver el comentario
+ *  grande de arriba: lastIndexOf('<div', …) desde el ícono cae justo acá). */
+const BULLET_ICONO_SIMPLE_WRAPPER_ANCHOR = 'role="componente"'
+
+export function renderBulletIconoSimpleSnippet(fields: BulletIconoSimpleFields): string {
+  const raw = stripComments(cuponesModuleRaw)
+  const wrapperIndex = indexOfOrThrow(raw, BULLET_ICONO_SIMPLE_WRAPPER_ANCHOR, COUPONS_FILE_NAME)
+  const bounds = elementBounds(raw, wrapperIndex, 'div', COUPONS_FILE_NAME)
+  let template = raw.slice(bounds.start, bounds.end)
+
+  const iconIndex = indexOfOrThrow(template, BULLET_ICONO_SIMPLE_ICON_URL_PLACEHOLDER, COUPONS_FILE_NAME)
+  if (fields.imageUrl.trim() === '') {
+    const tdBounds = elementBounds(template, iconIndex, 'td', COUPONS_FILE_NAME)
+    template = template.slice(0, tdBounds.start) + template.slice(tdBounds.end)
+  } else {
+    template = substituteImgSrcOrRemove(template, BULLET_ICONO_SIMPLE_ICON_URL_PLACEHOLDER, fields.imageUrl, COUPONS_FILE_NAME)
+  }
+
+  const textIndex = indexOfOrThrow(template, BULLET_ICONO_SIMPLE_TEXT_LITERAL, COUPONS_FILE_NAME)
+  const textElBounds = elementBounds(template, textIndex, 'h4', COUPONS_FILE_NAME)
+  const textBounds = textRunBounds(template, textElBounds, 'h4', COUPONS_FILE_NAME)
+  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+}
+
+// --- CUPON_MONTO --------------------------------------------------------------
+// coupons/cupones-modulo.html: el `<h1 role="molecula-texto">` de la celda
+// "cupón" ("Aca un markdown"), único en el archivo por su color FIJO
+// (`{{color_acento2_mail_general}}` no aparece en ningún otro elemento de este
+// archivo) — mismo patrón "1ra ocurrencia como plantilla" que COLUMNA_TEXTO.
+// El token de color queda sin resolver a propósito: lo resuelve la pasada de
+// tema final de components/cupones/render.ts, igual que el resto del catálogo.
+//
+// El maestro trae el texto partido en 2 runs por un `<br>` fijo de ejemplo
+// ("Aca un<br>\n markdown") — `textRunBounds` (usado por TITULO_TEXTO/etc., un
+// solo run de texto) solo reemplazaría el run DESPUÉS del `<br>`, dejando
+// "Aca un" pegado permanentemente (bug real, encontrado por verificación
+// visual CDP). `innerBounds` reemplaza el contenido ENTERO del `<h1>` (el
+// `<br>` incluido) — consistente con que `fields.text` es un string plano sin
+// soporte de salto de línea, mismo criterio ahora usado en
+// components/cupones/render.ts para el heading de la celda "título" (mismo bug).
+
+const CUPON_MONTO_COLOR_ANCHOR = '{{color_acento2_mail_general}}'
+
+export function renderCuponMontoSnippet(fields: CuponMontoFields): string {
+  const raw = stripComments(cuponesModuleRaw)
+  const anchorIndex = indexOfOrThrow(raw, CUPON_MONTO_COLOR_ANCHOR, COUPONS_FILE_NAME)
+  const bounds = elementBounds(raw, anchorIndex, 'h1', COUPONS_FILE_NAME)
+  const template = raw.slice(bounds.start, bounds.end)
+  const innerTextBounds = innerBounds(template, { start: 0, end: template.length }, 'h1', COUPONS_FILE_NAME)
+  return template.slice(0, innerTextBounds.start) + escapeHtmlText(fields.text) + template.slice(innerTextBounds.end)
 }

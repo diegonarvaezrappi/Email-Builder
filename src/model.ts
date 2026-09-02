@@ -11,6 +11,7 @@ import { col1FieldsSchema, type Col1Fields } from './components/col1/schema'
 import { col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
 import { logosFieldsSchema, type LogosFields } from './components/logos/schema'
+import { cuponesFieldsSchema, type CuponesFields } from './components/cupones/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -32,12 +33,12 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
 /**
  * Tipos de bloque de contenido que puede alojar CONTENIDOS (ver el comentario
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
- * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
- * implementen los demás — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS (fases 2 y
- * 3), COL1 (fase 4), COL3 (fase 5), COL2 (fase 6) y LOGOS (fase 7) del plan
- * de nuevos módulos de contenido, ver [[project_body_modules_plan_2026-08-26]].
+ * BENEFICIOS y 3 layouts de columnas). Hoy CTA, DEALS, TITLE, BULLET,
+ * BENEFICIOS (fases 2 y 3), COL1 (fase 4), COL3 (fase 5), COL2 (fase 6),
+ * LOGOS (fase 7) y CUPONES (fase 8, última del plan) — ver
+ * [[project_body_modules_plan_2026-08-26]].
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3' | 'COL2' | 'LOGOS'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3' | 'COL2' | 'LOGOS' | 'CUPONES'
 
 export interface CtaBlock {
   id: string
@@ -149,6 +150,22 @@ export interface LogosBlock {
   fields: LogosFields
 }
 
+/**
+ * Fase 8 (última) del plan de nuevos módulos de contenido: 2 celdas fijas
+ * (`fields.cells`, tupla), cada una tipo 'cupon' o 'titulo' — a diferencia de
+ * DEALS (siempre exactamente 2 tarjetas de la MISMA forma), acá cada celda
+ * puede ser una de 2 formas distintas, intercambiable. `fields.items` sigue
+ * siendo un solo array plano de módulo (mismo mecanismo que COL1/COL3),
+ * `areaKey: 'cell1'|'cell2'` — sin `hasGeneralModuleFields`: el maestro dice,
+ * dos veces, que fondo/alineado NO son togglables acá (ver
+ * components/cupones/schema.ts).
+ */
+export interface CuponesBlock {
+  id: string
+  type: 'CUPONES'
+  fields: CuponesFields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
 export type ContentBlock =
   | CtaBlock
@@ -160,6 +177,7 @@ export type ContentBlock =
   | Col3Block
   | Col2Block
   | LogosBlock
+  | CuponesBlock
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -215,6 +233,12 @@ const logosBlockSchema = z.object({
   fields: logosFieldsSchema,
 })
 
+const cuponesBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('CUPONES'),
+  fields: cuponesFieldsSchema,
+})
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   ctaBlockSchema,
   dealsBlockSchema,
@@ -225,6 +249,7 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
   col3BlockSchema,
   col2BlockSchema,
   logosBlockSchema,
+  cuponesBlockSchema,
 ])
 
 /**

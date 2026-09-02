@@ -313,6 +313,30 @@ export function ColumnaTextoIcon(props: IconProps) {
   )
 }
 
+/** Igual que BulletIconoIcon pero con UNA sola línea de texto (sin título) —
+ *  mirror del mini-bullet bakeado en cupones-modulo.html (ícono 15px + un
+ *  solo `<h4>`, ver moduleItems/schemas.ts). */
+export function BulletIconoSimpleIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <circle cx="14" cy="20" r="7" fill="currentColor" opacity="0.85" />
+      <rect x="28" y="17" width="28" height="6" rx="3" fill="currentColor" opacity="0.7" />
+    </svg>
+  )
+}
+
+/** Línea gruesa de acento (llena, sin opacidad) — mirror del `<h1
+ *  role="molecula-texto">` de color_acento2 fijo en cupones-modulo.html
+ *  ("Aca un markdown"), la misma familia visual de TextoXlIcon pero más corta
+ *  y sin transparencia, para leerse como "destacado" en el catálogo. */
+export function CuponMontoIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="10" y="14" width="34" height="12" rx="4" fill="currentColor" />
+    </svg>
+  )
+}
+
 /** Íconos de las moléculas del área libre de un módulo de body
  *  (bodyMoleculeRegistry.ts) — TITULO_TEXTO/SUBTITULO_TEXTO/SEPARADOR_LINEA
  *  (fase 2), BULLET_ICONO/BULLET_NUMERADO/ICONO/BENEFICIOS_TITULO/
@@ -332,6 +356,8 @@ export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>>
   BENEFICIOS_TITULO: BeneficiosTituloIcon,
   BENEFICIOS_TEXTO: BeneficiosTextoIcon,
   COLUMNA_TEXTO: ColumnaTextoIcon,
+  BULLET_ICONO_SIMPLE: BulletIconoSimpleIcon,
+  CUPON_MONTO: CuponMontoIcon,
 }
 
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {

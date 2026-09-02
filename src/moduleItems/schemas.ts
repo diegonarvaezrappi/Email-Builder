@@ -38,6 +38,12 @@ export const MODULE_ITEM_TYPE_VALUES = [
   'BENEFICIOS_TITULO',
   'BENEFICIOS_TEXTO',
   'COLUMNA_TEXTO',
+  // Fase 8 (plan de nuevos módulos de contenido, ver
+  // [[project_body_modules_plan_2026-08-26]]) — nacen ancladas a
+  // cupones-modulo.html (ver moduleItems/render.ts), universales desde el
+  // día 1 como el resto del catálogo.
+  'BULLET_ICONO_SIMPLE',
+  'CUPON_MONTO',
 ] as const
 export type ModuleItemType = (typeof MODULE_ITEM_TYPE_VALUES)[number]
 
@@ -163,6 +169,34 @@ export const columnaTextoFieldsSchema = z.object({ text: z.string().default('Tex
 export type ColumnaTextoFields = z.infer<typeof columnaTextoFieldsSchema>
 export const defaultColumnaTextoFields: ColumnaTextoFields = columnaTextoFieldsSchema.parse({})
 
+/**
+ * BULLET_ICONO_SIMPLE — el mini-bullet que coupons/cupones-modulo.html trae
+ * bakeado en su celda "cupón" (`role="componente"`: ícono 15px + UN solo
+ * texto, SIN línea de título) — a diferencia de BULLET_ICONO (icono+título+
+ * texto en una tabla, unifica los 3 archivos molecula_bullet_icono_{s,m,l}.html),
+ * este archivo no tiene título que editar y no tiene tamaño (el maestro solo
+ * lo trae en 15px acá). No tiene su propio archivo en content_moleculas/ —
+ * nace del propio módulo, mismo criterio que COLUMNA_TEXTO con
+ * modulo-3-columnas.html. Fase 8 del plan de nuevos módulos de contenido.
+ */
+export const bulletIconoSimpleFieldsSchema = z.object({
+  imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'),
+  text: z.string().default('Cupón xxxxxxxxxxx'),
+})
+export type BulletIconoSimpleFields = z.infer<typeof bulletIconoSimpleFieldsSchema>
+export const defaultBulletIconoSimpleFields: BulletIconoSimpleFields = bulletIconoSimpleFieldsSchema.parse({})
+
+/**
+ * CUPON_MONTO — el `<h1 role="molecula-texto">` de coupons/cupones-modulo.html
+ * ("Aca un markdown"), con `color_acento2_mail_general` FIJO — el mismo color
+ * de "monto de oferta" que TEXTOM/TEXTOXL del banner (ver
+ * [[project_banner_text_colors_2026-08-03]]). Texto plano, sin RichText —
+ * misma simplificación deliberada que TITULO_TEXTO/COLUMNA_TEXTO. Fase 8.
+ */
+export const cuponMontoFieldsSchema = z.object({ text: z.string().default('Aca un markdown') })
+export type CuponMontoFields = z.infer<typeof cuponMontoFieldsSchema>
+export const defaultCuponMontoFields: CuponMontoFields = cuponMontoFieldsSchema.parse({})
+
 /** Unión discriminada derivada de zod — mismo criterio que bannerItemSchema.
  *  `areaKey` distingue en qué área libre del módulo vive el item (Título solo
  *  tiene 'main'; un futuro módulo con más de un área libre — ej. 1 columna,
@@ -180,5 +214,7 @@ export const moduleItemSchema = z.discriminatedUnion('type', [
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BENEFICIOS_TITULO'), fields: beneficiosTituloFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BENEFICIOS_TEXTO'), fields: beneficiosTextoFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('COLUMNA_TEXTO'), fields: columnaTextoFieldsSchema }),
+  z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BULLET_ICONO_SIMPLE'), fields: bulletIconoSimpleFieldsSchema }),
+  z.object({ id: z.string(), areaKey: z.string(), type: z.literal('CUPON_MONTO'), fields: cuponMontoFieldsSchema }),
 ])
 export type ModuleItem = z.infer<typeof moduleItemSchema>
