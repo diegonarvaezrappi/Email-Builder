@@ -909,9 +909,7 @@ function EmailFrame({
               aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
               aria-pressed={isSlotSelected(selected, slot)}
               onClick={() => onSelect(selectSlot(slot))}
-            >
-              <span className="slot-badge">{SLOT_LABELS[slot]}</span>
-            </button>
+            />
             {registry[slot]?.removable && (
               <button
                 type="button"
@@ -944,9 +942,7 @@ function EmailFrame({
               aria-label={`Seleccionar ${getContentBlockDef(type)?.label ?? type}`}
               aria-pressed={isBlockSelected(selected, id)}
               onClick={() => onSelect(selectBlock(id))}
-            >
-              <span className="slot-badge">{getContentBlockDef(type)?.label ?? type}</span>
-            </button>
+            />
             {/* Duplicar una fila de DEALS es una forma más de agregar otra
                 (junto con arrastrar "Deals" de nuevo desde la librería) — sin
                 tope, ver components/deals/schema.ts. contentBlockRegistry.ts's
@@ -996,9 +992,7 @@ function EmailFrame({
               aria-label={`Seleccionar ${getBannerItemDef(type)?.label ?? type}`}
               aria-pressed={isBannerItemSelected(selected, id)}
               onClick={() => onSelect(selectBannerItem(id))}
-            >
-              <span className="slot-badge">{getBannerItemDef(type)?.label ?? type}</span>
-            </button>
+            />
             <button
               type="button"
               className="slot-duplicate"
@@ -1043,9 +1037,7 @@ function EmailFrame({
               aria-label="Seleccionar deal"
               aria-pressed={isDealCardSelected(selected, id)}
               onClick={() => onSelect(selectDealCard(id))}
-            >
-              <span className="slot-badge">Deal</span>
-            </button>
+            />
             <button
               type="button"
               className="slot-duplicate"
@@ -1101,9 +1093,7 @@ function EmailFrame({
                 aria-label={`Seleccionar ${DEAL_CARD_PIECE_LABELS[pieceType]}`}
                 aria-pressed={isDealCardPieceSelected(selected, cardId, pieceType)}
                 onClick={() => onSelect(selectDealCardPiece(cardId, pieceType))}
-              >
-                <span className="slot-badge">{DEAL_CARD_PIECE_LABELS[pieceType]}</span>
-              </button>
+              />
               <button
                 type="button"
                 className="slot-delete"
@@ -1149,9 +1139,7 @@ function EmailFrame({
                 aria-label={`Seleccionar ${itemDef?.label ?? item?.type ?? id}`}
                 aria-pressed={isModuleItemSelected(selected, id)}
                 onClick={() => onSelect(selectModuleItem(id))}
-              >
-                <span className="slot-badge">{itemDef?.label ?? item?.type}</span>
-              </button>
+              />
               <button
                 type="button"
                 className="slot-duplicate"

@@ -749,6 +749,19 @@
   outline-offset: 2px;
 }
 
+/* Pedido explícito del usuario 2026-09-02: el rotulito de texto ("CUPONES",
+   "Deals", etc.) interrumpía demasiado al arrastrar y soltar en el lienzo —
+   se quitó del todo como elemento VISIBLE. `.slot-badge` ya no envuelve texto
+   en ningún `.slot-hit`/`.block-hit` normal (esos usan solo `.slot-select`,
+   que ya cubre toda el área clickeable/arrastrable — el rótulo ahí era
+   puramente decorativo, nunca el hit-target). Sigue existiendo como CLASE
+   porque `.slot-badge-button` (ver más abajo) todavía la necesita: ahí el
+   botón ES el único punto para seleccionar el bloque completo de TITLE/
+   BULLET/BENEFICIOS/COL1/COL2/COL3/LOGOS/CUPONES/DEALS/BANNER (su propio
+   contenido lo tapa entero) — permanece invisible (`opacity: 0`, sin ningún
+   `:hover`/`.selected` que lo revele) pero sigue siendo clickeable: opacity 0
+   no quita `pointer-events`. Ver `.slot-badge-button:focus-visible` más abajo
+   para que un usuario de teclado igual vea qué tiene foco. */
 .slot-badge {
   position: absolute;
   top: 0;
@@ -762,12 +775,6 @@
   background: var(--accent);
   color: #fff;
   opacity: 0;
-  transition: opacity 0.12s;
-}
-
-.slot-hit:hover .slot-badge,
-.slot-hit.selected .slot-badge {
-  opacity: 1;
 }
 
 /* Botón de eliminar — solo en slots con SlotDef.removable (hoy, Cierre). */
@@ -861,8 +868,19 @@
   font: inherit;
 }
 
-.slot-hit-controls:hover .slot-badge,
-.slot-hit-controls.selected .slot-badge,
+/* A diferencia de .slot-select (que sí muestra un borde/glow al seleccionar,
+   vía el propio .slot-hit.selected .slot-select de más arriba), el badge
+   redibujado queda invisible SIEMPRE — ver la nota grande de .slot-badge. Un
+   usuario de mouse igual ve el borde de selección del bloque (pintado por el
+   .slot-hit.block-hit original, un nivel más abajo en el DOM); acá solo se
+   preserva el foco de teclado, para no dejar un botón interactivo 100%
+   invisible incluso enfocado. */
+.slot-badge-button:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .slot-hit-controls:hover .slot-delete,
 .slot-hit-controls.selected .slot-delete {
   opacity: 1;
