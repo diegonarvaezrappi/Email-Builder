@@ -32,6 +32,9 @@ import { Col3PropertiesPanel } from './components/col3/PropertiesPanel'
 import { cloneCol2Fields, createDefaultCol2Fields, defaultCol2Fields, col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { renderCol2Snippet } from './components/col2/render'
 import { Col2PropertiesPanel } from './components/col2/PropertiesPanel'
+import { cloneLogosFields, createDefaultLogosFields, defaultLogosFields, logosFieldsSchema, type LogosFields } from './components/logos/schema'
+import { renderLogosSnippet } from './components/logos/render'
+import { LogosPropertiesPanel } from './components/logos/PropertiesPanel'
 
 /**
  * Lo que un bloque necesita saber de sí mismo para renderizarse. Hoy solo su
@@ -235,8 +238,26 @@ const col2BlockDef: ContentBlockDef<Col2Fields> = {
   PropertiesPanel: Col2PropertiesPanel,
 }
 
+/**
+ * LOGOS ("franja de logos") — fase 7. Mismo criterio que COL2:
+ * `hasGeneralModuleFields: true` (fondo/click/alineado únicos de módulo,
+ * verificado por conteo de anclas — ver components/logos/schema.ts).
+ */
+const logosBlockDef: ContentBlockDef<LogosFields> = {
+  type: 'LOGOS',
+  label: 'Logos',
+  schema: logosFieldsSchema,
+  defaultFields: defaultLogosFields,
+  createDefaultFields: createDefaultLogosFields,
+  cloneFields: cloneLogosFields,
+  usesModuleItems: true,
+  hasGeneralModuleFields: true,
+  render: renderLogosSnippet,
+  PropertiesPanel: LogosPropertiesPanel,
+}
+
 /** Tipos de bloque registrados — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS,
- *  COL1, COL3 y COL2; LOGOS/CUPONES se suman acá cuando se implementen. */
+ *  COL1, COL3, COL2 y LOGOS; CUPONES se suma acá cuando se implemente. */
 export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlockDef<any>>> = {
   CTA: ctaBlockDef,
   DEALS: dealsBlockDef,
@@ -246,6 +267,7 @@ export const contentBlockRegistry: Partial<Record<ContentBlockType, ContentBlock
   COL1: col1BlockDef,
   COL3: col3BlockDef,
   COL2: col2BlockDef,
+  LOGOS: logosBlockDef,
 }
 
 /** Áreas libres de un bloque `usesModuleItems` — default `'main'` sin label

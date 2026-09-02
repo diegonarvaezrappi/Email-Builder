@@ -10,6 +10,7 @@ import { beneficiosFieldsSchema, type BeneficiosFields } from './components/bene
 import { col1FieldsSchema, type Col1Fields } from './components/col1/schema'
 import { col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
+import { logosFieldsSchema, type LogosFields } from './components/logos/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 
@@ -33,10 +34,10 @@ export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE
  * "WRAPPER DE CONTENIDOS" del maestro: TITLE, CTA, DEALS, LOGOS, CUPONES,
  * BENEFICIOS y 3 layouts de columnas). Ampliar esta unión cuando se
  * implementen los demás — hoy CTA, DEALS, TITLE, BULLET, BENEFICIOS (fases 2 y
- * 3), COL1 (fase 4), COL3 (fase 5) y COL2 (fase 6) del plan de nuevos
- * módulos de contenido, ver [[project_body_modules_plan_2026-08-26]].
+ * 3), COL1 (fase 4), COL3 (fase 5), COL2 (fase 6) y LOGOS (fase 7) del plan
+ * de nuevos módulos de contenido, ver [[project_body_modules_plan_2026-08-26]].
  */
-export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3' | 'COL2'
+export type ContentBlockType = 'CTA' | 'DEALS' | 'TITLE' | 'BULLET' | 'BENEFICIOS' | 'COL1' | 'COL3' | 'COL2' | 'LOGOS'
 
 export interface CtaBlock {
   id: string
@@ -136,8 +137,29 @@ export interface Col2Block {
   fields: Col2Fields
 }
 
+/**
+ * Fase 7: reusa el mecanismo dual-table de COL2 (fondo/click/alineado
+ * únicos de módulo, área libre byte-idéntica en escritorio+mobile, orden de
+ * celdas intercambiable) + agrega la grilla de logos en sí (3/4/6, un
+ * archivo maestro alternativo por tamaño, ver components/logos/render.ts).
+ */
+export interface LogosBlock {
+  id: string
+  type: 'LOGOS'
+  fields: LogosFields
+}
+
 /** Unión discriminada por `type` — se suman más acá cuando existan. */
-export type ContentBlock = CtaBlock | DealsBlock | TitleBlock | BulletBlock | BeneficiosBlock | Col1Block | Col3Block | Col2Block
+export type ContentBlock =
+  | CtaBlock
+  | DealsBlock
+  | TitleBlock
+  | BulletBlock
+  | BeneficiosBlock
+  | Col1Block
+  | Col3Block
+  | Col2Block
+  | LogosBlock
 
 const ctaBlockSchema = z.object({
   id: z.string(),
@@ -187,6 +209,12 @@ const col2BlockSchema = z.object({
   fields: col2FieldsSchema,
 })
 
+const logosBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal('LOGOS'),
+  fields: logosFieldsSchema,
+})
+
 export const contentBlockSchema = z.discriminatedUnion('type', [
   ctaBlockSchema,
   dealsBlockSchema,
@@ -196,6 +224,7 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
   col1BlockSchema,
   col3BlockSchema,
   col2BlockSchema,
+  logosBlockSchema,
 ])
 
 /**

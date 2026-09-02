@@ -269,6 +269,13 @@ const COL3_FILE = 'modulo-3-columnas.html'
 const COL2_DIR_NAME = '2columnas'
 const COL2_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, COL2_DIR_NAME)
 const COL2_FILE = 'modulo-2-columnas.html'
+/** `logos/` — fase 7 del plan de nuevos módulos de contenido, ver
+ *  components/logos/render.ts. 4 archivos (el shell + 3 grillas
+ *  alternativas), a diferencia de los módulos anteriores que traen uno solo. */
+const LOGOS_DIR_NAME = 'logos'
+const LOGOS_DIR = CONTENT_MODULES_DIR && path.join(CONTENT_MODULES_DIR, LOGOS_DIR_NAME)
+const LOGOS_MODULE_FILE = 'modulo-logos.html'
+const LOGOS_GRID_FILES = ['grilla3logos.html', 'grilla4logos.html', 'grilla6logos.html']
 /** Vive directo en la raíz de NN_content-modules/, sin subcarpeta propia (a
  *  diferencia de title/bullet/benefits) — nombre fijo. Pedido explícito del
  *  usuario 2026-08-31: Título/Bullet/CTA/Deals/Beneficios y Cierre deben vivir
@@ -616,6 +623,85 @@ const COL2_ANCHOR_COUNTS = {
   [COL2_IMAGE_URL_MODIFICABLE]: 2,
   mobile_hide: 1,
   desktop_hide: 1,
+}
+
+/**
+ * Anclas que components/logos/render.ts necesita en modulo-logos.html — mismo
+ * shape que COL2 (fondo/link/alineado generales 1 vez, área libre/tokens de
+ * fondo 2 veces, una por tabla), MÁS las 2 celdas de grilla — vienen VACÍAS en
+ * el shell (solo comentarios), ancladas por su `<td>` de apertura completo
+ * (distinto por formato: 60%/escritorio vs 100%/mobile, no hay literal
+ * compartido como en COL2).
+ */
+const LOGOS_LINK_TOKEN = 'LINKMODULLOGOS' // sic, typo del maestro (falta la "O" de "MODULO")
+const LOGOS_DESKTOP_GRID_TD_ANCHOR = '<td width="60%" style="vertical-align: middle; text-align:center; overflow: hidden; border-radius: 10px; ">'
+const LOGOS_MOBILE_GRID_TD_ANCHOR = '<td width="100%" style="vertical-align: middle; text-align:left;  ">'
+const LOGOS_MODULE_ANCHOR_COUNTS = {
+  [LOGOS_LINK_TOKEN]: 1,
+  '{{bg_contenedor1_mail_general}}': 1,
+  '{{body_container_background_radius}}': 2,
+  '{{body_container_background_padding}}': 2,
+  '{{body_alineado_molecular}}': 2,
+  '{{alineado_molecular_mail_body}}': 2,
+  'role="columna-textos"': 2,
+  '>Titulo<': 2,
+  'bloque de texto bloque de texto bloque de texto': 2,
+  [LOGOS_DESKTOP_GRID_TD_ANCHOR]: 1,
+  [LOGOS_MOBILE_GRID_TD_ANCHOR]: 1,
+  mobile_hide: 1,
+  desktop_hide: 1,
+}
+
+/**
+ * Anclas por archivo de grilla — las 3 comparten la misma URL placeholder de
+ * fondo (una por logo) y `border-radius: 7px` (una por logo), pero difieren
+ * en cómo anclan cada celda: grilla3/6 traen `role="logoN"` (risk #2 del
+ * plan — grilla4 NO trae role en ninguna celda, se ancla por posición
+ * documental: `<th style=` × 2 primero, `<td style=` × 2 después, ambos
+ * anclados en el placeholder compartido). `AQUIELLINKDELOGO2` en grilla6
+ * aparece 2 VECES a propósito (sic — la celda `role="logo3"` repite el token
+ * de logo2 en vez de "AQUIELLINKDELOGO3", que no existe en el archivo; ver
+ * risk #2/#6 del plan) — encerrar el conteo real, no el "correcto", para que
+ * un fix del maestro avise en vez de pasar desapercibido (mismo criterio que
+ * LINKCELDA1/2 en COL3).
+ */
+const LOGO_BG_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1B4hOqqkpKSu2cQHale6dE-hfLX6yfO7O'
+const LOGOS_GRID_ANCHOR_COUNTS = {
+  'grilla3logos.html': {
+    'role="logo1"': 1,
+    'role="logo2"': 1,
+    'role="logo3"': 1,
+    [LOGO_BG_PLACEHOLDER]: 3,
+    AQUIELLINKDELOGO1: 1,
+    AQUIELLINKDELOGO2: 1,
+    AQUIELLINKDELOGO3: 1,
+    'border-radius: 7px': 3,
+  },
+  'grilla4logos.html': {
+    '<th style=': 2,
+    '<td style=': 2,
+    [LOGO_BG_PLACEHOLDER]: 4,
+    AQUIELLINKDELOGO1: 1,
+    AQUIELLINKDELOGO2: 1,
+    AQUIELLINKDELOGO3: 1,
+    AQUIELLINKDELOGO4: 1,
+    'border-radius: 7px': 4,
+  },
+  'grilla6logos.html': {
+    'role="logo1"': 1,
+    'role="logo2"': 1,
+    'role="logo3"': 1,
+    'role="logo4"': 1,
+    'role="logo5"': 1,
+    'role="logo6"': 1,
+    [LOGO_BG_PLACEHOLDER]: 6,
+    AQUIELLINKDELOGO1: 1,
+    AQUIELLINKDELOGO2: 2, // sic, typo del maestro — logo3 repite el token de logo2
+    AQUIELLINKDELOGO4: 1,
+    AQUIELLINKDELOGO5: 1,
+    AQUIELLINKDELOGO6: 1,
+    'border-radius: 7px': 6,
+  },
 }
 
 const BENEFICIOS_IMAGE_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'
@@ -1380,6 +1466,62 @@ if (COL2_DIR) {
   }
 }
 
+// --- NN-components/NN_content-modules/logos/{modulo-logos,grilla3/4/6logos}.html
+// Fase 7 del plan de nuevos módulos de contenido — ver components/logos/render.ts.
+let logosModuleFileContent = ''
+/** `{ [fileName]: content }` — las 3 grillas. */
+const logosGridFileContents = {}
+if (LOGOS_DIR) {
+  const moduleFp = path.join(LOGOS_DIR, LOGOS_MODULE_FILE)
+  const moduleLabel = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}/${LOGOS_MODULE_FILE}`
+  if (!fs.existsSync(moduleFp)) {
+    fail(`No se encontró ${moduleLabel} en ${MASTER_DIR}`)
+  } else {
+    const content = fs.readFileSync(moduleFp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(LOGOS_MODULE_ANCHOR_COUNTS)) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${moduleLabel}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/logos/render.ts`)
+      }
+    }
+    logosModuleFileContent = content
+  }
+
+  for (const gridFile of LOGOS_GRID_FILES) {
+    const fp = path.join(LOGOS_DIR, gridFile)
+    const label = `${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}/${gridFile}`
+    if (!fs.existsSync(fp)) {
+      fail(`No se encontró ${label} en ${MASTER_DIR}`)
+      continue
+    }
+    const content = fs.readFileSync(fp, 'utf8')
+    const stripped = content.replace(HTML_COMMENT_RE, '')
+    for (const [anchor, expected] of Object.entries(LOGOS_GRID_ANCHOR_COUNTS[gridFile])) {
+      const actual = stripped.split(anchor).length - 1
+      if (actual !== expected) {
+        fail(`${label}: el ancla "${anchor}" aparece ${actual} veces sin comentarios (se esperaban ${expected}) — revisar components/logos/render.ts`)
+      }
+    }
+    logosGridFileContents[gridFile] = content
+  }
+
+  // Aviso (no aborta): mismo criterio que title/bullet/benefits/1columna/2-3columnas.
+  const knownLogosFiles = new Set([LOGOS_MODULE_FILE, ...LOGOS_GRID_FILES])
+  let actualLogosFiles = []
+  try {
+    actualLogosFiles = fs.readdirSync(LOGOS_DIR).filter((f) => f.endsWith('.html'))
+  } catch (e) {
+    fail(`No se pudo leer ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}: ${e.message}`)
+  }
+  const unknownLogosFiles = actualLogosFiles.filter((f) => !knownLogosFiles.has(f))
+  if (unknownLogosFiles.length > 0) {
+    console.warn(
+      `${DIM}⚠ ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}/ tiene archivo(s) nuevo(s) sin sincronizar: ${unknownLogosFiles.join(', ')} — revisar si hace falta agregarlos.${RESET}`,
+    )
+  }
+}
+
 // --- NN-components/NN_content-modules/_contenidos_wrapper.html -----------------
 // Pedido explícito del usuario 2026-08-31 — ver components/contenidos/render.ts.
 let contenidosWrapperFileContent = ''
@@ -1524,6 +1666,15 @@ if (col2FileContent) {
   fs.writeFileSync(path.join(COL2_ASSETS_DIR, COL2_FILE), col2FileContent, 'utf8')
 }
 
+if (logosModuleFileContent) {
+  const LOGOS_ASSETS_DIR = path.join(ASSETS_DIR, 'logos')
+  fs.mkdirSync(LOGOS_ASSETS_DIR, { recursive: true })
+  fs.writeFileSync(path.join(LOGOS_ASSETS_DIR, LOGOS_MODULE_FILE), logosModuleFileContent, 'utf8')
+  for (const [name, content] of Object.entries(logosGridFileContents)) {
+    fs.writeFileSync(path.join(LOGOS_ASSETS_DIR, name), content, 'utf8')
+  }
+}
+
 if (contenidosWrapperFileContent) {
   // Carpeta propia (`contenidos/`) — mismo criterio que title/bullet/benefits:
   // nombre calcado del componente de app/src que lo consume.
@@ -1577,6 +1728,9 @@ console.log(
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${COL2_DIR_NAME}/ (${Object.keys(COL2_ANCHOR_COUNTS).length} anclas OK)`,
+)
+console.log(
+  `${GREEN}✓${RESET} ${1 + LOGOS_GRID_FILES.length} archivos de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${LOGOS_DIR_NAME}/ (${Object.keys(LOGOS_MODULE_ANCHOR_COUNTS).length} anclas del shell OK + ${LOGOS_GRID_FILES.length} grillas OK)`,
 )
 console.log(
   `${GREEN}✓${RESET} 1 archivo de ${COMPONENTS_DIR_NAME}/${CONTENT_MODULES_SUBDIR_NAME}/${CONTENIDOS_WRAPPER_FILE} (${Object.keys(CONTENIDOS_WRAPPER_ANCHOR_COUNTS).length} anclas OK)`,
