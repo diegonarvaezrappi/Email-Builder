@@ -2,11 +2,14 @@ import { z } from 'zod'
 import { DEFAULT_THEME, THEME_SLUGS } from '../themes/themes'
 
 /**
- * Los 9 valores reales de `style_Look` en 02-components/03_ctas/cta-template.html
+ * Los 15 valores reales de `style_Look` en 02-components/03_ctas/cta-template.html
  * (leído del `{% if/elsif %}` completo). Nota: 'blanconeon' y 'blanco' son
  * ramas byte-idénticas en el archivo real (mismo color/imagen) — no es un bug
  * de esta app, se exponen ambas igual, como ya se hizo con las 10 variantes
- * de Cierre.
+ * de Cierre. Las últimas 6 (gris100…celeste100) se agregaron en el pull del
+ * 2026-09-02 ("actualización del cta") — coinciden 1:1 con el slug de 6 de
+ * los 7 temas pastel (todos menos verde100, que no tiene variante propia de
+ * `style_Look` — ver STYLE_LOOK_FOR_THEME en themeDefaults.ts).
  */
 export const CTA_STYLE_VALUES = [
   'neon',
@@ -18,6 +21,12 @@ export const CTA_STYLE_VALUES = [
   'pro',
   'blancogris',
   'negrogris',
+  'gris100',
+  'beige100',
+  'beige150',
+  'rosa100',
+  'purpura100',
+  'celeste100',
 ] as const
 
 export type CtaStyle = (typeof CTA_STYLE_VALUES)[number]
@@ -32,6 +41,31 @@ export const CTA_STYLE_LABELS: Record<CtaStyle, string> = {
   pro: 'Pro',
   blancogris: 'Blanco gris',
   negrogris: 'Negro gris',
+  gris100: 'Gris 100',
+  beige100: 'Beige 100',
+  beige150: 'Beige 150',
+  rosa100: 'Rosa 100',
+  purpura100: 'Púrpura 100',
+  celeste100: 'Celeste 100',
+}
+
+/**
+ * Valor real de `global.ctaStyle` en el documento: el sentinel `'default'`
+ * delante de los 15 estilos reales de arriba. `'default'` NO es un
+ * `style_Look` que exista en cta-template.html — significa "seguir al tema
+ * actual", resuelto recién al renderizar (ver themeDefaults.ts#resolveCtaStyle).
+ * Reemplaza el mecanismo anterior de "pisar mientras el usuario no lo haya
+ * tocado a mano": ahora es un valor EXPLÍCITO que el usuario puede volver a
+ * elegir en cualquier momento, y cualquier otro valor del select queda fijo
+ * pase lo que pase con el tema (pedido explícito del usuario).
+ */
+export const CTA_STYLE_SELECT_VALUES = ['default', ...CTA_STYLE_VALUES] as const
+
+export type CtaStyleSelect = (typeof CTA_STYLE_SELECT_VALUES)[number]
+
+export const CTA_STYLE_SELECT_LABELS: Record<CtaStyleSelect, string> = {
+  default: 'Default',
+  ...CTA_STYLE_LABELS,
 }
 
 /**
@@ -65,8 +99,13 @@ export const globalSchema = z.object({
    * explícito del usuario): un solo control, todas las instancias de CTA lo
    * leen al renderizar, así que cambiar el estilo en cualquier lado cambia
    * TODOS los CTA del mail a la vez. Ver components/cta/render.ts.
+   *
+   * Default es `'default'` (no un `style_Look` real): así el CTA sigue al
+   * tema general hasta que el usuario elija un color específico a mano — ver
+   * themeDefaults.ts#resolveCtaStyle, que resuelve el sentinel al momento de
+   * renderizar.
    */
-  ctaStyle: z.enum(CTA_STYLE_VALUES).default('neon'),
+  ctaStyle: z.enum(CTA_STYLE_SELECT_VALUES).default('default'),
 })
 
 export type GlobalFields = z.infer<typeof globalSchema>

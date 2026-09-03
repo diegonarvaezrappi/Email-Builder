@@ -1,7 +1,7 @@
 import type { ChangeEvent } from 'react'
 import { CTA_ALIGN_VALUES, CTA_ALIGN_LABELS } from './schema'
 import type { CtaFields } from './schema'
-import { CTA_STYLE_VALUES, CTA_STYLE_LABELS } from '../../global/schema'
+import { CTA_STYLE_SELECT_VALUES, CTA_STYLE_SELECT_LABELS } from '../../global/schema'
 import type { EmailDocument } from '../../model'
 import type { GlobalFields } from '../../global/schema'
 
@@ -60,9 +60,9 @@ export function CtaPropertiesPanel({ value, onChange, doc, onChangeGlobal }: Cta
           value={doc.global.ctaStyle}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => onChangeGlobal({ ...doc.global, ctaStyle: e.target.value as GlobalFields['ctaStyle'] })}
         >
-          {CTA_STYLE_VALUES.map((s) => (
+          {CTA_STYLE_SELECT_VALUES.map((s) => (
             <option key={s} value={s}>
-              {CTA_STYLE_LABELS[s]}
+              {CTA_STYLE_SELECT_LABELS[s]}
             </option>
           ))}
         </select>

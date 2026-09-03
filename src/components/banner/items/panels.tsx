@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../../model'
-import { CTA_STYLE_LABELS, CTA_STYLE_VALUES } from '../../../global/schema'
+import { CTA_STYLE_SELECT_LABELS, CTA_STYLE_SELECT_VALUES } from '../../../global/schema'
 import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import type { RichTextColorMap } from '../../../richText/model'
@@ -461,9 +461,9 @@ export function CtaInternoPropertiesPanel({ value, onChange, doc, onChangeGlobal
           value={doc.global.ctaStyle}
           onChange={(e: ChangeEvent<HTMLSelectElement>) => onChangeGlobal({ ...doc.global, ctaStyle: e.target.value as GlobalFields['ctaStyle'] })}
         >
-          {CTA_STYLE_VALUES.map((s) => (
+          {CTA_STYLE_SELECT_VALUES.map((s) => (
             <option key={s} value={s}>
-              {CTA_STYLE_LABELS[s]}
+              {CTA_STYLE_SELECT_LABELS[s]}
             </option>
           ))}
         </select>

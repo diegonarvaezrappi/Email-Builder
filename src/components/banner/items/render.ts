@@ -19,6 +19,7 @@ import { escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { DARK_THEME_SLUGS } from '../../../themes/themes'
+import { resolveCtaStyle } from '../../../themeDefaults'
 import { renderCtaSnippet } from '../../cta/render'
 import type { BannerItemRenderCtx } from '../schema'
 import { loadBannerMoleculaFile, loadContentMoleculaFile } from './files'
@@ -627,5 +628,5 @@ export function renderFranjaLogosSnippet(fields: FranjaLogosFields): string {
 
 export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const align = ctx.bannerType === 'horizontal' ? (ctx.horizontalMoleculeAlign ?? 'left') : (ctx.moleculeAlign ?? 'center')
-  return renderCtaSnippet({ ...fields, align }, doc.global.ctaStyle)
+  return renderCtaSnippet({ ...fields, align }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema))
 }

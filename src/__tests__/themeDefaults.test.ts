@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultHeaderFields } from '../components/header/schema'
 import { defaultBannerFields } from '../components/banner/schema'
-import { defaultGlobalFields } from '../global/schema'
-import { bannerBackgroundEnabledForTheme, ctaStyleForTheme, headerPatchForTheme, moduleBackgroundEnabledForTheme } from '../themeDefaults'
+import { bannerBackgroundEnabledForTheme, headerPatchForTheme, moduleBackgroundEnabledForTheme, resolveCtaStyle } from '../themeDefaults'
 
 // prevTema=null en la mayoría de estos tests = "primer render, sin tema
 // anterior" (mismo criterio que el chequeo original contra el default). Los
@@ -134,29 +133,33 @@ describe('headerPatchForTheme', () => {
   })
 })
 
-describe('ctaStyleForTheme', () => {
-  it('switches to pro/problack only while ctaStyle is still at its default', () => {
-    expect(ctaStyleForTheme(defaultGlobalFields, 'pro', null)).toBe('pro')
-    expect(ctaStyleForTheme(defaultGlobalFields, 'problack', null)).toBe('problack')
-    expect(ctaStyleForTheme({ ...defaultGlobalFields, ctaStyle: 'verde' }, 'pro', null)).toBeNull()
+describe('resolveCtaStyle', () => {
+  it('resolves "default" to the theme-specific style_Look for Pro/ProBlack and the 6 matching pastels', () => {
+    expect(resolveCtaStyle('default', 'pro')).toBe('pro')
+    expect(resolveCtaStyle('default', 'problack')).toBe('problack')
+    expect(resolveCtaStyle('default', 'gris100')).toBe('gris100')
+    expect(resolveCtaStyle('default', 'beige100')).toBe('beige100')
+    expect(resolveCtaStyle('default', 'beige150')).toBe('beige150')
+    expect(resolveCtaStyle('default', 'rosa100')).toBe('rosa100')
+    expect(resolveCtaStyle('default', 'purpura100')).toBe('purpura100')
+    expect(resolveCtaStyle('default', 'celeste100')).toBe('celeste100')
   })
 
-  it('does nothing for pastel/oscuros themes — only Pro/ProBlack specialize ctaStyle', () => {
-    expect(ctaStyleForTheme(defaultGlobalFields, 'beige100', null)).toBeNull()
-    expect(ctaStyleForTheme(defaultGlobalFields, 'darkturbo', null)).toBeNull()
+  it('falls back to "neon" for themes with no matching style_Look variant (verde100, the 3 oscuros/invertidos)', () => {
+    expect(resolveCtaStyle('default', 'verde100')).toBe('neon')
+    expect(resolveCtaStyle('default', 'darkneon')).toBe('neon')
+    expect(resolveCtaStyle('default', 'darkturbo')).toBe('neon')
+    expect(resolveCtaStyle('default', 'darkneutro')).toBe('neon')
   })
 
-  it('reverts Pro -> Beige 100 back to the default ctaStyle, since the user never touched it (same bug as brand)', () => {
-    const proCtaStyle = ctaStyleForTheme(defaultGlobalFields, 'pro', 'beige100')
-    expect(proCtaStyle).toBe('pro')
-
-    const globalAfterPro = { ...defaultGlobalFields, ctaStyle: proCtaStyle! }
-    expect(ctaStyleForTheme(globalAfterPro, 'beige100', 'pro')).toBe(defaultGlobalFields.ctaStyle)
+  it('falls back to "neon" for a tema that does not exist (e.g. a stale slug from an old saved document)', () => {
+    expect(resolveCtaStyle('default', 'tema-que-no-existe')).toBe('neon')
   })
 
-  it('does not revert a manually-chosen ctaStyle', () => {
-    const globalManuallyChanged = { ...defaultGlobalFields, ctaStyle: 'verde' as const }
-    expect(ctaStyleForTheme(globalManuallyChanged, 'beige100', 'pro')).toBeNull()
+  it('returns a manually-chosen style untouched, regardless of the theme', () => {
+    expect(resolveCtaStyle('verde', 'pro')).toBe('verde')
+    expect(resolveCtaStyle('pro', 'beige100')).toBe('pro')
+    expect(resolveCtaStyle('gris100', 'darkturbo')).toBe('gris100')
   })
 })
 

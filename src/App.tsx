@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { useBuilder, useTemporal } from './store/store'
-import { headerPatchForTheme, ctaStyleForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme } from './themeDefaults'
+import { headerPatchForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme } from './themeDefaults'
 import { contentBlockRegistry } from './contentBlockRegistry'
 import type { Col3Fields } from './components/col3/schema'
 import type { ContentBlock } from './model'
@@ -46,11 +46,13 @@ function App() {
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
 
-  // Ajustes por defecto del header/CTA/banner al cambiar el TEMA GENERAL — ver
+  // Ajustes por defecto del header/banner al cambiar el TEMA GENERAL — ver
   // themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100 cambian
-  // la marca del header; pastel/oscuros fuerzan la versión del logo; Pro/
-  // ProBlack cambian el estilo de CTA; pastel apaga el fondo del banner por
-  // defecto). Un solo patch por header, no 2
+  // la marca del header; pastel/oscuros fuerzan la versión del logo; pastel
+  // apaga el fondo del banner por defecto). El estilo de CTA NO vive acá desde
+  // el pull del 2026-09-02 — global.ctaStyle usa su propio sentinel 'default'
+  // resuelto al renderizar (themeDefaults.ts#resolveCtaStyle), no un efecto de
+  // tema. Un solo patch por header, no 2
   // escrituras sueltas: si header.brand y header.logoBackground cambian a la
   // vez (ej. tema Dark Turbo), 2 llamadas a setSlotFields seguidas se pisarían
   // entre sí porque ambas partirían del mismo `doc.header` ya obsoleto tras la
@@ -67,9 +69,6 @@ function App() {
 
     const headerPatch = headerPatchForTheme(doc.header, doc.global.tema, prevTema)
     if (headerPatch) setSlotFields('header', { ...doc.header, ...headerPatch })
-
-    const ctaStyle = ctaStyleForTheme(doc.global, doc.global.tema, prevTema)
-    if (ctaStyle) setGlobalFields({ ...doc.global, ctaStyle })
 
     const backgroundEnabled = bannerBackgroundEnabledForTheme(doc.banner, doc.global.tema, prevTema)
     if (backgroundEnabled !== null) setSlotFields('banner', { ...doc.banner, backgroundEnabled })

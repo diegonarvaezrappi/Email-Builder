@@ -646,4 +646,11 @@ describe('renderCtaInternoSnippet', () => {
     expect(html).toContain("style_Look = 'pro'")
     expect(html).toContain('{{content_blocks.${CTA-template}}}')
   })
+
+  it('resolves ctaStyle "default" via the CURRENT tema, not the literal string "default"', () => {
+    const withDefault = doc({ global: { ...defaultEmailDocument.global, ctaStyle: 'default', tema: 'problack' } })
+    const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, withDefault, ctx('horizontal'))
+    expect(html).toContain("style_Look = 'problack'")
+    expect(html).not.toContain("style_Look = 'default'")
+  })
 })

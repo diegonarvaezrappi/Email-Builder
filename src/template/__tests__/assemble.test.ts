@@ -74,6 +74,17 @@ describe('assembleEmailHtml', () => {
     expect(html.trimEnd().endsWith('<div class="separador"></div>')).toBe(false)
   })
 
+  it('resolves a CONTENIDOS CTA\'s "default" ctaStyle via the tema, not the literal string "default" (pull 2026-09-02)', () => {
+    const doc = {
+      ...defaultEmailDocument,
+      global: { ...defaultEmailDocument.global, tema: 'problack', ctaStyle: 'default' as const },
+      contenidos: [ctaBlock('a', 'Uno')],
+    }
+    const html = assembleEmailHtml(doc)
+    expect(html).toContain("style_Look = 'problack'")
+    expect(html).not.toContain("style_Look = 'default'")
+  })
+
   it('leaves no trace of the WRAPPER DE CONTENIDOS marker when there are no CTAs', () => {
     // defaultEmailDocument ya trae un CTA por defecto (siempre debajo del
     // banner, ver registry.ts) — se fuerza contenidos: [] acá para seguir

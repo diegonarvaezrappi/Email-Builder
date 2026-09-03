@@ -5,6 +5,7 @@ import type { GlobalFields } from './global/schema'
 import { defaultCtaFields, ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { renderCtaSnippet } from './components/cta/render'
 import { CtaPropertiesPanel } from './components/cta/PropertiesPanel'
+import { resolveCtaStyle } from './themeDefaults'
 import { cloneDealsFields, createDefaultDealsFields, defaultDealsFields, dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { renderDealsSnippet } from './components/deals/render'
 import { DealsPropertiesPanel } from './components/deals/panels'
@@ -124,7 +125,7 @@ const ctaBlockDef: ContentBlockDef<CtaFields> = {
   label: 'CTA',
   schema: ctaFieldsSchema,
   defaultFields: defaultCtaFields,
-  render: (fields, doc) => renderCtaSnippet(fields, doc.global.ctaStyle),
+  render: (fields, doc) => renderCtaSnippet(fields, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema)),
   PropertiesPanel: CtaPropertiesPanel,
 }
 

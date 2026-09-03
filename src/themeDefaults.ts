@@ -5,10 +5,10 @@
 // sin montar React: el useEffect de App.tsx solo llama a estas 2 y aplica el
 // resultado.
 //
-// header.brand y global.ctaStyle solo se ajustan MIENTRAS el usuario no los
-// haya tocado a mano — cualquier marca/estilo es válido con cualquier tema
-// (02-components/README.md, USO-DE-CADA-PARTE.md §4), así que esto es solo
-// una sugerencia inicial, no un candado.
+// header.brand solo se ajusta MIENTRAS el usuario no lo haya tocado a mano —
+// cualquier marca es válida con cualquier tema (02-components/README.md,
+// USO-DE-CADA-PARTE.md §4), así que esto es solo una sugerencia inicial, no
+// un candado.
 //
 // "No tocado a mano" NO puede ser "sigue en defaultHeaderFields.brand": una
 // vez que este mismo efecto cambia la marca (ej. al entrar a Verde 100), la
@@ -24,17 +24,22 @@
 // usuario elige a mano el mismo valor que el tema anterior ya traía, se lee
 // como "no tocado").
 //
+// global.ctaStyle NO usa este patrón de "prevTema" — desde el pull del
+// 2026-09-02 tiene su propio sentinel explícito ('default', ver
+// global/schema.ts) que resuelve resolveCtaStyle más abajo, sin falta de
+// trackear el tema anterior: 'default' es un valor que el usuario elige a
+// propósito, no uno que este efecto podría haber puesto antes.
+//
 // header.logoBackground es distinto: SIEMPRE se fuerza al entrar a un tema
 // pastel, oscuro/invertido, Pro o ProBlack, sin importar si el usuario ya lo
 // había tocado — no existe una combinación válida de logo claro+tema oscuro
-// (o viceversa) que este ajuste deba respetar, a diferencia de brand/ctaStyle.
+// (o viceversa) que este ajuste deba respetar, a diferencia de brand.
 // ============================================================================
 import { defaultHeaderFields } from './components/header/schema'
 import type { HeaderFields } from './components/header/schema'
 import { defaultBannerFields } from './components/banner/schema'
 import type { BannerFields } from './components/banner/schema'
-import { defaultGlobalFields } from './global/schema'
-import type { CtaStyle, GlobalFields } from './global/schema'
+import type { CtaStyle, CtaStyleSelect } from './global/schema'
 import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS } from './themes/themes'
 
 /**
@@ -55,11 +60,34 @@ const BRAND_FOR_THEME: Partial<Record<string, HeaderFields['brand']>> = {
   verde100: 'rappi-turbo',
 }
 
-/** Idem para el estilo global de CTA — solo Pro/ProBlack lo especializan. */
-const CTA_STYLE_FOR_THEME: Partial<Record<string, CtaStyle>> = {
+/**
+ * `style_Look` real que le corresponde a cada tema — usado para resolver el
+ * sentinel 'default' de global.ctaStyle (ver resolveCtaStyle). Pro/ProBlack y
+ * los 6 pasteles gris100/beige100/beige150/rosa100/purpura100/celeste100
+ * tienen una variante de `style_Look` con el MISMO nombre en
+ * cta-template.html (pull 2026-09-02, "actualización del cta") — mapeo 1:1,
+ * no una inferencia. verde100 y los 3 "oscuros/invertidos"
+ * (darkneon/darkturbo/darkneutro) NO tienen variante propia todavía (el
+ * maestro no la definió) — quedan fuera de este mapa y caen al fallback
+ * general (ver resolveCtaStyle), igual que hoy.
+ */
+const STYLE_LOOK_FOR_THEME: Partial<Record<string, CtaStyle>> = {
   pro: 'pro',
   problack: 'problack',
+  gris100: 'gris100',
+  beige100: 'beige100',
+  beige150: 'beige150',
+  rosa100: 'rosa100',
+  purpura100: 'purpura100',
+  celeste100: 'celeste100',
 }
+
+/**
+ * Fallback cuando el tema no tiene una variante propia de `style_Look` —
+ * mismo valor que cta-template.html usa como default
+ * (`{% assign style_Look = style_Look | default: 'neon' %}`).
+ */
+const FALLBACK_CTA_STYLE: CtaStyle = 'neon'
 
 /**
  * logoBackground forzado por tema — a diferencia de BRAND_FOR_THEME (que solo
@@ -82,17 +110,13 @@ function expectedBrandForTema(tema: string): HeaderFields['brand'] {
   return BRAND_FOR_THEME[tema] ?? defaultHeaderFields.brand
 }
 
-function expectedCtaStyleForTema(tema: string): CtaStyle {
-  return CTA_STYLE_FOR_THEME[tema] ?? defaultGlobalFields.ctaStyle
-}
-
 /**
  * El fondo del banner (banner.backgroundEnabled) viene activado por defecto
  * en el schema (true, el comportamiento de los temas no-pastel) — en pastel
  * el maestro documenta que el contenedor viene APAGADO por defecto (ver
  * components/banner/render.ts), así que el default correcto ahí es false.
- * Mismo patrón de "no tocado desde el tema anterior" que brand/ctaStyle (NO
- * el de logoBackground, que siempre se fuerza): activar/desactivar el fondo
+ * Mismo patrón de "no tocado desde el tema anterior" que brand (NO el de
+ * logoBackground, que siempre se fuerza): activar/desactivar el fondo
  * es una elección válida en cualquier tema, así que si el usuario ya tocó el
  * checkbox a mano, este efecto no debe volver a pisarlo hasta el próximo
  * cambio de tema sin tocar.
@@ -135,14 +159,18 @@ export function headerPatchForTheme(
   return Object.keys(patch).length > 0 ? patch : null
 }
 
-/** Análogo para global.ctaStyle — un solo campo, no hace falta un patch parcial. */
-export function ctaStyleForTheme(global: GlobalFields, tema: string, prevTema: string | null): CtaStyle | null {
-  const untouchedSincePrevTema =
-    global.ctaStyle === (prevTema === null ? defaultGlobalFields.ctaStyle : expectedCtaStyleForTema(prevTema))
-  if (!untouchedSincePrevTema) return null
-
-  const ctaStyle = expectedCtaStyleForTema(tema)
-  return ctaStyle !== global.ctaStyle ? ctaStyle : null
+/**
+ * Resuelve el sentinel 'default' de global.ctaStyle contra el tema actual —
+ * llamado desde donde sea que se renderice un CTA (contentBlockRegistry.ts,
+ * banner/items/render.ts#renderCtaInternoSnippet), no desde un useEffect: a
+ * diferencia de brand/backgroundEnabled no hace falta trackear `prevTema` ni
+ * "tocado a mano", porque 'default' es un valor EXPLÍCITO que el usuario
+ * elige — se resuelve de nuevo en cada render sin ambigüedad. Cualquier otro
+ * valor (un color elegido a mano) se devuelve tal cual, sin mirar el tema.
+ */
+export function resolveCtaStyle(ctaStyle: CtaStyleSelect, tema: string): CtaStyle {
+  if (ctaStyle !== 'default') return ctaStyle
+  return STYLE_LOOK_FOR_THEME[tema] ?? FALLBACK_CTA_STYLE
 }
 
 /** Análogo para banner.backgroundEnabled — ver expectedBackgroundEnabledForTema. */
