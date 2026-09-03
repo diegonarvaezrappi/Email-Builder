@@ -11,7 +11,7 @@ import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, TitleBlo
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
   type: 'CTA',
-  fields: { text, deeplink: '#', align: 'center' },
+  fields: { text, deeplink: '#', align: 'center', size: 'big' },
 })
 
 function setContenidos(blocks: ContentBlock[]) {

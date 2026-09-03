@@ -628,5 +628,9 @@ export function renderFranjaLogosSnippet(fields: FranjaLogosFields): string {
 
 export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const align = ctx.bannerType === 'horizontal' ? (ctx.horizontalMoleculeAlign ?? 'left') : (ctx.moleculeAlign ?? 'center')
-  return renderCtaSnippet({ ...fields, align }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema))
+  // `cta_size` (ver components/cta/schema.ts) tampoco es un campo propio de
+  // CTA_INTERNO — no pedido para este piece, y 'big' reproduce el único
+  // tamaño que existía antes de esa variable (rama `{% else %}` de
+  // cta-template.html, byte-idéntica a 'big').
+  return renderCtaSnippet({ ...fields, align, size: 'big' }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema))
 }

@@ -157,9 +157,14 @@ describe('resolveCtaStyle', () => {
   })
 
   it('returns a manually-chosen style untouched, regardless of the theme', () => {
+    // Los 4 valores realmente elegibles a mano desde el select restringido
+    // (ver CTA_STYLE_SELECT_VALUES) — 'pro'/'gris100' siguen siendo salidas
+    // válidas de resolveCtaStyle('default', tema), pero ya no son elegibles
+    // a mano, así que no tiene sentido pasarlas acá.
     expect(resolveCtaStyle('verde', 'pro')).toBe('verde')
-    expect(resolveCtaStyle('pro', 'beige100')).toBe('pro')
-    expect(resolveCtaStyle('gris100', 'darkturbo')).toBe('gris100')
+    expect(resolveCtaStyle('neon', 'beige100')).toBe('neon')
+    expect(resolveCtaStyle('blanco', 'gris100')).toBe('blanco')
+    expect(resolveCtaStyle('negrogris', 'darkturbo')).toBe('negrogris')
   })
 })
 

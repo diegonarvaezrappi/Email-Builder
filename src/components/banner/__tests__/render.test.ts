@@ -82,11 +82,13 @@ describe('renderBannerSnippet', () => {
     expect(renderBannerSnippet(d.banner, d)).not.toContain('BITEM:IMG_AUTOMATICA_MODULO:a')
   })
 
-  it('"clean output" — zero Liquid `{% %}` tags without a CTA_INTERNO item, exactly 4 with one', () => {
+  it('"clean output" — zero Liquid `{% %}` tags without a CTA_INTERNO item, exactly 5 with one', () => {
+    // 5 asigna: cta_alineado, cta_size (pull 2026-09-02), text_cta,
+    // deeplink_cta, style_Look — ver renderCtaAssignLines.
     const withoutCta = withItems([promo('a'), tags('b')])
     const withCta = withItems([promo('a'), ctaInterno('c')])
     expect((renderBannerSnippet(withoutCta.banner, withoutCta).match(/\{%/g) ?? []).length).toBe(0)
-    expect((renderBannerSnippet(withCta.banner, withCta).match(/\{%/g) ?? []).length).toBe(4)
+    expect((renderBannerSnippet(withCta.banner, withCta).match(/\{%/g) ?? []).length).toBe(5)
   })
 
   it('theme-leak test: for every theme, no {{...}} of any kind survives in the rendered banner (all 10 item types present)', () => {

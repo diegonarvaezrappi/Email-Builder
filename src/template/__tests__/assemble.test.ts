@@ -15,7 +15,7 @@ import type { CtaBlock } from '../../model'
 const ctaBlock = (id: string, text: string): CtaBlock => ({
   id,
   type: 'CTA',
-  fields: { text, deeplink: '#', align: 'center' },
+  fields: { text, deeplink: '#', align: 'center', size: 'big' },
 })
 
 describe('assembleEmailHtml', () => {

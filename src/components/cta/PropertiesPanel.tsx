@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { CTA_ALIGN_VALUES, CTA_ALIGN_LABELS } from './schema'
+import { CTA_ALIGN_VALUES, CTA_ALIGN_LABELS, CTA_SIZE_VALUES, CTA_SIZE_LABELS } from './schema'
 import type { CtaFields } from './schema'
 import { CTA_STYLE_SELECT_VALUES, CTA_STYLE_SELECT_LABELS } from '../../global/schema'
 import type { EmailDocument } from '../../model'
@@ -49,6 +49,17 @@ export function CtaPropertiesPanel({ value, onChange, doc, onChangeGlobal }: Cta
           {CTA_ALIGN_VALUES.map((a) => (
             <option key={a} value={a}>
               {CTA_ALIGN_LABELS[a]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="field">
+        <span>Tamaño</span>
+        <select value={value.size} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('size', e.target.value as CtaFields['size'])}>
+          {CTA_SIZE_VALUES.map((s) => (
+            <option key={s} value={s}>
+              {CTA_SIZE_LABELS[s]}
             </option>
           ))}
         </select>

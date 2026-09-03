@@ -16,7 +16,7 @@ const withTema = (tema: string, fondoUrl = '') => d({ global: { ...defaultEmailD
 const withFooter = (tipoFooter: TipoFooter, over: Partial<EmailDocument['footer']> = {}) =>
   d({ footer: { ...defaultEmailDocument.footer, tipoFooter, ...over } })
 
-const ctaBlock = (id: string, text: string): CtaBlock => ({ id, type: 'CTA', fields: { text, deeplink: '#', align: 'center' } })
+const ctaBlock = (id: string, text: string): CtaBlock => ({ id, type: 'CTA', fields: { text, deeplink: '#', align: 'center', size: 'big' } })
 
 describe('preprocessBrazeShorthand', () => {
   it('converts a bare ${x} inside a tag expression into a plain variable', () => {

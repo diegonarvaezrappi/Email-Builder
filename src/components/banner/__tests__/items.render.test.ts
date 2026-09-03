@@ -641,10 +641,15 @@ describe('renderCtaInternoSnippet', () => {
   })
 
   it('reflects doc.global.ctaStyle — the ONE exception to "clean Liquid output" (real Braze content block)', () => {
-    const withStyle = doc({ global: { ...defaultEmailDocument.global, ctaStyle: 'pro' } })
+    const withStyle = doc({ global: { ...defaultEmailDocument.global, ctaStyle: 'negrogris' } })
     const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, withStyle, ctx('horizontal'))
-    expect(html).toContain("style_Look = 'pro'")
+    expect(html).toContain("style_Look = 'negrogris'")
     expect(html).toContain('{{content_blocks.${CTA-template}}}')
+  })
+
+  it('always emits cta_size = \'big\' — CTA_INTERNO has no size control of its own (out of scope, matches the pre-cta_size visual)', () => {
+    const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, doc(), ctx('horizontal'))
+    expect(html).toContain("cta_size = 'big'")
   })
 
   it('resolves ctaStyle "default" via the CURRENT tema, not the literal string "default"', () => {

@@ -8,10 +8,12 @@ export const CTA_CONTENT_BLOCK_NAME = 'CTA-template'
 const CTA_SNIPPET_INDENT = ' '.repeat(36)
 
 /**
- * Las 4 líneas `{% assign %}` (sin indentar) que fijan cómo se ve/dónde
+ * Las 5 líneas `{% assign %}` (sin indentar) que fijan cómo se ve/dónde
  * apunta la instancia — mismo criterio que renderFooterAssignLines: se
  * exportan aparte para que preview/liquidPreview.ts pueda reutilizarlas
- * concatenadas directamente con el cuerpo real del content block.
+ * concatenadas directamente con el cuerpo real del content block. Mismo
+ * orden que cta-llamado.html: cta_alineado, cta_size, text_cta,
+ * deeplink_cta, style_Look.
  *
  * `ctaStyle` (el `style_Look`) es GLOBAL — vive en doc.global.ctaStyle, no en
  * `fields` — por eso entra como parámetro aparte, igual que `tema` en
@@ -20,6 +22,7 @@ const CTA_SNIPPET_INDENT = ' '.repeat(36)
 export function renderCtaAssignLines(fields: CtaFields, ctaStyle: string): string[] {
   return [
     `{% assign cta_alineado = '${fields.align}' %}`,
+    `{% assign cta_size = '${fields.size}' %}`,
     `{% assign text_cta = ${toLiquidStringLiteral(fields.text)} %}`,
     `{% assign deeplink_cta = ${toLiquidStringLiteral(fields.deeplink)} %}`,
     `{% assign style_Look = '${ctaStyle}' %}`,

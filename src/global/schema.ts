@@ -50,22 +50,33 @@ export const CTA_STYLE_LABELS: Record<CtaStyle, string> = {
 }
 
 /**
- * Valor real de `global.ctaStyle` en el documento: el sentinel `'default'`
- * delante de los 15 estilos reales de arriba. `'default'` NO es un
- * `style_Look` que exista en cta-template.html — significa "seguir al tema
- * actual", resuelto recién al renderizar (ver themeDefaults.ts#resolveCtaStyle).
- * Reemplaza el mecanismo anterior de "pisar mientras el usuario no lo haya
- * tocado a mano": ahora es un valor EXPLÍCITO que el usuario puede volver a
- * elegir en cualquier momento, y cualquier otro valor del select queda fijo
- * pase lo que pase con el tema (pedido explícito del usuario).
+ * Valores elegibles a mano desde el select de color de CTA — el sentinel
+ * `'default'` (ver más abajo) + un subconjunto reducido de 4 colores reales
+ * (pedido explícito del usuario, 2026-09-03: "limita el select... a Default,
+ * Neon, Blanco, Negro Gris, Verde"). El resto de CTA_STYLE_VALUES (pro,
+ * problack, gris100, beige100, beige150, rosa100, purpura100, celeste100,
+ * blanconeon, negroneon, blancogris) SIGUE existiendo como salida real de
+ * `style_Look` — STYLE_LOOK_FOR_THEME (themeDefaults.ts) los sigue usando
+ * para resolver 'default' en esos temas — solo dejan de ser elegibles a
+ * mano acá.
+ *
+ * `'default'` NO es un `style_Look` que exista en cta-template.html —
+ * significa "seguir al tema actual", resuelto recién al renderizar (ver
+ * themeDefaults.ts#resolveCtaStyle). Reemplaza el mecanismo anterior de
+ * "pisar mientras el usuario no lo haya tocado a mano": ahora es un valor
+ * EXPLÍCITO que el usuario puede volver a elegir en cualquier momento, y
+ * cualquier otro valor del select queda fijo pase lo que pase con el tema.
  */
-export const CTA_STYLE_SELECT_VALUES = ['default', ...CTA_STYLE_VALUES] as const
+export const CTA_STYLE_SELECT_VALUES = ['default', 'neon', 'blanco', 'negrogris', 'verde'] as const
 
 export type CtaStyleSelect = (typeof CTA_STYLE_SELECT_VALUES)[number]
 
 export const CTA_STYLE_SELECT_LABELS: Record<CtaStyleSelect, string> = {
   default: 'Default',
-  ...CTA_STYLE_LABELS,
+  neon: 'Neon',
+  blanco: 'Blanco',
+  negrogris: 'Negro Gris',
+  verde: 'Verde',
 }
 
 /**
@@ -104,8 +115,19 @@ export const globalSchema = z.object({
    * tema general hasta que el usuario elija un color específico a mano — ver
    * themeDefaults.ts#resolveCtaStyle, que resuelve el sentinel al momento de
    * renderizar.
+   *
+   * `z.preprocess` en vez de un `z.enum` liso: el select se redujo (ver
+   * CTA_STYLE_SELECT_VALUES) DESPUÉS de que ya existían documentos guardados
+   * en localStorage con un `ctaStyle` de los 11 valores retirados (ej. 'pro',
+   * 'gris100', 'blanconeon') — sin este preprocess, `safeParse` (persistence.ts)
+   * descartaría el documento COMPLETO al recargar, no solo este campo. Mismo
+   * patrón que la migración de tags legacy (ver items/schemas.ts) — cualquier
+   * valor que ya no sea elegible cae a 'default' en vez de tirar el documento.
    */
-  ctaStyle: z.enum(CTA_STYLE_SELECT_VALUES).default('default'),
+  ctaStyle: z.preprocess(
+    (v) => ((CTA_STYLE_SELECT_VALUES as readonly unknown[]).includes(v) ? v : 'default'),
+    z.enum(CTA_STYLE_SELECT_VALUES),
+  ).default('default'),
 })
 
 export type GlobalFields = z.infer<typeof globalSchema>

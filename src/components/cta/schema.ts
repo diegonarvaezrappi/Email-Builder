@@ -17,6 +17,25 @@ export const CTA_ALIGN_LABELS: Record<CtaAlign, string> = {
 }
 
 /**
+ * `cta_size` — variable nueva del pull 2026-09-02 ("actualización del cta").
+ * cta-template.html resuelve 3 ramas (`'small'` / `'big'` / `{% else %}`), pero
+ * la rama `{% else %}` (cuando `cta_size` no está seteado) es BYTE-IDÉNTICA a
+ * `'big'` — mismo criterio que el alias 'blanco'/'blanconeon' de más arriba:
+ * no existe un tercer tamaño visualmente distinto, así que solo se exponen
+ * estos 2. 'big' es el default porque reproduce EXACTAMENTE el único tamaño
+ * que existía antes de este pull (ancho 100% hasta 480px, texto en negrita) —
+ * ningún CTA existente cambia de aspecto si no se toca este control.
+ */
+export const CTA_SIZE_VALUES = ['big', 'small'] as const
+
+export type CtaSize = (typeof CTA_SIZE_VALUES)[number]
+
+export const CTA_SIZE_LABELS: Record<CtaSize, string> = {
+  big: 'Big Cta',
+  small: 'Small Cta',
+}
+
+/**
  * Campos por instancia de CTA. El color/estilo del botón NO vive acá — es
  * `global.ctaStyle` (ver global/schema.ts), compartido por todas las
  * instancias a la vez (pedido explícito del usuario).
@@ -30,6 +49,7 @@ export const ctaFieldsSchema = z.object({
   text: z.string().default('Pide ahora'),
   deeplink: z.string().default(''),
   align: z.enum(CTA_ALIGN_VALUES).default('center'),
+  size: z.enum(CTA_SIZE_VALUES).default('big'),
 })
 
 export type CtaFields = z.infer<typeof ctaFieldsSchema>
