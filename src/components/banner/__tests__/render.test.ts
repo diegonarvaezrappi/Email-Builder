@@ -172,7 +172,7 @@ describe('renderBannerSnippet', () => {
       it('activado, pinta bg_solid_mail_general como tono y el padding "on" de los temas no-pastel', () => {
         const cases: [tema: string, bgSolid: string][] = [
           ['beige100', '#FFF0DD'],
-          ['verde100', '#C0FDD3'],
+          ['verde100', '#CBFCD9'],
         ]
         for (const [tema, bgSolid] of cases) {
           // padd_banner_mail_general vive en la tabla de MOLECULAS (ver

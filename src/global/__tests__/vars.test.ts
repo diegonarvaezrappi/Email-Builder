@@ -40,7 +40,7 @@ describe('resolveGlobalVars', () => {
   it('starts from the theme variables', () => {
     expect(resolveGlobalVars(globals({ tema: 'beige100' }))).toMatchObject({
       bg_solid_mail_general: '#FFF0DD',
-      color_texto_mail_general: '#2B2316',
+      color_texto_mail_general: '#633D11',
     })
   })
 

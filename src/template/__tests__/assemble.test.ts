@@ -111,8 +111,8 @@ describe('assembleEmailHtml', () => {
     const withTheme = (tema: string) =>
       assembleEmailHtml({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, tema } })
     expect(withTheme('beige100')).toContain('#FFF0DD')
-    expect(withTheme('verde100')).toContain('#C0FDD3')
-    expect(withTheme('beige100')).not.toContain('#C0FDD3')
+    expect(withTheme('verde100')).toContain('#CBFCD9')
+    expect(withTheme('beige100')).not.toContain('#CBFCD9')
   })
 
   it('keeps the Braze Liquid that must reach the platform', () => {
