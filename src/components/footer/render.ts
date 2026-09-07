@@ -13,13 +13,14 @@ export const FOOTER_CONTENT_BLOCK_BY_TIPO: Record<TipoFooter, string> = {
 export const FOOTER_SNIPPET_INDENT = ' '.repeat(28)
 
 /**
- * font_style_look del footer. Lo define el TEMA, no el footer:
- * `color_footer_mail_general` vale 'pro' en Pro/ProBlack y 'negro' en los otros
- * 9 temas — ver 06-docs/GUIA-DE-TEMAS.md y el comentario de
- * 03-components/footer/footer.html.
+ * font_style_look del footer. Lo define el TEMA, no el footer — ver
+ * themes.ts#colorFooterForTheme para el mapa completo (los 7 pasteles +
+ * 'pro' tienen su propia rama en footer_general.html/footer_sinamor.html
+ * desde el pull ~2026-09-02; problack cae en 'pro', darkneon/darkturbo/
+ * darkneutro caen en 'negro').
  *
- * Se emite el valor ya RESUELTO como literal ('negro' / 'pro'), igual que hace
- * el footer.html del repo. Ojo: NO se puede emitir
+ * Se emite el valor ya RESUELTO como literal ('negro' / 'pro' / el slug del
+ * tema), igual que hace el footer.html del repo. Ojo: NO se puede emitir
  * `{% assign font_style_look = '{{color_footer_mail_general}}' %}` — Liquid no
  * interpola `{{ }}` dentro de un string literal, así que asignaría el texto
  * crudo y no coincidiría con ninguna rama de estilo del content block. Esa

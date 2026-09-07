@@ -186,11 +186,18 @@ describe('moduleBackgroundVarsForTheme', () => {
 })
 
 describe('colorFooterForTheme', () => {
-  it('falls back by theme group now that no theme defines the real variable', () => {
+  it('falls back to the tema-matching font_style_look now that no theme defines the real variable (pull ~2026-09-02: footer_general/footer_sinamor gained a branch per pastel)', () => {
     expect(colorFooterForTheme('pro')).toBe('pro')
     expect(colorFooterForTheme('problack')).toBe('pro')
-    expect(colorFooterForTheme('verde100')).toBe('negro')
+    for (const tema of ['gris100', 'beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100']) {
+      expect(colorFooterForTheme(tema)).toBe(tema)
+    }
+  })
+
+  it('falls back to negro for the 3 oscuros/invertidos — no matching footer branch for them', () => {
+    expect(colorFooterForTheme('darkneon')).toBe('negro')
     expect(colorFooterForTheme('darkturbo')).toBe('negro')
+    expect(colorFooterForTheme('darkneutro')).toBe('negro')
   })
 
   it('falls back to negro for an unknown theme', () => {

@@ -2,13 +2,24 @@ import { describe, expect, it } from 'vitest'
 import { defaultFooterFields } from '../schema'
 import { renderFooterSnippet, resolveFontStyleLook } from '../render'
 
-// Temas reales del repo (01-foundations/global-styles/head-meta-tags.html):
-// los 9 primeros definen color_footer_mail_general = 'negro', pro/problack = 'pro'.
-const TEMAS_NEGRO = ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100', 'darkneon', 'darkturbo', 'darkneutro']
+// Temas reales del repo (01-foundations/global-styles/head-meta-tags.html).
+// Desde el pull ~2026-09-02 ("actualización del cta", mismo lote que tocó
+// footer_general.html/footer_sinamor.html), los 7 pasteles resuelven a su
+// PROPIO slug (footer_general/footer_sinamor ganaron una rama por pastel) —
+// ya no caen todos en 'negro' genérico. Solo los 3 oscuros/invertidos siguen
+// en 'negro' (el maestro no les dio rama propia). Ver themes.ts#colorFooterForTheme.
+const TEMAS_PASTEL = ['gris100', 'beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100', 'verde100']
+const TEMAS_NEGRO = ['darkneon', 'darkturbo', 'darkneutro']
 const TEMAS_PRO = ['pro', 'problack']
 
 describe('resolveFontStyleLook', () => {
-  it('is negro for the 9 pastel/dark themes', () => {
+  it('resolves to the tema\'s own slug for the 7 pastel themes', () => {
+    for (const tema of TEMAS_PASTEL) {
+      expect(resolveFontStyleLook(tema, 'General')).toBe(tema)
+    }
+  })
+
+  it('is negro for the 3 oscuros/invertidos — no matching footer branch for them', () => {
     for (const tema of TEMAS_NEGRO) {
       expect(resolveFontStyleLook(tema, 'General')).toBe('negro')
     }
@@ -21,7 +32,7 @@ describe('resolveFontStyleLook', () => {
   })
 
   it('forces negro when Tipo de Footer is RTS, regardless of the theme', () => {
-    for (const tema of [...TEMAS_NEGRO, ...TEMAS_PRO]) {
+    for (const tema of [...TEMAS_PASTEL, ...TEMAS_NEGRO, ...TEMAS_PRO]) {
       expect(resolveFontStyleLook(tema, 'RTS')).toBe('negro')
     }
   })
@@ -37,7 +48,7 @@ describe('renderFooterSnippet', () => {
     expect(snippet).toBe(
       [
         "                            {% assign cond = '' %}",
-        "                            {% assign font_style_look = 'negro' %}",
+        "                            {% assign font_style_look = 'beige100' %}",
         '                            {% assign show_legal_tyc = false %}',
         '                            {% assign show_legal_turbo = false %}',
         '                            {% assign show_legal_liquor = false %}',

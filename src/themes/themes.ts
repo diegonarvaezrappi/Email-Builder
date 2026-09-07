@@ -243,7 +243,8 @@ export function themeVars(slug: string): Record<string, string> {
 
 /**
  * Los 2 temas "premium" — Pro y ProBlack. Vive acá (y no solo en THEME_GROUPS,
- * más abajo) porque colorFooterForTheme también lo necesita como fallback.
+ * más abajo) porque también entran, junto al resto de temas, en
+ * FONT_STYLE_LOOK_FOR_THEME de más abajo.
  */
 const PREMIUM_THEME_SLUGS = ['pro', 'problack']
 
@@ -274,28 +275,59 @@ export const PASTEL_THEME_SLUGS = ['beige100', 'beige150', 'rosa100', 'purpura10
 export const DARK_THEME_SLUGS = ['darkneon', 'darkturbo', 'darkneutro']
 
 /**
+ * `font_style_look` real que le corresponde a cada tema en
+ * `footer_general.html`/`footer_sinamor.html` — pull ~2026-09-02, mismo lote
+ * de commits que la "actualización del cta" (`e0debcf`/`03ff5fc`): esos 2
+ * archivos ganaron una rama de `font_style_look` con el MISMO nombre para
+ * cada uno de los 7 pasteles, además de la ya existente 'pro' — mapeo 1:1,
+ * no una inferencia. Igual que con las 6 nuevas variantes de CTA, el propio
+ * archivo de referencia del maestro (`02-components/06_footer/footer.html`)
+ * NO se actualizó para documentarlo (sigue diciendo "variantes 'negro' 'pro'"
+ * únicamente) — silenciosamente agregado, encontrado leyendo el HTML real.
+ *
+ * `problack` NO tiene rama propia (el maestro no la definió) — se mapea a
+ * 'pro' igual, PRESERVANDO el comportamiento que ya tenía antes de este mapa
+ * (vía el fallback por grupo que este mapa reemplaza), no inventando nada
+ * nuevo. `darkneon`/`darkturbo`/`darkneutro` tampoco tienen rama propia y
+ * caen al fallback genérico ('negro'), también sin cambios de comportamiento.
+ */
+const FONT_STYLE_LOOK_FOR_THEME: Partial<Record<string, string>> = {
+  pro: 'pro',
+  problack: 'pro',
+  gris100: 'gris100',
+  beige100: 'beige100',
+  beige150: 'beige150',
+  rosa100: 'rosa100',
+  purpura100: 'purpura100',
+  celeste100: 'celeste100',
+  verde100: 'verde100',
+}
+
+/**
  * `font_style_look` que le corresponde al footer según el tema.
  *
  * Si el tema no existe (ej. un documento viejo en localStorage apuntando a un
  * tema que David borró) o si el tema existe pero no define
- * `color_footer_mail_general`, cae al fallback por grupo: 'pro' en Pro/
- * ProBlack, 'negro' en el resto.
+ * `color_footer_mail_general`, cae a FONT_STYLE_LOOK_FOR_THEME de arriba (o a
+ * 'negro' si el slug tampoco está ahí — un tema desconocido, o alguno de los
+ * 3 oscuros/invertidos).
  *
- * Ese segundo caso pasa AHORA MISMO con los 11 temas reales del repo: en la
- * reestructuración de headers/banners a moléculas, `color_footer_mail_general`
- * se borró de las 11 ramas de head-meta-tags.html sin reemplazo (parece un
- * accidente de edición — 02-components/README.md, GUIA-DE-TEMAS.md,
- * COMO-ARMAR-UN-MAIL.md y CHANGELOG.md siguen describiéndolo como el
- * mecanismo vigente, y ninguno se actualizó). scripts/sync-master.mjs avisa
- * por consola en vez de abortar el sync — así que el fallback de acá reproduce
- * el mismo valor documentado (pro en Pro/ProBlack) para que el estilo del
- * footer no se rompa mientras la variable no vuelva a existir en el repo. El
- * día que vuelva, este fallback deja de usarse solo (siempre se prefiere el
- * valor real del tema).
+ * El caso "no define `color_footer_mail_general`" pasa AHORA MISMO con los 12
+ * temas reales del repo: en la reestructuración de headers/banners a
+ * moléculas, `color_footer_mail_general` se borró de todas las ramas de
+ * head-meta-tags.html sin reemplazo (parece un accidente de edición —
+ * 02-components/README.md, GUIA-DE-TEMAS.md, COMO-ARMAR-UN-MAIL.md y
+ * CHANGELOG.md siguen describiéndolo como el mecanismo vigente, y ninguno se
+ * actualizó). scripts/sync-master.mjs avisa por consola en vez de abortar el
+ * sync — así que el fallback de acá reproduce el mejor valor conocido (el
+ * mapa por tema, documentado arriba) para que el estilo del footer combine
+ * con el tema mientras la variable no vuelva a existir en el repo. El día que
+ * vuelva, este fallback deja de usarse solo (siempre se prefiere el valor
+ * real del tema).
  */
 export function colorFooterForTheme(slug: string): string {
   const value = THEMES.find((t) => t.slug === slug)?.vars.color_footer_mail_general
-  return value ?? (PREMIUM_THEME_SLUGS.includes(slug) ? 'pro' : 'negro')
+  return value ?? FONT_STYLE_LOOK_FOR_THEME[slug] ?? 'negro'
 }
 
 // --- Presentación (solo UI) ---------------------------------------------------
