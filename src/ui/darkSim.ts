@@ -117,7 +117,7 @@ function hasRealBackgroundImage(el: Element, view: Window & typeof globalThis): 
  *  - **Wrappers de página.** Los 2 `<td>` de template_base.html envuelven el
  *    email entero; compensarlos equivale a apagar la simulación. Se reconocen
  *    porque contienen al `[role="paddedcontainer"]` (el contenedor de
- *    header/banner/contenidos/cierre), cosa que ningún portador real hace.
+ *    header/banner/contenidos), cosa que ningún portador real hace.
  *  - **Portadores en padre-hijo DIRECTO.** Un elemento solo puede tener un
  *    `filter`, así que si dos portadores anidados directamente se marcan, el
  *    interior queda en nº impar y su fondo sale invertido igual. Pasa de verdad

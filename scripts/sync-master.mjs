@@ -216,7 +216,6 @@ const COMPONENTS_DIR = COMPONENTS_DIR_NAME && path.join(MASTER_DIR, COMPONENTS_D
 
 const FOOTER_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'footer')
 const HEADERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'headers')
-const CIERRE_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'closing')
 const CTAS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'ctas')
 const BANNERS_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'banners')
 const CONTENT_MODULES_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPONENTS_DIR_NAME, 'content-modules')
@@ -224,7 +223,6 @@ const CONTENT_MODULES_SUBDIR_NAME = resolveNumberedSubdir(COMPONENTS_DIR, COMPON
 const FOUNDATIONS_DIR = FOUNDATIONS_DIR_NAME && path.join(MASTER_DIR, FOUNDATIONS_DIR_NAME, 'global-styles')
 const FOOTER_DIR = FOOTER_SUBDIR_NAME && path.join(COMPONENTS_DIR, FOOTER_SUBDIR_NAME)
 const HEADERS_DIR = HEADERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, HEADERS_SUBDIR_NAME)
-const CIERRE_DIR = CIERRE_SUBDIR_NAME && path.join(COMPONENTS_DIR, CIERRE_SUBDIR_NAME)
 const CTAS_DIR = CTAS_SUBDIR_NAME && path.join(COMPONENTS_DIR, CTAS_SUBDIR_NAME)
 const BANNERS_DIR = BANNERS_SUBDIR_NAME && path.join(COMPONENTS_DIR, BANNERS_SUBDIR_NAME)
 /** `banner_moleculas/` no lleva prefijo numérico (no es un NN_algo) — nombre fijo. */
@@ -307,7 +305,6 @@ const TEMPLATE_BASE_NAME = 'estructura_general.html'
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
 const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
-const CIERRE_FILE = 'cierre.html'
 /**
  * Solo cta-template.html: es el content block real que src/preview/liquidPreview.ts
  * infla donde aparezca `{{content_blocks.${CTA-template}}}`. cta-llamado.html
@@ -1020,17 +1017,6 @@ if (FOOTER_DIR) {
   }
 }
 
-// --- NN-components/NN_closing/cierre.html -----------------------------------------
-let cierreFileContent = ''
-if (CIERRE_DIR) {
-  const fp = path.join(CIERRE_DIR, CIERRE_FILE)
-  if (!fs.existsSync(fp)) {
-    fail(`No se encontró ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/${CIERRE_FILE} en ${MASTER_DIR}`)
-  } else {
-    cierreFileContent = fs.readFileSync(fp, 'utf8')
-  }
-}
-
 // --- NN-components/NN_ctas/cta-template.html ---------------------------------------
 let ctaTemplateContent = ''
 if (CTAS_DIR) {
@@ -1709,9 +1695,6 @@ fs.writeFileSync(path.join(ASSETS_DIR, TEMPLATE_BASE_FILE), assembledTemplateBas
 for (const [name, content] of Object.entries(footerFileContents)) {
   fs.writeFileSync(path.join(ASSETS_DIR, name), content, 'utf8')
 }
-if (cierreFileContent) {
-  fs.writeFileSync(path.join(ASSETS_DIR, CIERRE_FILE), cierreFileContent, 'utf8')
-}
 if (ctaTemplateContent) {
   fs.writeFileSync(path.join(ASSETS_DIR, CTA_FILE), ctaTemplateContent, 'utf8')
 }
@@ -1817,7 +1800,7 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + BANNER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CIERRE_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + BANNER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
 )
 console.log(
   `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,

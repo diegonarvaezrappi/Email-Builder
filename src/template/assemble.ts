@@ -38,16 +38,18 @@ const WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]
 const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/
 
 /**
- * El maestro (estructura_general.html) usa el plural "CIERRES" para el
- * marcador del slot Cierre — inconsistencia real del repo, no un typo de acá.
- * Debe quedar sincronizado con SLOT_MARKERS de scripts/sync-master.mjs, que
- * valida esta misma forma antes de sincronizar.
+ * El maestro (estructura_general.html) usa el plural "CIERRES" para este
+ * marcador — inconsistencia real del repo, no un typo de acá. Debe quedar
+ * sincronizado con SLOT_MARKERS de scripts/sync-master.mjs, que valida esta
+ * misma forma antes de sincronizar.
  *
- * Cierre ya NO se planta ahí: desde el pedido explícito del usuario
- * (2026-08-31) de unificar Título/Bullet/CTA/Deals/Beneficios y Cierre en una
- * sola tabla, su HTML se inserta dentro del snippet de CONTENIDOS (ver
- * components/contenidos/render.ts, _contenidos_wrapper.html) — este marcador
- * se deja vacío a propósito, ver el branch `slot === 'CIERRE'` más abajo.
+ * Ya no hay ningún slot "Cierre" que plantar acá — la molécula de Cierre
+ * (imagen de firma) se retiró de la app el 2026-09-07: su rol pasó a vivir en
+ * Footer (ver components/footer/schema.ts#firma), que ya tenía su propio
+ * mecanismo de firma sin usar (`font_style_look`/`firma`). El marcador sigue
+ * existiendo en el maestro y se deja SIEMPRE vacío — se exige que exista
+ * (falla ruidoso si el maestro lo renombra o lo borra), pero nunca se
+ * reemplaza por nada.
  */
 const CIERRE_MARKER = '<!-- CIERRES -->'
 
@@ -82,20 +84,14 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   // ejemplo viene del maestro, no de lo que armó el usuario.
   let html = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
 
+  if (!html.includes(CIERRE_MARKER)) {
+    throw new Error(`No se encontró el marcador ${CIERRE_MARKER} en template_base.html`)
+  }
+  html = html.replace(CIERRE_MARKER, () => '')
+
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
     if (!def) continue
-
-    if (slot === 'CIERRE') {
-      // Su HTML ya se insertó como parte del snippet de CONTENIDOS (misma
-      // tabla, ver components/contenidos/render.ts) — nunca se vuelve a
-      // invocar renderCierreSnippet acá, el marcador queda vacío a propósito.
-      if (!html.includes(CIERRE_MARKER)) {
-        throw new Error(`No se encontró el marcador ${CIERRE_MARKER} en template_base.html`)
-      }
-      html = html.replace(CIERRE_MARKER, () => '')
-      continue
-    }
 
     const fields = doc[def.docKey]
     const rendered = def.render(fields, doc)
@@ -124,8 +120,8 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       continue
     }
 
-    // Único slot que llega hasta acá hoy: FOOTER (HEADER/CONTENIDOS/BANNER/
-    // CIERRE ya se resolvieron arriba, cada uno con su propio branch).
+    // Único slot que llega hasta acá hoy: FOOTER (HEADER/CONTENIDOS/BANNER
+    // ya se resolvieron arriba, cada uno con su propio branch).
     const marker = `<!-- ${slot} -->`
     if (!html.includes(marker)) {
       throw new Error(`No se encontró el marcador ${marker} en template_base.html`)

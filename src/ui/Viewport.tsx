@@ -142,7 +142,7 @@ type PreviewDevice = 'desktop' | 'mobile'
 const MOBILE_WIDTH = 375
 
 /** Cómo se ubica cada slot implementado dentro del documento del mail. */
-const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER' | 'CIERRE', string> = {
+const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER', string> = {
   // El div que envuelve la tabla del header — HEADER1..HEADER4 según la marca
   // (ver 01-foundations/global-styles/global-styles.html).
   HEADER: '[id^="HEADER"]',
@@ -151,11 +151,8 @@ const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER' | 'CIERRE', string> =
   // `@media` de global-styles.html — es el localizador más estable del mail.
   BANNER: 'table[id^="BANNER_"]',
   // El footer no trae id ni role propios: es el hermano que sigue al
-  // contenedor con padding donde viven header/banner/contenidos/cierre.
+  // contenedor con padding donde viven header/banner/contenidos.
   FOOTER: 'table[role="paddedcontainer"]',
-  // El cierre no trae wrapper propio tampoco (ver 05_closing/cierre.html):
-  // se ubica por el único atributo estable que trae la imagen de firma.
-  CIERRE: 'img[alt="RappiFirma"]',
 }
 
 export function Viewport({
@@ -429,7 +426,7 @@ interface MarkedBlockRect extends DropRect {
 }
 
 /** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
-const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER', 'CIERRE'] as const
+const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER'] as const
 
 /**
  * Mide dónde quedó cada slot implementado dentro del documento ya renderizado.
@@ -458,16 +455,6 @@ function measureSlots(root: Document): SlotRect[] {
       const height = Math.max(body.bottom - top, 0)
       if (height === 0) continue
       rects.push({ slot, top, left: body.left, width: body.width, height })
-    } else if (slot === 'CIERRE') {
-      // Tampoco tiene wrapper propio: se ubica por la imagen de firma y se
-      // mide la tabla que la contiene (si no se encuentra, se usa la imagen
-      // sola). No aparece nada acá cuando renderCierreSnippet devolvió '' —
-      // eliminado a mano, tema Pro/ProBlack o Footer RTS.
-      const img = root.querySelector(SLOT_LOCATORS.CIERRE)
-      if (!img) continue
-      const el = img.closest('table') ?? img
-      const r = el.getBoundingClientRect()
-      rects.push({ slot, top: r.top, left: r.left, width: r.width, height: r.height })
     }
   }
   return rects

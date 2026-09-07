@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS } from './schema'
+import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, FOOTER_FIRMA_VALUES, FOOTER_FIRMA_LABELS } from './schema'
 import type { FooterFields } from './schema'
 
 interface FooterPropertiesPanelProps {
@@ -42,6 +42,20 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
 
       {value.tipoFooter !== 'RTS' && (
         <>
+          <label className="field">
+            <span>Firma</span>
+            <select
+              value={value.firma}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) => set('firma', e.target.value as FooterFields['firma'])}
+            >
+              {FOOTER_FIRMA_VALUES.map((f) => (
+                <option key={f} value={f}>
+                  {FOOTER_FIRMA_LABELS[f]}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="field field-checkbox">
             <input
               type="checkbox"

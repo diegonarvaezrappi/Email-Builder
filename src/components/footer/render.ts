@@ -36,11 +36,15 @@ export function resolveFontStyleLook(tema: string, tipoFooter: TipoFooter): stri
 }
 
 /**
- * Las 5 líneas `{% assign %}` (sin indentar) que fijan cómo se ve el content
+ * Las 6 líneas `{% assign %}` (sin indentar) que fijan cómo se ve el content
  * block referenciado. Se exportan por separado de `renderFooterSnippet` para
  * que preview/liquidPreview.ts pueda reutilizarlas concatenadas directamente
  * con el cuerpo real del content block (en vez de con la referencia opaca
  * `{{content_blocks.$...}}`, que Liquid no puede resolver en el navegador).
+ *
+ * `firma` se emite siempre, sin importar el Tipo de Footer — mismo criterio
+ * que los 3 `show_legal_*` de abajo, que tampoco se condicionan a RTS: es
+ * inofensivo que footer_rts.html reciba un `firma` que no lee.
  */
 export function renderFooterAssignLines(fields: FooterFields, tema: string): string[] {
   const fontStyleLook = resolveFontStyleLook(tema, fields.tipoFooter)
@@ -48,6 +52,7 @@ export function renderFooterAssignLines(fields: FooterFields, tema: string): str
   return [
     `{% assign cond = ${toLiquidStringLiteral(cond)} %}`,
     `{% assign font_style_look = '${fontStyleLook}' %}`,
+    `{% assign firma = '${fields.firma}' %}`,
     `{% assign show_legal_tyc = ${fields.legalPromos} %}`,
     `{% assign show_legal_turbo = ${fields.legalTurbo} %}`,
     `{% assign show_legal_liquor = ${fields.legalLicores} %}`,

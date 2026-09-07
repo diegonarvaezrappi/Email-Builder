@@ -4,7 +4,6 @@ import { defaultEmailDocument } from '../../registry'
 import { assembleEmailHtml } from '../assemble'
 import { renderFooterSnippet } from '../../components/footer/render'
 import { renderHeaderSnippet } from '../../components/header/render'
-import { renderCierreSnippet } from '../../components/cierre/render'
 import { renderContenidosSnippet } from '../../components/contenidos/render'
 import { renderBannerSnippet, stripBannerFieldAssigns } from '../../components/banner/render'
 import { stripDealsFieldAssigns } from '../../components/deals/render'
@@ -35,12 +34,10 @@ describe('assembleEmailHtml', () => {
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('embeds the rendered cierre snippet (now inside the CONTENIDOS table, see contenidos/render.ts) and leaves the CIERRES marker empty', () => {
+  it('leaves the CIERRES marker permanently empty (the Cierre molecule was retired 2026-09-07, folded into Footer\'s own firma select)', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    const expectedSnippet = renderCierreSnippet(defaultEmailDocument.cierre, defaultEmailDocument)
-
     expect(html).not.toContain('<!-- CIERRES -->')
-    expect(html.includes(expectedSnippet)).toBe(true)
+    expect(html).not.toContain('RappiFirma')
   })
 
   it('replaces the BANNER placeholder (a prose comment, not a simple <!-- X -->) with the rendered banner snippet', () => {
@@ -121,23 +118,17 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme, the HEADER/BANNER/CONTENIDOS/CIERRE/FOOTER markers', () => {
-    // tema 'problack' fuerza también el auto-ocultado de Cierre (regla #1 de
-    // USO-DE-CADA-PARTE.md §9) — se prueba con 'beige100' para poder afirmar
-    // que el marcador SÍ se reemplaza (por algo no vacío) en este test.
+  it('touches nothing besides the theme and the HEADER/BANNER/CONTENIDOS/FOOTER markers (plus the permanently-empty CIERRES one)', () => {
     const doc = {
       ...defaultEmailDocument,
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
       contenidos: [ctaBlock('a', 'Uno')],
     }
     const expected = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
+      .replace('<!-- CIERRES -->', () => '')
       .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, () => renderHeaderSnippet(doc.header, 'beige100'))
       .replace(/<!--\s*BANNER\s*:[\s\S]*?-->/, () => renderBannerSnippet(doc.banner, doc))
-      // renderContenidosSnippet ya trae Cierre embebido adentro (ver
-      // components/contenidos/render.ts) — el marcador CIERRES del maestro
-      // queda vacío a propósito, nunca se vuelve a invocar renderCierreSnippet.
       .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, () => renderContenidosSnippet(doc.contenidos, doc))
-      .replace('<!-- CIERRES -->', () => '')
       .replace('<!-- FOOTER -->', () => renderFooterSnippet(doc.footer, 'beige100'))
     expect(assembleEmailHtml(doc)).toBe(expected)
   })

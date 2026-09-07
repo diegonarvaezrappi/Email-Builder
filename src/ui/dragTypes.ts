@@ -5,7 +5,12 @@
 // los lee — que ambos importen de acá evita que se desincronicen.
 // ============================================================================
 
-/** Restaurar un slot singleton eliminado (hoy, Cierre y Banner). Payload = el SlotName. */
+/**
+ * Restaurar un slot singleton eliminado (cualquiera con `removable: true` en
+ * su SlotDef, ver registry.ts). Payload = el SlotName. Ningún slot lo usa hoy
+ * (Cierre, el único caso, se retiró 2026-09-07) — el mecanismo queda genérico
+ * por si un futuro slot lo vuelve a necesitar.
+ */
 export const SLOT_DRAG_TYPE = 'application/x-email-slot'
 
 /** Insertar un bloque de contenido NUEVO (hoy, CTA) desde LibraryPanel. Payload = el ContentBlockType (ej. 'CTA'). */

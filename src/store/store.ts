@@ -35,8 +35,9 @@ interface BuilderState {
   /**
    * Operaciones sobre doc.contenidos (el array de bloques de CONTENIDOS, hoy
    * solo CTA). A diferencia de setSlotFields (un reemplazo de campo completo,
-   * perfecto para el `removed` booleano de Cierre), acá hay aritmética real de
-   * índices — vale una acción dedicada por operación, testeable sola.
+   * perfecto para un booleano simple como `removed` en un slot removable),
+   * acá hay aritmética real de índices — vale una acción dedicada por
+   * operación, testeable sola.
    */
   insertContentBlock: (type: ContentBlockType, atIndex: number) => void
   duplicateContentBlock: (id: string) => void

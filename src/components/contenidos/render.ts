@@ -2,7 +2,6 @@ import wrapperRaw from '../../assets/templates/contenidos/_contenidos_wrapper.ht
 import type { ContentBlock, EmailDocument } from '../../model'
 import { contentBlockRegistry } from '../../contentBlockRegistry'
 import { wrapWithBlockMarkers } from '../../template/contentBlocks'
-import { renderCierreSnippet } from '../cierre/render'
 import { elementBounds, indexOfOrThrow, innerBounds } from '../../template/htmlEdits'
 
 const SEPARADOR = '<div class="separador"></div>'
@@ -54,24 +53,23 @@ export function renderContentBlocksSnippet(blocks: ContentBlock[], doc: EmailDoc
  * template maestro.
  *
  * Pedido explícito del usuario (2026-08-31): Título, Bullet, CTA, Deals y
- * Beneficios ya no van en tablas hermanas independientes — todos, MÁS Cierre,
- * viven dentro de la ÚNICA tabla que documenta
+ * Beneficios ya no van en tablas hermanas independientes — todos viven dentro
+ * de la ÚNICA tabla que documenta
  * 02-components/04_content-modules/_contenidos_wrapper.html (el archivo que el
  * maestro ya describe como el contenedor real de "los módulos de contenido",
- * hasta ahora sincronizado pero sin usar). Cierre se agrega DESPUÉS de los
- * bloques, dentro del mismo `<td>` — ya trae su propio separador líder (ver
- * 02-components/05_closing/cierre.html, primera línea), así que no hace falta
- * uno adicional acá. El marcador `<!-- CIERRES -->` del maestro queda vacío a
- * propósito: Cierre ya no se planta ahí, ver template/assemble.ts.
+ * hasta ahora sincronizado pero sin usar).
  *
- * Vacío entero (sin tabla) si no hay nada que mostrar — ni bloques ni Cierre
- * (removido a mano, tema Pro/ProBlack, o Footer RTS) — mismo criterio que el
- * resto del pipeline: nunca dejar una tabla vacía en el HTML exportado.
+ * Hasta 2026-09-07 acá también se agregaba la molécula de Cierre (imagen de
+ * firma) DESPUÉS de los bloques — se retiró: su rol pasó a vivir en Footer
+ * (ver components/footer/schema.ts#firma), que ya tenía su propio mecanismo
+ * de firma sin usar. El marcador `<!-- CIERRES -->` del maestro queda vacío
+ * para siempre ahora (ver template/assemble.ts).
+ *
+ * Vacío entero (sin tabla) si no hay bloques que mostrar — mismo criterio que
+ * el resto del pipeline: nunca dejar una tabla vacía en el HTML exportado.
  */
 export function renderContenidosSnippet(blocks: ContentBlock[], doc: EmailDocument): string {
-  const blocksHtml = renderContentBlocksSnippet(blocks, doc)
-  const cierreHtml = renderCierreSnippet(doc.cierre, doc)
-  const inner = [blocksHtml, cierreHtml].filter((html) => html !== '').join('\n')
+  const inner = renderContentBlocksSnippet(blocks, doc)
   if (inner === '') return ''
 
   const raw = wrapperRaw.replace(HTML_COMMENT_RE, '')

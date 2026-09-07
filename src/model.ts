@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { footerSchema, type FooterFields } from './components/footer/schema'
 import { headerSchema, type HeaderFields } from './components/header/schema'
-import { cierreSchema, type CierreFields } from './components/cierre/schema'
 import { ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { titleFieldsSchema, type TitleFields } from './components/title/schema'
@@ -25,10 +24,10 @@ export type { BannerItem, BannerItemType } from './components/banner/items/schem
 export type { DealCard, DealCardFields } from './components/deals/schema'
 
 /** Nombres de los marcadores de slot presentes en template_base.html. */
-export type SlotName = 'HEADER' | 'BANNER' | 'CONTENIDOS' | 'CIERRE' | 'FOOTER'
+export type SlotName = 'HEADER' | 'BANNER' | 'CONTENIDOS' | 'FOOTER'
 
 /** Orden en el que aparecen los marcadores dentro del template maestro. */
-export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'CIERRE', 'FOOTER']
+export const SLOT_ORDER: SlotName[] = ['HEADER', 'BANNER', 'CONTENIDOS', 'FOOTER']
 
 /**
  * Tipos de bloque de contenido que puede alojar CONTENIDOS (ver el comentario
@@ -257,7 +256,7 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
  * (donde un diseño ES un solo tipo discriminado), acá un email tiene TODOS los
  * slots a la vez — por eso este es un mapa, no una unión discriminada.
  *
- * `banner` y `contenidos` no son singletons puros como header/footer/cierre:
+ * `banner` y `contenidos` no son singletons puros como header/footer:
  * `banner.items` y `contenidos` son listas libres y repetibles de piezas/bloques
  * (banner: 10 tipos posibles, ver components/banner/; contenidos: hoy solo
  * CTA) — ver components/banner/render.ts y components/contenidos/render.ts.
@@ -274,7 +273,6 @@ export interface EmailDocument {
   header: HeaderFields
   banner: BannerFields
   footer: FooterFields
-  cierre: CierreFields
   contenidos: ContentBlock[]
 }
 
@@ -288,6 +286,5 @@ export const emailDocumentSchema = z.object({
   header: headerSchema,
   banner: bannerSchema.default(defaultBannerFields),
   footer: footerSchema,
-  cierre: cierreSchema,
   contenidos: z.array(contentBlockSchema).default([]),
 })
