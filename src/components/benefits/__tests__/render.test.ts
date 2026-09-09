@@ -34,6 +34,12 @@ describe('renderBeneficiosSnippet · celda 1 (imagen fija)', () => {
     expect(html).toContain('src="https://x.test/mine.png"')
   })
 
+  it('defaults the alt to "tag" (matches the master) and substitutes a custom one', () => {
+    expect(render(defaultBeneficiosFields)).toContain('alt="tag"')
+    const html = render({ ...defaultBeneficiosFields, image: { ...defaultBeneficiosFields.image, imageAlt: 'mi alt' } })
+    expect(html).toContain('alt="mi alt"')
+  })
+
   it('blank URL removes the whole <img> (global convention) but the cell/module stays — "non-removable" means the SLOT, not the URL behavior', () => {
     const html = render({ ...defaultBeneficiosFields, image: { ...defaultBeneficiosFields.image, imageUrl: '' } })
     expect(html).not.toContain('role="imagen-auto"')

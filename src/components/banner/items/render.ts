@@ -361,7 +361,7 @@ export function renderImgAutomaticaMoleculaSnippet(
       fileName,
     )
   }
-  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, fields.imageUrl, fileName)
+  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }
 
@@ -402,7 +402,7 @@ export function renderImgAutomaticaModuloSnippet(fields: ImgAutomaticaModuloFiel
     const radius = fields.borderRadiusEnabled ? IMG_AUTOMATICA_MODULO_BORDER_RADIUS : '0px'
     html = substituteOnce(html, IMG_AUTOMATICA_MODULO_STYLE_BUG, `margin: 0 auto; border-radius: ${radius};`, fileName)
   }
-  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER, fields.imageUrl, fileName)
+  html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MODULO_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)
 }
 
@@ -422,7 +422,7 @@ export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument,
   const fileName = `modulo_img_altofijo_${ctx.bannerType}.html`
   let html = stripComments(loadBannerMoleculaFile(fileName))
   html = substituteOnce(html, IMG_FIJA_HERO_URL_PLACEHOLDER, escapeHtmlAttr(fields.heroImageUrl), fileName)
-  html = substituteImgSrcOrRemove(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, fields.logoImageUrl, fileName)
+  html = substituteImgSrcOrRemove(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, fields.logoImageUrl, fields.logoImageAlt, fileName)
   if (ctx.bannerType === 'vertical') {
     html = substituteOnce(html, IMG_FIJA_LOGO_LINK_PLACEHOLDER, escapeHtmlAttr(fields.logoLink), fileName)
   }
@@ -459,7 +459,12 @@ function renderTagPill(template: string, imgStart: number, imgEnd: number, tag: 
   const iconTag = template.slice(imgStart, imgEnd)
   const tail = template.slice(imgEnd) // arranca en " tag 1 </h4>..."
 
-  const icon = tag.iconEnabled && tag.iconUrl.trim() !== '' ? iconTag.replace(/src="[^"]*"/, () => `src="${escapeHtmlAttr(tag.iconUrl)}"`) : ''
+  const icon =
+    tag.iconEnabled && tag.iconUrl.trim() !== ''
+      ? iconTag
+          .replace(/src="[^"]*"/, () => `src="${escapeHtmlAttr(tag.iconUrl)}"`)
+          .replace(/alt="[^"]*"/, () => `alt="${escapeHtmlAttr(tag.iconAlt)}"`)
+      : ''
   const body = tail.replace(TAG_TEXT_PLACEHOLDER.slice(1), () => ` ${escapeHtmlText(tag.text)} </h4>`)
   return head + icon + body
 }
@@ -585,7 +590,7 @@ function renderFranjaLogoCell(template: string, logo: FranjaLogoItem, widthPx: n
   // incluidos), así que estos 2 literales ya no existirían para anclar acá.
   html = substituteOnce(html, 'width="50"', `width="${widthPx}"`, fileName)
   html = substituteOnce(html, 'width:50px', `width:${widthPx}px`, fileName)
-  return substituteImgSrcOrRemove(html, FRANJA_LOGOS_ICON_PLACEHOLDER, logo.imageUrl, fileName)
+  return substituteImgSrcOrRemove(html, FRANJA_LOGOS_ICON_PLACEHOLDER, logo.imageUrl, logo.imageAlt, fileName)
 }
 
 export function renderFranjaLogosSnippet(fields: FranjaLogosFields): string {

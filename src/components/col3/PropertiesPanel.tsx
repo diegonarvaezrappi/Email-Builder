@@ -58,6 +58,14 @@ export function Col3PropertiesPanel({ value, onChange }: Col3PropertiesPanelProp
                 onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { image: { ...cell.image, imageUrl: e.target.value } })}
               />
             </label>
+            <label className="field">
+              <span>Alt de la imagen</span>
+              <input
+                type="text"
+                value={cell.image.imageAlt}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { image: { ...cell.image, imageAlt: e.target.value } })}
+              />
+            </label>
             <label className="field field-checkbox">
               <input
                 type="checkbox"

@@ -49,6 +49,7 @@ const COBRANDING_IMG_RE = /<img class="cobranding-(?:s|m|l|xl)"[^>]*>/g
  */
 const MAIN_LOGO_IMG_RE = /<img[^>]*>/
 const IMG_SRC_RE = /src="[^"]*"/
+const IMG_ALT_RE = /alt="[^"]*"/
 
 /** Mismo alto en height/max-height/min-height en los 40 maestros (verificado).
  *  's'/'l' escalan ese valor; 'm' lo deja intacto (no-op a propósito, para
@@ -113,6 +114,7 @@ function applyLogoOverrides(trHtml: string, fields: HeaderFields): string {
   if (fields.logoUrl.trim() !== '') {
     img = img.replace(IMG_SRC_RE, `src="${escapeHtmlAttr(fields.logoUrl)}"`)
   }
+  img = img.replace(IMG_ALT_RE, `alt="${escapeHtmlAttr(fields.logoAlt)}"`)
   img = resizeLogoImg(img, fields.logoSize)
 
   return trHtml.slice(0, match.index) + img + trHtml.slice(match.index + match[0].length)
@@ -151,7 +153,7 @@ function applyCobranding(trHtml: string, fields: HeaderFields): string {
   })
 
   const fileName = `headers/${fields.brand}/${fields.layout}-${fields.logoBackground}.html`
-  cell = substituteImgSrcOrRemove(cell, COBRANDING_IMG_SRC_PLACEHOLDER, fields.cobrandingImageUrl, fileName)
+  cell = substituteImgSrcOrRemove(cell, COBRANDING_IMG_SRC_PLACEHOLDER, fields.cobrandingImageUrl, fields.cobrandingImageAlt, fileName)
 
   return trHtml.slice(0, anchorIndex) + cell + trHtml.slice(cellEnd)
 }

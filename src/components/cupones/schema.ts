@@ -67,6 +67,9 @@ export const TITULO_CELL_TAG_ICON_URL = 'https://lh3.googleusercontent.com/d/1wZ
 export const cuponCellFieldsSchema = z.object({
   type: z.literal('cupon').default('cupon'),
   imageUrl: z.string().default(CUPON_CELL_IMAGE_URL),
+  /** Alt del `<img role="imagenfull">` — default reproduce el `alt="tag"` que
+   *  cupones-modulo.html ya trae de fábrica en ambas celdas "cupón". */
+  imageAlt: z.string().default('tag'),
   borderRadiusEnabled: z.boolean().default(false),
   linkEnabled: z.boolean().default(false),
   link: z.string().default(''),
@@ -87,6 +90,9 @@ export type CuponCellFields = z.infer<typeof cuponCellFieldsSchema>
 export const tituloCellFieldsSchema = z.object({
   type: z.literal('titulo').default('titulo'),
   tagIconUrl: z.string().default(TITULO_CELL_TAG_ICON_URL),
+  /** Alt del `<img role="molecula-iconoS">` — default reproduce el `alt="Rappi"`
+   *  que celda_cupon_titulo.html ya trae de fábrica. */
+  tagIconAlt: z.string().default('Rappi'),
   titleText: z.string().default('Aca un titulo'),
   linkEnabled: z.boolean().default(false),
   link: z.string().default(''),
@@ -135,7 +141,7 @@ function cuponesDefaultItems(ids: [string, string, string, string, string, strin
       },
       { id: montoId, areaKey, type: 'CUPON_MONTO', fields: defaultCuponMontoFields },
       { id: separadorId, areaKey, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },
-      { id: bulletId, areaKey, type: 'BULLET_ICONO_SIMPLE', fields: { imageUrl: TITULO_CELL_TAG_ICON_URL, text: 'Cupón xxxxxxxxxxx' } },
+      { id: bulletId, areaKey, type: 'BULLET_ICONO_SIMPLE', fields: { imageUrl: TITULO_CELL_TAG_ICON_URL, imageAlt: 'img', text: 'Cupón xxxxxxxxxxx' } },
     ]
   })
 }

@@ -4,16 +4,20 @@ import { defaultTagItem } from '../items/schemas'
 import type { BannerItem } from '../items/schemas'
 
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem()] } })
-const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
+const imgFija = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_FIJA',
+  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
+})
 const imgAutoModulo = (id: string): BannerItem => ({
   id,
   type: 'IMG_AUTOMATICA_MODULO',
-  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+  fields: { imageUrl: '', imageAlt: '', widthPercent: 80, borderRadiusEnabled: false },
 })
 const imgAutoMolecula = (id: string): BannerItem => ({
   id,
   type: 'IMG_AUTOMATICA_MOLECULA',
-  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+  fields: { imageUrl: '', imageAlt: '', widthPercent: 80, borderRadiusEnabled: false },
 })
 
 describe('applyImageModuleExclusivity', () => {

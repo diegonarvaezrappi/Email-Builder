@@ -126,6 +126,9 @@ export const defaultTextoComplementarioFields: TextoComplementarioFields = texto
  *  la misma variable alimenta tanto la molécula como el módulo. */
 export const imgAutomaticaMoleculaFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN'),
+  /** Alt del `<img>` — default reproduce el `alt="img"` que
+   *  molecula_img_automatica_{horizontal,vertical}.html ya trae de fábrica. */
+  imageAlt: z.string().default('img'),
   widthPercent: z.number().int().min(1).max(100).default(80),
   /** Pedido explícito del usuario 2026-08-26: mismo control que ya tiene
    *  IMG_AUTOMATICA_MODULO (ver ese schema más abajo), acá extendido a la
@@ -142,6 +145,9 @@ export const imgAutomaticaModuloFieldsSchema = z.object({
   imageUrl: z.string().default(
     'https://braze-images.com/appboy/communication/assets/image_assets/images/6a69942490791600863938e5/original.png?1785304099',
   ),
+  /** Alt del `<img>` — default reproduce el `alt="img"` que
+   *  modulo_img_automatica_horizontal.html ya trae de fábrica. */
+  imageAlt: z.string().default('img'),
   widthPercent: z.number().int().min(1).max(100).default(80),
   /** El maestro trae `border-radius:0px` en la <img> junto a un comentario
    *  dirigido a un humano: "Este border radius se debe poder modificar por
@@ -156,8 +162,13 @@ export type ImgAutomaticaModuloFields = z.infer<typeof imgAutomaticaModuloFields
 export const defaultImgAutomaticaModuloFields: ImgAutomaticaModuloFields = imgAutomaticaModuloFieldsSchema.parse({})
 
 export const imgFijaFieldsSchema = z.object({
+  // heroImageUrl NO tiene alt propio — el maestro lo pinta como
+  // `background-image: url(...)` de un <td>, nunca un <img> real.
   heroImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1DUvbZ8_lGdt1N_jZUSt4vyHHblvbVg9P'),
   logoImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1a9-c_8otztz8MJvWa6G-TczJ3NEO083G'),
+  /** Alt del `<img class="banner-logo1-1">` — default reproduce el `alt="LOGO"`
+   *  que modulo_img_altofijo_{horizontal,vertical}.html ya trae de fábrica. */
+  logoImageAlt: z.string().default('LOGO'),
   /** Solo la variante VERTICAL envuelve el logo en <a href="AQUIELLINKDELOGO1">;
    *  la horizontal no lo hace. Asimetría real de los 2 archivos del maestro,
    *  no un bug a "arreglar" — en horizontal este campo se ignora. */
@@ -182,16 +193,27 @@ export const TAG_ICON_DEFAULT_URL = 'https://lh3.googleusercontent.com/d/1WGmmnG
  * vez de invalidar todo el documento (persistence.ts descarta el documento
  * ENTERO si un solo campo no valida).
  */
+/** Alt del ícono del tag — default reproduce el `alt="Rappi"` que
+ *  modulo_tags_{horizontal,vertical}.html ya trae de fábrica en sus 3 pills. */
+export const TAG_ICON_ALT_DEFAULT = 'Rappi'
+
 export const tagItemSchema = z.preprocess(
-  (value) => (typeof value === 'string' ? { text: value, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL } : value),
+  (value) =>
+    typeof value === 'string' ? { text: value, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL, iconAlt: TAG_ICON_ALT_DEFAULT } : value,
   z.object({
     text: z.string().default('tag 1'),
     iconEnabled: z.boolean().default(true),
     iconUrl: z.string().default(TAG_ICON_DEFAULT_URL),
+    iconAlt: z.string().default(TAG_ICON_ALT_DEFAULT),
   }),
 )
 export type TagItem = z.infer<typeof tagItemSchema>
-export const defaultTagItem = (text = 'tag 1'): TagItem => ({ text, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL })
+export const defaultTagItem = (text = 'tag 1'): TagItem => ({
+  text,
+  iconEnabled: true,
+  iconUrl: TAG_ICON_DEFAULT_URL,
+  iconAlt: TAG_ICON_ALT_DEFAULT,
+})
 
 /** 1-3 etiquetas editables: "si la fuente no trae tag, se omite"
  *  (05-docs/USO-DE-CADA-PARTE.md) implica que 1 sola es lo normal. */
@@ -249,6 +271,9 @@ export const FRANJA_LOGOS_ICON_DEFAULT_URL = 'https://lh3.googleusercontent.com/
 
 export const franjaLogoItemSchema = z.object({
   imageUrl: z.string().default(FRANJA_LOGOS_ICON_DEFAULT_URL),
+  /** Alt del `<img role="molecula-iconoL">` — default reproduce el `alt="LOGO"`
+   *  que molecula_franja_logos.html ya trae de fábrica en sus 4 celdas. */
+  imageAlt: z.string().default('LOGO'),
   link: z.string().default(''),
 })
 export type FranjaLogoItem = z.infer<typeof franjaLogoItemSchema>

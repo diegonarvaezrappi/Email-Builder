@@ -30,12 +30,12 @@ const tagsItem = (id: string): BannerItem => ({ id, type: 'TAGS', fields: defaul
 const imgFijaItem = (id: string): BannerItem => ({
   id,
   type: 'IMG_FIJA',
-  fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' },
+  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
 })
 const imgAutomaticaModuloItem = (id: string): BannerItem => ({
   id,
   type: 'IMG_AUTOMATICA_MODULO',
-  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+  fields: { imageUrl: '', imageAlt: '', widthPercent: 80, borderRadiusEnabled: false },
 })
 
 function setBannerItems(items: BannerItem[]) {

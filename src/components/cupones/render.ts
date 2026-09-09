@@ -108,7 +108,7 @@ function renderCuponCell(
     imgTag = imgTag.replace('style="', `style="border-radius: ${CUPON_IMAGE_BORDER_RADIUS}; `)
   }
   html = html.slice(0, imgBounds.start) + imgTag + html.slice(imgBounds.end)
-  html = substituteImgSrcOrRemove(html, CUPON_IMAGE_URL_PLACEHOLDER, fields.imageUrl, MODULE_FILE_NAME)
+  html = substituteImgSrcOrRemove(html, CUPON_IMAGE_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, MODULE_FILE_NAME)
 
   const areaAnchorIndex = indexOfOrThrow(html, CUPON_FREE_AREA_STYLE_ANCHOR, MODULE_FILE_NAME)
   const divBounds = elementBounds(html, areaAnchorIndex, 'div', MODULE_FILE_NAME)
@@ -134,8 +134,12 @@ function renderTituloCell(fields: TituloCellFields): string {
     const tagBounds = elementBounds(html, tagRoleIndex, 'div', TITULO_FILE_NAME)
     html = html.slice(0, tagBounds.start) + html.slice(tagBounds.end)
   } else {
-    const tagIconIndex = indexOfOrThrow(html, TITULO_TAG_ICON_PLACEHOLDER, TITULO_FILE_NAME)
-    html = html.slice(0, tagIconIndex) + fields.tagIconUrl + html.slice(tagIconIndex + TITULO_TAG_ICON_PLACEHOLDER.length)
+    // Antes: splice manual del `src` (sin escapar ni tocar `alt`). Ahora que
+    // también hace falta sustituir `alt`, reusa substituteImgSrcOrRemove — la
+    // rama "en blanco" de esa función nunca se toma acá porque ya se filtró
+    // arriba (el borrado de ESTE campo es del `<div role="molecula-tag">`
+    // ENTERO, más grande que el `<img>` que esa función borraría sola).
+    html = substituteImgSrcOrRemove(html, TITULO_TAG_ICON_PLACEHOLDER, fields.tagIconUrl, fields.tagIconAlt, TITULO_FILE_NAME)
   }
 
   // El maestro trae el texto partido en 2 runs por un `<br>` fijo de ejemplo

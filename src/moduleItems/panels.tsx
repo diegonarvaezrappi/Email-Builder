@@ -116,6 +116,10 @@ export function IconoPropertiesPanel({ value, onChange }: { value: IconoFields; 
         <input type="text" value={value.imageUrl} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })} />
       </label>
       <label className="field">
+        <span>Alt de la imagen</span>
+        <input type="text" value={value.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageAlt: e.target.value })} />
+      </label>
+      <label className="field">
         <span>Tamaño</span>
         <select value={value.size} onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ ...value, size: e.target.value as IconoFields['size'] })}>
           {ICONO_SIZE_VALUES.map((s) => (
@@ -204,6 +208,10 @@ export function BulletIconoSimplePropertiesPanel({
       <label className="field">
         <span>URL del ícono</span>
         <input type="text" value={value.imageUrl} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })} />
+      </label>
+      <label className="field">
+        <span>Alt del ícono</span>
+        <input type="text" value={value.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageAlt: e.target.value })} />
       </label>
       <label className="field">
         <span>Texto</span>

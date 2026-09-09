@@ -136,6 +136,10 @@ export const dealCardFieldsSchema = z.object({
    *  Aplica a la forma que esté activa (`logoShape`); la forma inactiva se
    *  descarta entera sin importar este valor. */
   logoUrl: z.string().default('https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j'),
+  /** Alt del logo — default reproduce el `alt="LOGO"` que deal_columnas.html
+   *  ya trae de fábrica en AMBAS formas (cuadrado/pastilla), así que no hace
+   *  falta un valor por forma. */
+  logoAlt: z.string().default('LOGO'),
   /** Reemplaza el token de relleno manual LINKDEAL de ESTA celda. Los deals son
    *  el único módulo de contenido que viene clickeable por defecto
    *  (02-components/04_content-modules/_contenidos_wrapper.html). */
@@ -196,9 +200,13 @@ export const dealCardFieldsSchema = z.object({
    */
   tag1Enabled: z.boolean().default(true),
   tag1IconUrl: z.string().default('https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa'),
+  /** Alt del ícono del tag 1 — default reproduce el `alt="Rappi"` de fábrica. */
+  tag1IconAlt: z.string().default('Rappi'),
   tag1Text: z.string().default('tag 1'),
   tag2Enabled: z.boolean().default(true),
   tag2IconUrl: z.string().default('https://lh3.googleusercontent.com/d/19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn'),
+  /** Alt del ícono del tag 2 — default reproduce el `alt="Rappi"` de fábrica. */
+  tag2IconAlt: z.string().default('Rappi'),
   tag2Text: z.string().default('tag 2'),
 
   /** LLAMADO A LA ACCION — texto plano dentro de un `<strong>`, sin botón. */
@@ -396,9 +404,9 @@ export function restoreDealCardPiece(fields: DealCardFields, type: DealCardPiece
         tiempoText: d.tiempoText,
       }
     case 'tag1':
-      return { ...fields, tag1Enabled: d.tag1Enabled, tag1IconUrl: d.tag1IconUrl, tag1Text: d.tag1Text }
+      return { ...fields, tag1Enabled: d.tag1Enabled, tag1IconUrl: d.tag1IconUrl, tag1IconAlt: d.tag1IconAlt, tag1Text: d.tag1Text }
     case 'tag2':
-      return { ...fields, tag2Enabled: d.tag2Enabled, tag2IconUrl: d.tag2IconUrl, tag2Text: d.tag2Text }
+      return { ...fields, tag2Enabled: d.tag2Enabled, tag2IconUrl: d.tag2IconUrl, tag2IconAlt: d.tag2IconAlt, tag2Text: d.tag2Text }
     case 'cta':
       return { ...fields, ctaEnabled: d.ctaEnabled, ctaText: d.ctaText }
   }

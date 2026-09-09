@@ -138,7 +138,7 @@ function renderKeptImageVariant(template: string, fields: Col2ImageFields): stri
   }
   let html = template.slice(0, imgBounds.start) + imgTag + template.slice(imgBounds.end)
   html = html.replaceAll(WIDTH_TOKEN, fields.widthPercent)
-  return substituteImgSrcOrRemove(html, placeholder, fields.imageUrl, FILE_NAME)
+  return substituteImgSrcOrRemove(html, placeholder, fields.imageUrl, fields.imageAlt, FILE_NAME)
 }
 
 /** "Se puede quitar el fondo de la imagen de forma independiente" — a

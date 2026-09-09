@@ -98,6 +98,12 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).not.toContain('src=""')
   })
 
+  it('defaults the cobranding alt to "Tag" (matches the master) and substitutes a custom one', () => {
+    expect(renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true }, 'beige100')).toContain('alt="Tag"')
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true, cobrandingImageAlt: 'mi alt' }, 'beige100')
+    expect(snippet).toContain('alt="mi alt"')
+  })
+
   it('keeps the master border-radius on the cobranding image by default', () => {
     const snippet = renderHeaderSnippet({ ...defaultHeaderFields, cobranding: true }, 'beige100')
     const img = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]
@@ -164,6 +170,12 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).toContain('src="https://example.com/mi-logo.png"')
     expect(snippet).not.toContain('https://lh3.googleusercontent.com/d/1jwEAvRrPJreG7pZbEGhZuo18kVjnw4Cf')
     expect(snippet).not.toContain('cobranding-')
+  })
+
+  it('defaults the brand logo alt to "Rappi" (matches the master) and substitutes a custom one (customLogo on)', () => {
+    expect(renderHeaderSnippet({ ...defaultHeaderFields, customLogo: true }, 'beige100')).toContain('alt="Rappi"')
+    const snippet = renderHeaderSnippet({ ...defaultHeaderFields, customLogo: true, logoAlt: 'mi alt' }, 'beige100')
+    expect(snippet).toContain('alt="mi alt"')
   })
 
   it('escapes special characters in a user-provided logo URL (customLogo on)', () => {

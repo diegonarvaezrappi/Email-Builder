@@ -136,7 +136,7 @@ function renderCell(
     imgTag = imgTag.replace('style="', `style="border-radius: ${IMAGE_BORDER_RADIUS}; `)
   }
   html = html.slice(0, imgBounds.start) + imgTag + html.slice(imgBounds.end)
-  html = substituteImgSrcOrRemove(html, imagePlaceholder, fields.image.imageUrl, FILE_NAME)
+  html = substituteImgSrcOrRemove(html, imagePlaceholder, fields.image.imageUrl, fields.image.imageAlt, FILE_NAME)
 
   // Área libre de la celda (role="divcomponentes"): se vacía entera y se
   // rellena con lo que fields.items tenga para ESTA areaKey — mismo patrón

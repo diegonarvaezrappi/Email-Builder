@@ -62,6 +62,9 @@ export const COL2_CELL_ORDER_LABELS: Record<Col2CellOrder, string> = {
  */
 export const col2ImageFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/14VKG5CPVNPIVbOQYkyHgtxfW1uLorjXP'),
+  /** Alt del `<img>` — default reproduce el `alt="tag"` que modulo-2-columnas.html
+   *  ya trae de fábrica en AMBOS modos ("full"/"modificable"). */
+  imageAlt: z.string().default('tag'),
   mode: z.enum(COL2_IMAGE_MODE_VALUES).default('modificable'),
   widthPercent: z.string().default('90'),
   borderRadiusEnabled: z.boolean().default(true),

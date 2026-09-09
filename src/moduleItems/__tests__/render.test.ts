@@ -117,29 +117,30 @@ describe('renderBulletNumeradoSnippet', () => {
 describe('renderIconoSnippet', () => {
   it('picks the <img> matching fields.size', () => {
     for (const size of ['S', 'M', 'L', 'XL'] as const) {
-      const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', size, borderRadiusEnabled: false })
+      const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', imageAlt: 'img', size, borderRadiusEnabled: false })
       expect(html).toContain(`role="molecula-icono${size}"`)
     }
   })
 
   it('borderRadiusEnabled=false removes any pre-existing radius (L/XL ship with one)', () => {
-    const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', size: 'L', borderRadiusEnabled: false })
+    const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', imageAlt: 'img', size: 'L', borderRadiusEnabled: false })
     expect(html).not.toContain('border-radius')
   })
 
   it('borderRadiusEnabled=true adds it even on S/M (which ship with none)', () => {
-    const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', size: 'S', borderRadiusEnabled: true })
+    const html = renderIconoSnippet({ imageUrl: 'https://x.test/a.png', imageAlt: 'img', size: 'S', borderRadiusEnabled: true })
     expect(html).toContain('border-radius: 7px')
   })
 
   it('blank imageUrl removes the whole <img> (global convention)', () => {
-    const html = renderIconoSnippet({ imageUrl: '', size: 'M', borderRadiusEnabled: false })
+    const html = renderIconoSnippet({ imageUrl: '', imageAlt: 'img', size: 'M', borderRadiusEnabled: false })
     expect(html).not.toContain('<img')
   })
 
-  it('substitutes the URL otherwise', () => {
-    const html = renderIconoSnippet({ imageUrl: 'https://x.test/mine.png', size: 'M', borderRadiusEnabled: false })
+  it('substitutes the URL and alt otherwise', () => {
+    const html = renderIconoSnippet({ imageUrl: 'https://x.test/mine.png', imageAlt: 'mi alt', size: 'M', borderRadiusEnabled: false })
     expect(html).toContain('src="https://x.test/mine.png"')
+    expect(html).toContain('alt="mi alt"')
   })
 })
 
@@ -196,7 +197,7 @@ describe('renderBulletIconoSimpleSnippet', () => {
   const DEFAULT_ICON_URL = 'https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'
 
   it('renders the icon + a single text, no title line (unlike BULLET_ICONO)', () => {
-    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: 'Mi cupón' })
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, imageAlt: 'img', text: 'Mi cupón' })
     expect(html).toContain(`src="${DEFAULT_ICON_URL}"`)
     expect(html).toContain('>Mi cupón<')
     expect(html).not.toContain('Subtitulo')
@@ -204,18 +205,18 @@ describe('renderBulletIconoSimpleSnippet', () => {
   })
 
   it('blank icon URL removes the WHOLE <td>, not just the <img> (master: "quitando todo el <td>")', () => {
-    const html = renderBulletIconoSimpleSnippet({ imageUrl: '', text: 'Mi cupón' })
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: '', imageAlt: 'img', text: 'Mi cupón' })
     expect(html).not.toContain('<img')
     expect(html).not.toContain('width="15px"')
     expect(html).toContain('>Mi cupón<')
   })
 
   it('escapes HTML-significant characters', () => {
-    expect(renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;')
+    expect(renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, imageAlt: 'img', text: '<b>x</b>' })).toContain('&lt;b&gt;x&lt;/b&gt;')
   })
 
   it('has no Liquid tags left; theme/align vars survive for later passes', () => {
-    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, text: 'x' })
+    const html = renderBulletIconoSimpleSnippet({ imageUrl: DEFAULT_ICON_URL, imageAlt: 'img', text: 'x' })
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).toContain('{{color_texto_mail_general}}')
     expect(html).toContain('{{alineado_molecular_mail_body}}')

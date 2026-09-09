@@ -36,6 +36,9 @@ export const BENEFICIOS_MAIN_AREA = 'main'
  *  resto de la app. */
 export const beneficiosImageFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb'),
+  /** Alt del `<img role="imagen-auto">` — default reproduce el `alt="tag"` que
+   *  modulo-beneficios.html ya trae de fábrica. */
+  imageAlt: z.string().default('tag'),
   borderRadiusEnabled: z.boolean().default(true),
 })
 export type BeneficiosImageFields = z.infer<typeof beneficiosImageFieldsSchema>
@@ -59,7 +62,12 @@ export type BeneficiosFields = z.infer<typeof beneficiosFieldsSchema>
  *  referencia estático). */
 function beneficiosDefaultItems(ids: [string, string, string, string, string]): ModuleItem[] {
   return [
-    { id: ids[0], areaKey: BENEFICIOS_MAIN_AREA, type: 'ICONO', fields: { imageUrl: BENEFICIOS_DEFAULT_ICON_URL, size: 'M', borderRadiusEnabled: false } },
+    {
+      id: ids[0],
+      areaKey: BENEFICIOS_MAIN_AREA,
+      type: 'ICONO',
+      fields: { imageUrl: BENEFICIOS_DEFAULT_ICON_URL, imageAlt: 'img', size: 'M', borderRadiusEnabled: false },
+    },
     { id: ids[1], areaKey: BENEFICIOS_MAIN_AREA, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },
     { id: ids[2], areaKey: BENEFICIOS_MAIN_AREA, type: 'BENEFICIOS_TITULO', fields: defaultBeneficiosTituloFields },
     { id: ids[3], areaKey: BENEFICIOS_MAIN_AREA, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },

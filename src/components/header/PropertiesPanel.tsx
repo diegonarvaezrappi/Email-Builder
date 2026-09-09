@@ -94,6 +94,11 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
           </label>
 
           <label className="field">
+            <span>Alt del logo</span>
+            <input type="text" value={value.logoAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => set('logoAlt', e.target.value)} />
+          </label>
+
+          <label className="field">
             <span>Tamaño del logo</span>
             <select
               value={value.logoSize}
@@ -126,6 +131,15 @@ export function HeaderPropertiesPanel({ value, onChange }: HeaderPropertiesPanel
               type="text"
               value={value.cobrandingImageUrl}
               onChange={(e: ChangeEvent<HTMLInputElement>) => set('cobrandingImageUrl', e.target.value)}
+            />
+          </label>
+
+          <label className="field">
+            <span>Alt de la imagen de cobranding</span>
+            <input
+              type="text"
+              value={value.cobrandingImageAlt}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set('cobrandingImageAlt', e.target.value)}
             />
           </label>
 

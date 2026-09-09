@@ -129,6 +129,12 @@ export const ICONO_SIZE_LABELS: Record<IconoSize, string> = { S: 'Chico', M: 'Me
 export const ICONO_DEFAULT_URL = 'https://lh3.googleusercontent.com/d/1vdunOvDi3k-LLdfUwk2Qpotyl9u7ionz'
 export const iconoFieldsSchema = z.object({
   imageUrl: z.string().default(ICONO_DEFAULT_URL),
+  /** Alt del `<img>` — molecula_icono.html trae un `alt` DISTINTO por tamaño
+   *  (S/M/XL: "img", L: "LOGO"), pero el default de acá solo reproduce el de
+   *  'M' (el default de `size` arriba) — mismo criterio "ningún campo cambia
+   *  el valor de OTRO campo automáticamente" del comentario de arriba: si el
+   *  usuario cambia `size` a 'L' después, `imageAlt` NO se actualiza solo. */
+  imageAlt: z.string().default('img'),
   size: z.enum(ICONO_SIZE_VALUES).default('M'),
   borderRadiusEnabled: z.boolean().default(false),
 })
@@ -181,6 +187,9 @@ export const defaultColumnaTextoFields: ColumnaTextoFields = columnaTextoFieldsS
  */
 export const bulletIconoSimpleFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-'),
+  /** Alt del `<img role="molecula-iconoS">` — default reproduce el `alt="img"`
+   *  que cupones-modulo.html ya trae de fábrica. */
+  imageAlt: z.string().default('img'),
   text: z.string().default('Cupón xxxxxxxxxxx'),
 })
 export type BulletIconoSimpleFields = z.infer<typeof bulletIconoSimpleFieldsSchema>

@@ -164,6 +164,10 @@ export function DealCardPropertiesPanel({ value, onChange }: DealCardPropertiesP
         <input type="text" placeholder="https://..." value={value.logoUrl} onChange={(e) => set('logoUrl', e.target.value)} />
         <span className="field-hint">Vacío = el deal se muestra sin logo.</span>
       </label>
+      <label className="field">
+        <span>Alt del logo</span>
+        <input type="text" value={value.logoAlt} onChange={(e) => set('logoAlt', e.target.value)} />
+      </label>
 
       <p className="field-group-label">Enlace</p>
       <label className="field">
@@ -347,6 +351,10 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
               onChange={(e) => set('tag1IconUrl', e.target.value)}
             />
           </label>
+          <label className="field">
+            <span>Alt del ícono del tag 1</span>
+            <input type="text" value={value.tag1IconAlt} disabled={!value.tag1Enabled} onChange={(e) => set('tag1IconAlt', e.target.value)} />
+          </label>
         </>
       )}
 
@@ -368,6 +376,10 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
               disabled={!value.tag2Enabled}
               onChange={(e) => set('tag2IconUrl', e.target.value)}
             />
+          </label>
+          <label className="field">
+            <span>Alt del ícono del tag 2</span>
+            <input type="text" value={value.tag2IconAlt} disabled={!value.tag2Enabled} onChange={(e) => set('tag2IconAlt', e.target.value)} />
           </label>
         </>
       )}

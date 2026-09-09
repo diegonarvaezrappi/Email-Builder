@@ -55,6 +55,9 @@ const COL3_CELL_IMAGE_URLS: [string, string, string] = [
  *  (el maestro no trae ninguno de fábrica, mismo criterio 2026-08-26). */
 export const col3ImageFieldsSchema = z.object({
   imageUrl: z.string().default(''),
+  /** Alt del `<img>` — default reproduce el `alt="-"` que modulo-3-columnas.html
+   *  ya trae de fábrica en LAS 3 celdas (mismo valor, no una por celda). */
+  imageAlt: z.string().default('-'),
   borderRadiusEnabled: z.boolean().default(false),
 })
 export type Col3ImageFields = z.infer<typeof col3ImageFieldsSchema>
@@ -102,7 +105,7 @@ function col3DefaultItems(ids: [string, string, string, string, string, string, 
   return COL3_CELL_AREAS.flatMap((areaKey, cellIndex): ModuleItem[] => {
     const [iconoId, separadorId, textoId] = ids.slice(cellIndex * 3, cellIndex * 3 + 3)
     return [
-      { id: iconoId, areaKey, type: 'ICONO', fields: { imageUrl: COL3_DEFAULT_ICON_URL, size: 'M', borderRadiusEnabled: false } },
+      { id: iconoId, areaKey, type: 'ICONO', fields: { imageUrl: COL3_DEFAULT_ICON_URL, imageAlt: 'img', size: 'M', borderRadiusEnabled: false } },
       { id: separadorId, areaKey, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },
       { id: textoId, areaKey, type: 'COLUMNA_TEXTO', fields: { text: 'Texto corto' } },
     ]

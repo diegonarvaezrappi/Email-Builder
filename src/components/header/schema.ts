@@ -72,6 +72,10 @@ export const headerSchema = z.object({
    *  customLogo es true — vacío = se conserva el asset del maestro para la
    *  marca/logoBackground elegidos. */
   logoUrl: z.string().default(''),
+  /** Alt del logo de marca — igual que logoUrl, solo tiene efecto cuando
+   *  customLogo es true. Default reproduce el `alt="Rappi"` que las 40
+   *  variantes de header ya traen de fábrica. */
+  logoAlt: z.string().default('Rappi'),
   /** Tamaño del logo de marca — ver HEADER_LOGO_SIZE_VALUES arriba. Solo tiene
    *  efecto cuando customLogo es true (una marca real siempre usa el tamaño
    *  original del maestro, sin overrides). */
@@ -88,6 +92,9 @@ export const headerSchema = z.object({
    *  y `applyCobranding` siempre sustituye el placeholder por el valor actual
    *  de este campo sea cual sea. */
   cobrandingImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1JYYWeVebW_G73Y2f-Enj6gwV--MN3Y_u'),
+  /** Alt de la imagen de cobranding — default reproduce el `alt="Tag"` que los
+   *  40 archivos de header ya traen de fábrica en las 3 <img> de cobranding. */
+  cobrandingImageAlt: z.string().default('Tag'),
   /** Los 40 archivos traen `border-radius: 5px` en las 3 <img> de cobranding.
    *  Default `true` = se respeta el maestro tal cual; en `false`, render.ts se
    *  lo quita a la <img> que queda (algunos logos de partner no deben salir

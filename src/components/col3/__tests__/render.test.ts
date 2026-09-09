@@ -51,6 +51,14 @@ describe('renderCol3Snippet · imagen "full" (una por celda)', () => {
     expect(html).toContain('src="https://x.test/mine.png"')
     expect(html).not.toContain(defaultCol3Fields.cells[2].image.imageUrl)
   })
+
+  it('defaults the alt to "-" (matches the master, all 3 cells) and substitutes a custom one on the targeted cell only', () => {
+    expect(render(defaultCol3Fields).match(/alt="-"/g)?.length).toBe(3)
+    const fields = withCell(defaultCol3Fields, 1, { image: { ...defaultCol3Fields.cells[1].image, imageAlt: 'mi alt' } })
+    const html = render(fields)
+    expect(html.match(/alt="mi alt"/g)?.length).toBe(1)
+    expect(html.match(/alt="-"/g)?.length).toBe(2)
+  })
 })
 
 describe('renderCol3Snippet · área libre (3 celdas, default icono+separador+texto corto)', () => {

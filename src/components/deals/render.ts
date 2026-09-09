@@ -114,6 +114,20 @@ const LOGO_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkd
  */
 const LOGO_PASTILLA_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe'
 
+/** Ubica el `alt="..."` DENTRO de los bounds ya calculados de un `<img>` y arma
+ *  el Edit que lo reemplaza — mismo criterio "fallar ruidoso" que
+ *  substituteImgSrcOrRemove (template/htmlText.ts) para el resto de los
+ *  campos de imagen de la app. */
+function altAttrEdit(cell: string, imgBounds: Bounds, alt: string): Edit {
+  const tag = cell.slice(imgBounds.start, imgBounds.end)
+  const match = tag.match(/alt="[^"]*"/)
+  if (!match || match.index === undefined) {
+    throw new Error(`${FILE_NAME}: no se encontró alt="..." en el <img> del logo del deal — revisar renderImageCell`)
+  }
+  const start = imgBounds.start + match.index
+  return { start, end: start + match[0].length, replacement: `alt="${escapeHtmlAttr(alt)}"` }
+}
+
 function renderImageCell(cell: string, fields: DealCardFields): string {
   const edits: Edit[] = []
 
@@ -150,6 +164,7 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
         end: pastillaSrcIndex + LOGO_PASTILLA_PLACEHOLDER.length,
         replacement: escapeHtmlAttr(fields.logoUrl),
       })
+      edits.push(altAttrEdit(cell, voidElementBounds(cell, pastillaSrcIndex, 'img'), fields.logoAlt))
     }
   } else {
     edits.push({ ...elementBounds(cell, pastillaSrcIndex, 'div'), replacement: '' })
@@ -159,6 +174,7 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
     } else {
       const urlIndex = indexOfOrThrow(cell, LOGO_PLACEHOLDER)
       edits.push({ start: urlIndex, end: urlIndex + LOGO_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.logoUrl) })
+      edits.push(altAttrEdit(cell, voidElementBounds(cell, squareRoleIndex, 'img'), fields.logoAlt))
     }
   }
 
@@ -258,7 +274,7 @@ function tagGroupBounds(cell: string, iconPlaceholder: string): Bounds {
  * fragmento entero desaparece del reensamblado si `enabled` es false, ver
  * renderTextCell), lo que hace falta acá es solo el reemplazo de texto/ícono.
  */
-function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, text: string): Edit[] {
+function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, iconAlt: string, text: string): Edit[] {
   const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
   // "se debe poder cambiar o quitar el ícono, si se quita, se elimina la div
   // completa" — sin ícono no hay pill, así que apagar el tag (o dejar la URL
@@ -269,6 +285,7 @@ function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconU
   const labelBounds = textRunBounds(cell, elementBounds(cell, iconIndex, 'h5'), 'h5')
   return [
     { start: iconIndex, end: iconIndex + iconPlaceholder.length, replacement: escapeHtmlAttr(iconUrl) },
+    altAttrEdit(cell, voidElementBounds(cell, iconIndex, 'img'), iconAlt),
     // Los espacios alrededor son del maestro (` tag 1 `), no del dato.
     { ...labelBounds, replacement: ` ${escapeHtmlText(text)} ` },
   ]
@@ -355,9 +372,9 @@ function pieceEdits(fragment: string, type: DealCardPieceType, fields: DealCardF
     case 'rating':
       return ratingGroupFragmentEdits(fragment, fields)
     case 'tag1':
-      return tagEdits(fragment, TAG_1_ICON_PLACEHOLDER, fields.tag1Enabled, fields.tag1IconUrl, fields.tag1Text)
+      return tagEdits(fragment, TAG_1_ICON_PLACEHOLDER, fields.tag1Enabled, fields.tag1IconUrl, fields.tag1IconAlt, fields.tag1Text)
     case 'tag2':
-      return tagEdits(fragment, TAG_2_ICON_PLACEHOLDER, fields.tag2Enabled, fields.tag2IconUrl, fields.tag2Text)
+      return tagEdits(fragment, TAG_2_ICON_PLACEHOLDER, fields.tag2Enabled, fields.tag2IconUrl, fields.tag2IconAlt, fields.tag2Text)
     case 'cta':
       return ctaEdits(fragment, fields)
   }

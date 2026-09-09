@@ -52,6 +52,14 @@ export function Col2PropertiesPanel({ value, onChange }: Col2PropertiesPanelProp
         />
       </label>
       <label className="field">
+        <span>Alt de la imagen</span>
+        <input
+          type="text"
+          value={value.image.imageAlt}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, image: { ...value.image, imageAlt: e.target.value } })}
+        />
+      </label>
+      <label className="field">
         <span>Modo</span>
         <select
           value={value.image.mode}

@@ -56,7 +56,7 @@ function renderBeneficiosImage(raw: string, fields: BeneficiosFields['image']): 
   }
 
   const withRadius = raw.slice(0, bounds.start) + imgTag + raw.slice(bounds.end)
-  return substituteImgSrcOrRemove(withRadius, IMAGE_URL_PLACEHOLDER, fields.imageUrl, FILE_NAME)
+  return substituteImgSrcOrRemove(withRadius, IMAGE_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, FILE_NAME)
 }
 
 export function renderBeneficiosSnippet(fields: BeneficiosFields, doc: EmailDocument, ctx: BeneficiosRenderCtx): string {

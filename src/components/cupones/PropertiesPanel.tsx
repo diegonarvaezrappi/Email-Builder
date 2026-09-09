@@ -63,6 +63,14 @@ export function CuponesPropertiesPanel({ value, onChange }: CuponesPropertiesPan
                   onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, imageUrl: e.target.value })}
                 />
               </label>
+              <label className="field">
+                <span>Alt de la imagen</span>
+                <input
+                  type="text"
+                  value={cell.imageAlt}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, imageAlt: e.target.value })}
+                />
+              </label>
               <label className="field field-checkbox">
                 <input
                   type="checkbox"
@@ -80,6 +88,14 @@ export function CuponesPropertiesPanel({ value, onChange }: CuponesPropertiesPan
                   type="text"
                   value={cell.tagIconUrl}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, tagIconUrl: e.target.value })}
+                />
+              </label>
+              <label className="field">
+                <span>Alt del ícono del tag</span>
+                <input
+                  type="text"
+                  value={cell.tagIconAlt}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, tagIconAlt: e.target.value })}
                 />
               </label>
               <label className="field">

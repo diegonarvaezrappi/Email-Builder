@@ -41,6 +41,24 @@ describe('renderCuponesSnippet · celda "cupón" · imagen', () => {
     const html = render(fields)
     expect(html.match(/src="https:\/\/lh3\.googleusercontent\.com\/d\/17zBTLASXQzFtt9NtEP3h0qudKBhcZRMA"/g)?.length).toBe(1)
   })
+
+  it('defaults the alt to "tag" (matches the master, both cells) and substitutes a custom one on the targeted cell only', () => {
+    // Scoped a la etiqueta `role="imagenfull"` puntual, no un conteo global de
+    // 'alt="tag"': el archivo real TAMBIÉN hardcodea 'alt="tag"' en la imagen
+    // decorativa de puntos (`{{body_container_img_dots}}`, no editable, ver
+    // components/logos/render.ts para el mismo tipo de coincidencia) — un
+    // conteo ciego contaría esas 2 de más (mismo criterio que
+    // [[project_theme_literal_collisions]]).
+    const imagenFullTag = (html: string) => html.match(/<img role="imagenfull"[^>]*>/g) ?? []
+    expect(imagenFullTag(render(defaultCuponesFields)).every((tag) => tag.includes('alt="tag"'))).toBe(true)
+
+    const cell0 = defaultCuponesFields.cells[0]
+    if (cell0.type !== 'cupon') throw new Error('expected cupon cell')
+    const fields = withCell(defaultCuponesFields, 0, { ...cell0, imageAlt: 'mi alt' })
+    const tags = imagenFullTag(render(fields))
+    expect(tags[0]).toContain('alt="mi alt"')
+    expect(tags[1]).toContain('alt="tag"')
+  })
 })
 
 describe('renderCuponesSnippet · área libre de la celda "cupón" (default: texto+pastilla, monto, separador, bullet)', () => {
@@ -108,6 +126,12 @@ describe('renderCuponesSnippet · celda "título" (swap-in)', () => {
     const withoutIcon = withCell(defaultCuponesFields, 0, { ...createDefaultTituloCellFields(), tagIconUrl: '' })
     expect(render(withIcon)).toContain('role="molecula-tag"')
     expect(render(withoutIcon)).not.toContain('role="molecula-tag"')
+  })
+
+  it('defaults the tag icon alt to "Rappi" (matches the master) and substitutes a custom one', () => {
+    expect(render(withCell(defaultCuponesFields, 0, createDefaultTituloCellFields()))).toContain('alt="Rappi"')
+    const html = render(withCell(defaultCuponesFields, 0, { ...createDefaultTituloCellFields(), tagIconAlt: 'mi alt' }))
+    expect(html).toContain('alt="mi alt"')
   })
 
   it('enabling the titulo cell\'s link resolves LINKTITULO', () => {

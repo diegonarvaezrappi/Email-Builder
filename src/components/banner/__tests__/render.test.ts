@@ -19,7 +19,11 @@ const promo = (id: string, promoText = '120'): BannerItem => ({
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem('tag 1')] } })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
 const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
-const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
+const imgFija = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_FIJA',
+  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
+})
 
 describe('renderBannerSnippet', () => {
   it('default document (vertical, pre-loaded with PROMO/IMG_AUTOMATICA_MOLECULA/TEXTO_COMPLEMENTARIO/IMG_FIJA/TAGS) renders every default piece', () => {
@@ -75,7 +79,7 @@ describe('renderBannerSnippet', () => {
 
   it('items whose type has no file for the active orientation are skipped at render, not crashed on', () => {
     const d = withItems(
-      [{ id: 'a', type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
+      [{ id: 'a', type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: 'x', imageAlt: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
       { banner: { ...defaultEmailDocument.banner, bannerType: 'vertical' } },
     )
     expect(() => renderBannerSnippet(d.banner, d)).not.toThrow()
@@ -101,8 +105,8 @@ describe('renderBannerSnippet', () => {
       },
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
-      { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } },
-      { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoLink: '' } },
+      { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', imageAlt: 'x', widthPercent: 80, borderRadiusEnabled: false } },
+      { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoImageAlt: 'x', logoLink: '' } },
       { id: '7', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } },
     ]
     for (const tema of THEME_SLUGS) {
@@ -360,7 +364,7 @@ describe('renderBannerSnippet', () => {
 
     it('"center" centers IMG_AUTOMATICA_MOLECULA via its own <img> margin (its outer table is already width:100%)', () => {
       const d = withItems(
-        [{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
+        [{ id: 'i', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', imageAlt: 'x', widthPercent: 80, borderRadiusEnabled: false } }],
         { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } },
       )
       const html = renderBannerSnippet(d.banner, d)

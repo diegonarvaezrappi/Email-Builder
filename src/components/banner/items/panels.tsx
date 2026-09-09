@@ -180,6 +180,10 @@ export function ImgAutomaticaMoleculaPropertiesPanel({ value, onChange }: Banner
         />
       </label>
       <label className="field">
+        <span>Alt de la imagen</span>
+        <input type="text" value={value.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageAlt: e.target.value })} />
+      </label>
+      <label className="field">
         <span>Ancho (%)</span>
         <input
           type="number"
@@ -211,6 +215,10 @@ export function ImgAutomaticaModuloPropertiesPanel({ value, onChange }: BannerIt
           value={value.imageUrl}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageUrl: e.target.value })}
         />
+      </label>
+      <label className="field">
+        <span>Alt de la imagen</span>
+        <input type="text" value={value.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageAlt: e.target.value })} />
       </label>
       <label className="field">
         <span>Ancho (%)</span>
@@ -251,6 +259,14 @@ export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanel
           type="text"
           value={value.logoImageUrl}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, logoImageUrl: e.target.value })}
+        />
+      </label>
+      <label className="field">
+        <span>Alt del logo</span>
+        <input
+          type="text"
+          value={value.logoImageAlt}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, logoImageAlt: e.target.value })}
         />
       </label>
       {doc.banner.bannerType === 'vertical' && (
@@ -313,6 +329,15 @@ export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<Ta
               value={tag.iconUrl}
               disabled={!tag.iconEnabled}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { iconUrl: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Alt del ícono</span>
+            <input
+              type="text"
+              value={tag.iconAlt}
+              disabled={!tag.iconEnabled}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { iconAlt: e.target.value })}
             />
           </label>
         </div>
@@ -412,6 +437,10 @@ export function FranjaLogosPropertiesPanel({ value, onChange }: BannerItemPanelP
                 </button>
               )}
             </div>
+          </label>
+          <label className="field">
+            <span>Alt de la imagen</span>
+            <input type="text" value={logo.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => setLogo(index, { imageAlt: e.target.value })} />
           </label>
           <label className="field">
             <span>Enlace</span>

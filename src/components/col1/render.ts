@@ -69,7 +69,7 @@ function renderCol1Image(raw: string, fields: Col1Fields['image']): string {
   }
 
   const withRadius = raw.slice(0, bounds.start) + imgTag + raw.slice(bounds.end)
-  return substituteImgSrcOrRemove(withRadius, IMAGE_URL_PLACEHOLDER, fields.imageUrl, FILE_NAME)
+  return substituteImgSrcOrRemove(withRadius, IMAGE_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, FILE_NAME)
 }
 
 function renderAreaItems(items: ModuleItem[], areaKey: string, doc: EmailDocument, itemCtx: ModuleItemRenderCtx): string {

@@ -33,6 +33,12 @@ describe('renderCol1Snippet · imagen', () => {
     expect(html).toContain('src="https://x.test/mine.png"')
   })
 
+  it('defaults the alt to "tag" (matches the master) and substitutes a custom one', () => {
+    expect(render(defaultCol1Fields)).toContain('alt="tag"')
+    const html = render({ ...defaultCol1Fields, image: { ...defaultCol1Fields.image, imageAlt: 'mi alt' } })
+    expect(html).toContain('alt="mi alt"')
+  })
+
   it('blank URL removes the whole <img> (the image is genuinely optional here, unlike Beneficios) but the module stays', () => {
     const html = render({ ...defaultCol1Fields, image: { ...defaultCol1Fields.image, imageUrl: '' } })
     expect(html).not.toContain('role="imagen-auto"')

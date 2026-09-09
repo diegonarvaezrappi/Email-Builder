@@ -41,6 +41,9 @@ export const COL1_AREA_BELOW = 'below'
  *  Beneficios, que arranca en 8px). */
 export const col1ImageFieldsSchema = z.object({
   imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1OEXxNDtUklgU4W8sta2zOzdZ4rZYq7PO'),
+  /** Alt del `<img role="imagen-auto">` — default reproduce el `alt="tag"` que
+   *  modulo-1columna.html ya trae de fábrica. */
+  imageAlt: z.string().default('tag'),
   borderRadiusEnabled: z.boolean().default(false),
 })
 export type Col1ImageFields = z.infer<typeof col1ImageFieldsSchema>

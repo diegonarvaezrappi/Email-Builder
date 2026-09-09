@@ -28,14 +28,14 @@ describe('createDefaultCol1Fields', () => {
 describe('cloneCol1Fields', () => {
   it('preserves user field values (incl. the image) but regenerates every item id, across BOTH areas', () => {
     const original = createDefaultCol1Fields()
-    original.image = { imageUrl: 'https://x.test/mine.png', borderRadiusEnabled: true }
+    original.image = { imageUrl: 'https://x.test/mine.png', imageAlt: 'mine', borderRadiusEnabled: true }
     original.items = [
       { id: 'a', areaKey: 'above', type: 'TITULO_TEXTO', fields: { text: 'Arriba' } } as (typeof original.items)[number],
       { id: 'b', areaKey: 'below', type: 'TITULO_TEXTO', fields: { text: 'Abajo' } } as (typeof original.items)[number],
     ]
     const clone = cloneCol1Fields(original)
 
-    expect(clone.image).toEqual({ imageUrl: 'https://x.test/mine.png', borderRadiusEnabled: true })
+    expect(clone.image).toEqual({ imageUrl: 'https://x.test/mine.png', imageAlt: 'mine', borderRadiusEnabled: true })
     expect(clone.items.map((it) => it.areaKey)).toEqual(['above', 'below'])
     expect(clone.items.map((it) => it.id)).not.toEqual(['a', 'b'])
     expect(new Set(clone.items.map((it) => it.id)).size).toBe(2)

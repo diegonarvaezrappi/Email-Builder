@@ -11,11 +11,15 @@ const promo = (id: string): BannerItem => ({
 })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: [] } })
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem('a')] } })
-const imgFija = (id: string): BannerItem => ({ id, type: 'IMG_FIJA', fields: { heroImageUrl: '', logoImageUrl: '', logoLink: '' } })
+const imgFija = (id: string): BannerItem => ({
+  id,
+  type: 'IMG_FIJA',
+  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
+})
 const imgAutoModulo = (id: string): BannerItem => ({
   id,
   type: 'IMG_AUTOMATICA_MODULO',
-  fields: { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+  fields: { imageUrl: '', imageAlt: '', widthPercent: 80, borderRadiusEnabled: false },
 })
 
 describe('enforceHorizontalItemOrder', () => {

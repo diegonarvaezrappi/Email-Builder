@@ -230,6 +230,14 @@ describe('renderDealsSnippet · piezas opcionales', () => {
       expect(html).toContain('1ZYWddltBXkpcjXzkdlT2fqWSSR2HYB-j') // logo cuadrado por defecto de 'b'
       expect(count(html, 'role="molecula-iconoL"')).toBe(2) // 1 pastilla (a) + 1 cuadrado (b)
     })
+
+    it('defaults el alt a "LOGO" (igual en ambas formas) y sustituye uno propio', () => {
+      expect(render(cards(card('a')))).toContain('alt="LOGO"')
+      const cuadrado = render(cards(card('a', { logoAlt: 'mi alt' })))
+      expect(cuadrado).toContain('alt="mi alt"')
+      const pastilla = render(cards(card('a', { logoShape: 'pastilla', logoAlt: 'mi alt pastilla' })))
+      expect(pastilla).toContain('alt="mi alt pastilla"')
+    })
   })
 
   // complemento2Text: pedido explícito del usuario 2026-08-25, en 2 pasos —
@@ -306,6 +314,13 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     const html = render(cards(card('a', { tag1IconUrl: '', tag2Enabled: false })))
     expect(html).not.toContain('src=""')
     expect(count(html, 'role="molecula-tag"')).toBe(0)
+  })
+
+  it('el alt de cada ícono de tag por defecto es "Rappi" y se puede sustituir, independiente entre tags', () => {
+    expect(render(cards(card('a')))).toContain('alt="Rappi"')
+    const html = render(cards(card('a', { tag1IconAlt: 'alt tag 1', tag2IconAlt: 'alt tag 2' })))
+    expect(html).toContain('alt="alt tag 1"')
+    expect(html).toContain('alt="alt tag 2"')
   })
 })
 

@@ -35,6 +35,14 @@ export function Col1PropertiesPanel({ value, onChange }: Col1PropertiesPanelProp
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, image: { ...value.image, imageUrl: e.target.value } })}
         />
       </label>
+      <label className="field">
+        <span>Alt de la imagen</span>
+        <input
+          type="text"
+          value={value.image.imageAlt}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, image: { ...value.image, imageAlt: e.target.value } })}
+        />
+      </label>
       <label className="field field-checkbox">
         <input
           type="checkbox"

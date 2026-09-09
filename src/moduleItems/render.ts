@@ -200,7 +200,7 @@ export function renderIconoSnippet(fields: IconoFields): string {
     imgTag = imgTag.replace('style="', `style="border-radius: ${ICONO_BORDER_RADIUS}; `)
   }
 
-  return substituteImgSrcOrRemove(imgTag, ICONO_URL_PLACEHOLDER[fields.size], fields.imageUrl, ICONO_FILE_NAME)
+  return substituteImgSrcOrRemove(imgTag, ICONO_URL_PLACEHOLDER[fields.size], fields.imageUrl, fields.imageAlt, ICONO_FILE_NAME)
 }
 
 // --- BENEFICIOS_TITULO / BENEFICIOS_TEXTO -----------------------------------------
@@ -282,7 +282,7 @@ export function renderBulletIconoSimpleSnippet(fields: BulletIconoSimpleFields):
     const tdBounds = elementBounds(template, iconIndex, 'td', COUPONS_FILE_NAME)
     template = template.slice(0, tdBounds.start) + template.slice(tdBounds.end)
   } else {
-    template = substituteImgSrcOrRemove(template, BULLET_ICONO_SIMPLE_ICON_URL_PLACEHOLDER, fields.imageUrl, COUPONS_FILE_NAME)
+    template = substituteImgSrcOrRemove(template, BULLET_ICONO_SIMPLE_ICON_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, COUPONS_FILE_NAME)
   }
 
   const textIndex = indexOfOrThrow(template, BULLET_ICONO_SIMPLE_TEXT_LITERAL, COUPONS_FILE_NAME)

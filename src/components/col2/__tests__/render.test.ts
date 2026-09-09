@@ -85,6 +85,12 @@ describe('renderCol2Snippet · imagen (2 markups alternativos, pick-one)', () =>
     expect(html).not.toContain('<img')
     expect(html).toContain('class="mobile_hide"')
   })
+
+  it('defaults the alt to "tag" (matches the master) and substitutes a custom one, in BOTH tables', () => {
+    expect(render(defaultCol2Fields).match(/alt="tag"/g)?.length).toBe(2)
+    const html = render({ ...defaultCol2Fields, image: { ...defaultCol2Fields.image, imageAlt: 'mi alt' } })
+    expect(html.match(/alt="mi alt"/g)?.length).toBe(2)
+  })
 })
 
 describe('renderCol2Snippet · orden de celdas', () => {

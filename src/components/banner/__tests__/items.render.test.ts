@@ -336,20 +336,22 @@ describe('renderTextoComplementarioSnippet', () => {
 })
 
 describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet', () => {
-  it('molecula: substitutes the image URL and width%', () => {
+  it('molecula: substitutes the image URL, alt, and width%', () => {
     const html = renderImgAutomaticaMoleculaSnippet(
-      { imageUrl: 'https://x.test/a.png', widthPercent: 42, borderRadiusEnabled: false },
+      { imageUrl: 'https://x.test/a.png', imageAlt: 'mi alt', widthPercent: 42, borderRadiusEnabled: false },
       doc(),
       ctx('horizontal'),
     )
     expect(html).toContain('https://x.test/a.png')
+    expect(html).toContain('alt="mi alt"')
     expect(html).toContain('width: 42%')
     expect(html).not.toContain('1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN')
   })
 
-  it('modulo (horizontal only): substitutes the image URL and width%, uses a different placeholder URL than the molecula', () => {
-    const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 55, borderRadiusEnabled: false })
+  it('modulo (horizontal only): substitutes the image URL, alt, and width%, uses a different placeholder URL than the molecula', () => {
+    const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', imageAlt: 'mi alt', widthPercent: 55, borderRadiusEnabled: false })
     expect(html).toContain('https://x.test/b.png')
+    expect(html).toContain('alt="mi alt"')
     expect(html).toContain('width: 55%')
     expect(html).not.toContain('braze-images.com')
   })
@@ -359,7 +361,7 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   // cargada" en el mail).
   it('molecula: removes the <img> entirely when imageUrl is blank', () => {
     const html = renderImgAutomaticaMoleculaSnippet(
-      { imageUrl: '', widthPercent: 80, borderRadiusEnabled: false },
+      { imageUrl: '', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: false },
       doc(),
       ctx('horizontal'),
     )
@@ -368,7 +370,7 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   })
 
   it('modulo: removes the <img> entirely when imageUrl is blank', () => {
-    const html = renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: false })
+    const html = renderImgAutomaticaModuloSnippet({ imageUrl: '', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: false })
     expect(html).not.toContain('<img')
     expect(html).not.toContain('src=""')
   })
@@ -380,19 +382,19 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   // `margin` si no se corrige.
   describe('modulo: borderRadiusEnabled', () => {
     it('default (false) renders a valid, unrounded style — fixes the master\'s comma typo too', () => {
-      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 80, borderRadiusEnabled: false })
+      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: false })
       expect(html).toContain('margin: 0 auto; border-radius: 0px;')
       expect(html).not.toContain('margin: 0 auto,')
     })
 
     it('true adds a real border-radius', () => {
-      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', widthPercent: 80, borderRadiusEnabled: true })
+      const html = renderImgAutomaticaModuloSnippet({ imageUrl: 'https://x.test/b.png', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: true })
       expect(html).toContain('border-radius: 8px;')
     })
 
     it('does not throw when the image is blank (the whole <img> — and the style bug with it — gets removed first)', () => {
       expect(() =>
-        renderImgAutomaticaModuloSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: true }),
+        renderImgAutomaticaModuloSnippet({ imageUrl: '', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: true }),
       ).not.toThrow()
     })
   })
@@ -404,7 +406,7 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
   describe('molecula: borderRadiusEnabled', () => {
     it.each(['horizontal', 'vertical'] as const)('default (false) renders border-radius: 0px in %s', (bannerType) => {
       const html = renderImgAutomaticaMoleculaSnippet(
-        { imageUrl: 'https://x.test/a.png', widthPercent: 80, borderRadiusEnabled: false },
+        { imageUrl: 'https://x.test/a.png', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: false },
         doc(),
         ctx(bannerType),
       )
@@ -413,7 +415,7 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
 
     it.each(['horizontal', 'vertical'] as const)('true adds a real border-radius in %s', (bannerType) => {
       const html = renderImgAutomaticaMoleculaSnippet(
-        { imageUrl: 'https://x.test/a.png', widthPercent: 80, borderRadiusEnabled: true },
+        { imageUrl: 'https://x.test/a.png', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: true },
         doc(),
         ctx(bannerType),
       )
@@ -422,24 +424,25 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
 
     it('does not throw when the image is blank', () => {
       expect(() =>
-        renderImgAutomaticaMoleculaSnippet({ imageUrl: '', widthPercent: 80, borderRadiusEnabled: true }, doc(), ctx('horizontal')),
+        renderImgAutomaticaMoleculaSnippet({ imageUrl: '', imageAlt: 'img', widthPercent: 80, borderRadiusEnabled: true }, doc(), ctx('horizontal')),
       ).not.toThrow()
     })
   })
 })
 
 describe('renderImgFijaSnippet', () => {
-  it('substitutes hero and logo URLs in both orientations', () => {
-    const fields = { heroImageUrl: 'https://x.test/hero.png', logoImageUrl: 'https://x.test/logo.png', logoLink: '' }
+  it('substitutes hero, logo URLs, and logo alt in both orientations', () => {
+    const fields = { heroImageUrl: 'https://x.test/hero.png', logoImageUrl: 'https://x.test/logo.png', logoImageAlt: 'mi alt', logoLink: '' }
     for (const bannerType of ['horizontal', 'vertical'] as const) {
       const html = renderImgFijaSnippet(fields, doc(), ctx(bannerType))
       expect(html).toContain('https://x.test/hero.png')
       expect(html).toContain('https://x.test/logo.png')
+      expect(html).toContain('alt="mi alt"')
     }
   })
 
   it('wraps the logo in the link ONLY for vertical — horizontal has no such wrapper at all', () => {
-    const fields = { heroImageUrl: '', logoImageUrl: '', logoLink: 'https://x.test/logo-link' }
+    const fields = { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: 'https://x.test/logo-link' }
     const vertical = renderImgFijaSnippet(fields, doc(), ctx('vertical'))
     const horizontal = renderImgFijaSnippet(fields, doc(), ctx('horizontal'))
     expect(vertical).toContain('https://x.test/logo-link')
@@ -448,7 +451,7 @@ describe('renderImgFijaSnippet', () => {
   })
 
   it('leaves {{img_overlay_2_mail_general}} for the final theme pass (not a user field)', () => {
-    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoLink: '' }, doc(), ctx('horizontal'))
+    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx('horizontal'))
     expect(html).toContain('{{img_overlay_2_mail_general}}')
   })
 
@@ -458,7 +461,7 @@ describe('renderImgFijaSnippet', () => {
   // un valor vacío ya no deja ningún ícono roto, así que sigue sustituyéndose
   // como siempre (url() vacío, no se borra nada).
   it.each(['horizontal', 'vertical'] as const)('%s: removes the logo <img> when logoImageUrl is blank, but keeps the hero background substitution', (bannerType) => {
-    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoLink: '' }, doc(), ctx(bannerType))
+    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx(bannerType))
     expect(html).not.toContain('<img')
     expect(html).not.toContain('src=""')
     expect(html).toContain('background-image: url();')
@@ -499,7 +502,7 @@ describe('renderTagsSnippet', () => {
 
   it('hides only the disabled icon, keeping its own text and the other pills intact', () => {
     const html = renderTagsSnippet(
-      { tags: [{ text: 'a', iconEnabled: false, iconUrl: defaultTagItem().iconUrl }, defaultTagItem('b')] },
+      { tags: [{ text: 'a', iconEnabled: false, iconUrl: defaultTagItem().iconUrl, iconAlt: defaultTagItem().iconAlt }, defaultTagItem('b')] },
       doc(),
       ctx('vertical'),
     )
@@ -509,18 +512,19 @@ describe('renderTagsSnippet', () => {
   })
 
   it('treats a blank icon URL as "no icon", same convention as every other <img> field', () => {
-    const html = renderTagsSnippet({ tags: [{ text: 'a', iconEnabled: true, iconUrl: '' }] }, doc(), ctx('vertical'))
+    const html = renderTagsSnippet({ tags: [{ text: 'a', iconEnabled: true, iconUrl: '', iconAlt: 'Rappi' }] }, doc(), ctx('vertical'))
     expect(html).not.toContain('<img')
     expect(html).toContain('> a </h4>')
   })
 
-  it('substitutes a custom icon URL', () => {
+  it('substitutes a custom icon URL and alt', () => {
     const html = renderTagsSnippet(
-      { tags: [{ text: 'a', iconEnabled: true, iconUrl: 'https://x.test/custom-icon.png' }] },
+      { tags: [{ text: 'a', iconEnabled: true, iconUrl: 'https://x.test/custom-icon.png', iconAlt: 'mi alt' }] },
       doc(),
       ctx('vertical'),
     )
     expect(html).toContain('src="https://x.test/custom-icon.png"')
+    expect(html).toContain('alt="mi alt"')
   })
 
   it('migrates a legacy plain-string tag (pre-icon documents) into the new shape', () => {
@@ -592,7 +596,7 @@ describe('renderTextoPastillaSnippet', () => {
 })
 
 describe('renderFranjaLogosSnippet', () => {
-  const logo = (over: Partial<{ imageUrl: string; link: string }> = {}) => ({ ...defaultFranjaLogoItem(), ...over })
+  const logo = (over: Partial<{ imageUrl: string; imageAlt: string; link: string }> = {}) => ({ ...defaultFranjaLogoItem(), ...over })
 
   it.each([1, 2, 4, 6])('renders exactly %i logo cell(s) for %i logo(s)', (n) => {
     const logos = Array.from({ length: n }, () => logo())
@@ -614,6 +618,12 @@ describe('renderFranjaLogosSnippet', () => {
   it('removes the <img> entirely when a logo URL is blank, same convention as every other <img> field', () => {
     const html = renderFranjaLogosSnippet({ logos: [logo({ imageUrl: '' })], size: 'L' })
     expect(html).not.toContain('<img')
+  })
+
+  it('defaults the alt to "LOGO" (matches the master) and substitutes a custom one per logo', () => {
+    expect(renderFranjaLogosSnippet({ logos: [logo()], size: 'L' })).toContain('alt="LOGO"')
+    const html = renderFranjaLogosSnippet({ logos: [logo({ imageAlt: 'mi alt' })], size: 'L' })
+    expect(html).toContain('alt="mi alt"')
   })
 
   it.each([

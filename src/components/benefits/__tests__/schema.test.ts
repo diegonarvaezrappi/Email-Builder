@@ -46,12 +46,12 @@ describe('createDefaultBeneficiosFields', () => {
 describe('cloneBeneficiosFields', () => {
   it('preserves user field values (incl. the fixed image) but regenerates every item id', () => {
     const original = createDefaultBeneficiosFields()
-    original.image = { imageUrl: 'https://x.test/mine.png', borderRadiusEnabled: false }
-    original.items[0].fields = { imageUrl: 'https://x.test/icon.png', size: 'L', borderRadiusEnabled: true }
+    original.image = { imageUrl: 'https://x.test/mine.png', imageAlt: 'mine', borderRadiusEnabled: false }
+    original.items[0].fields = { imageUrl: 'https://x.test/icon.png', imageAlt: 'icon', size: 'L', borderRadiusEnabled: true }
     const clone = cloneBeneficiosFields(original)
 
-    expect(clone.image).toEqual({ imageUrl: 'https://x.test/mine.png', borderRadiusEnabled: false })
-    expect(clone.items[0].fields).toEqual({ imageUrl: 'https://x.test/icon.png', size: 'L', borderRadiusEnabled: true })
+    expect(clone.image).toEqual({ imageUrl: 'https://x.test/mine.png', imageAlt: 'mine', borderRadiusEnabled: false })
+    expect(clone.items[0].fields).toEqual({ imageUrl: 'https://x.test/icon.png', imageAlt: 'icon', size: 'L', borderRadiusEnabled: true })
     expect(clone.items.map((it) => it.id)).not.toEqual(original.items.map((it) => it.id))
     expect(clone.items.map((it) => it.type)).toEqual(original.items.map((it) => it.type))
   })
