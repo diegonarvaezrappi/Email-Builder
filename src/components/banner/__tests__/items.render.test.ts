@@ -432,7 +432,13 @@ describe('renderImgAutomaticaMoleculaSnippet / renderImgAutomaticaModuloSnippet'
 
 describe('renderImgFijaSnippet', () => {
   it('substitutes hero, logo URLs, and logo alt in both orientations', () => {
-    const fields = { heroImageUrl: 'https://x.test/hero.png', logoImageUrl: 'https://x.test/logo.png', logoImageAlt: 'mi alt', logoLink: '' }
+    const fields = {
+      heroImageUrl: 'https://x.test/hero.png',
+      heroImageAlt: 'mi alt de fondo',
+      logoImageUrl: 'https://x.test/logo.png',
+      logoImageAlt: 'mi alt',
+      logoLink: '',
+    }
     for (const bannerType of ['horizontal', 'vertical'] as const) {
       const html = renderImgFijaSnippet(fields, doc(), ctx(bannerType))
       expect(html).toContain('https://x.test/hero.png')
@@ -441,8 +447,23 @@ describe('renderImgFijaSnippet', () => {
     }
   })
 
+  // El fondo (background-image: url(...)) no tiene un alt nativo — se expone
+  // como role="img" aria-label="..." en el mismo <td>, pedido explícito del
+  // usuario 2026-09-09 ("para todas las imagenes que son agregadas como
+  // fondo, tambien agregales un campo ALT").
+  it('exposes heroImageAlt as role="img" aria-label="..." on the same <td> as the background-image', () => {
+    const fields = { heroImageUrl: 'https://x.test/hero.png', heroImageAlt: 'Paisaje de la promo', logoImageUrl: '', logoImageAlt: '', logoLink: '' }
+    for (const bannerType of ['horizontal', 'vertical'] as const) {
+      const html = renderImgFijaSnippet(fields, doc(), ctx(bannerType))
+      expect(html).toContain('role="img" aria-label="Paisaje de la promo"')
+      const tdIndex = html.indexOf('role="img" aria-label="Paisaje de la promo"')
+      expect(html.slice(0, tdIndex)).toMatch(/<td[^>]*$/)
+      expect(html.slice(tdIndex)).toContain('background-image: url(https://x.test/hero.png)')
+    }
+  })
+
   it('wraps the logo in the link ONLY for vertical — horizontal has no such wrapper at all', () => {
-    const fields = { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: 'https://x.test/logo-link' }
+    const fields = { heroImageUrl: '', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: 'https://x.test/logo-link' }
     const vertical = renderImgFijaSnippet(fields, doc(), ctx('vertical'))
     const horizontal = renderImgFijaSnippet(fields, doc(), ctx('horizontal'))
     expect(vertical).toContain('https://x.test/logo-link')
@@ -451,7 +472,7 @@ describe('renderImgFijaSnippet', () => {
   })
 
   it('leaves {{img_overlay_2_mail_general}} for the final theme pass (not a user field)', () => {
-    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx('horizontal'))
+    const html = renderImgFijaSnippet({ heroImageUrl: '', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx('horizontal'))
     expect(html).toContain('{{img_overlay_2_mail_general}}')
   })
 
@@ -461,10 +482,17 @@ describe('renderImgFijaSnippet', () => {
   // un valor vacío ya no deja ningún ícono roto, así que sigue sustituyéndose
   // como siempre (url() vacío, no se borra nada).
   it.each(['horizontal', 'vertical'] as const)('%s: removes the logo <img> when logoImageUrl is blank, but keeps the hero background substitution', (bannerType) => {
-    const html = renderImgFijaSnippet({ heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx(bannerType))
+    const html = renderImgFijaSnippet({ heroImageUrl: '', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }, doc(), ctx(bannerType))
     expect(html).not.toContain('<img')
     expect(html).not.toContain('src=""')
     expect(html).toContain('background-image: url();')
+  })
+
+  it('escapes what would break out of the hero url(...) — cssUrlValue, not escapeHtmlAttr', () => {
+    const fields = { heroImageUrl: 'https://x.test/a b(c).png', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' }
+    const html = renderImgFijaSnippet(fields, doc(), ctx('horizontal'))
+    expect(html).toContain('https://x.test/a%20b%28c%29.png')
+    expect(html).not.toContain('a b(c).png')
   })
 })
 

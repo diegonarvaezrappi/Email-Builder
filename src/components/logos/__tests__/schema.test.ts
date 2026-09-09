@@ -58,7 +58,7 @@ describe('cloneLogosFields', () => {
   it('preserves user field values (incl. all 6 logo slots + gridSize) but regenerates every item id', () => {
     const original = createDefaultLogosFields()
     original.gridSize = '6'
-    original.logos[4] = { imageUrl: 'https://x.test/logo5.png', linkEnabled: true, link: 'https://x.test/l5' }
+    original.logos[4] = { imageUrl: 'https://x.test/logo5.png', imageAlt: 'Logo 5', linkEnabled: true, link: 'https://x.test/l5' }
     const clone = cloneLogosFields(original)
 
     expect(clone.gridSize).toBe('6')

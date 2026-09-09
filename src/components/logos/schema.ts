@@ -56,6 +56,17 @@ const LOGO_DEFAULT_URL = 'https://lh3.googleusercontent.com/d/1B4hOqqkpKSu2cQHal
  */
 export const logoFieldsSchema = z.object({
   imageUrl: z.string().default(LOGO_DEFAULT_URL),
+  /** Alt del logo — `imageUrl` pinta un `background-image: url(...)`, sin un
+   *  atributo `alt` nativo, así que se expone como `role="img"
+   *  aria-label="..."` en la misma celda (ver renderLogoCell), solo cuando hay
+   *  URL. El `<img alt="LOGO">` fijo que trae cada celda del maestro por
+   *  dentro es OTRO elemento, el que "no se quita ni se modifica" (ver el
+   *  comentario grande de renderLogoCell) — no tiene relación con este campo.
+   *  Sin valor de fábrica que reproducir (el maestro no documenta este
+   *  background), default elegido por la app. Pedido explícito del usuario
+   *  2026-09-09: "para todas las imagenes que son agregadas como fondo,
+   *  tambien agregales un campo ALT". */
+  imageAlt: z.string().default('Logo'),
   linkEnabled: z.boolean().default(false),
   link: z.string().default(''),
 })

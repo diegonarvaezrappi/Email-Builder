@@ -40,6 +40,7 @@ import {
   type Edit,
 } from '../../template/htmlEdits'
 import { cssUrlValue } from '../../global/vars'
+import { insertBackgroundImageAltAtStart } from '../../template/htmlText'
 import { wrapWithModuleItemMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
@@ -173,7 +174,9 @@ function renderLogoCell(cellHtml: string, fields: LogoFields, borderRadiusEnable
     html = html.replace('style="', `style="border-radius: ${LOGO_BORDER_RADIUS}; `)
   }
 
-  html = fields.imageUrl.trim() ? html.replace(LOGO_BG_PLACEHOLDER, cssUrlValue(fields.imageUrl)) : html.replace(LOGO_BG_DECLARATION, '')
+  html = fields.imageUrl.trim()
+    ? insertBackgroundImageAltAtStart(html.replace(LOGO_BG_PLACEHOLDER, cssUrlValue(fields.imageUrl)), fields.imageAlt, fileName)
+    : html.replace(LOGO_BG_DECLARATION, '')
 
   const linkMatch = html.match(LOGO_LINK_ATTR_RE)
   if (!linkMatch) {

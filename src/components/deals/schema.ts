@@ -127,6 +127,15 @@ export const dealCardFieldsSchema = z.object({
   /** Va dentro de `background-image: url(...)` de la celda de imagen (no en un
    *  atributo), así que el render lo pasa por cssUrlValue, no por escapeHtmlAttr. */
   productImageUrl: z.string().default('https://images.rappi.com/products/77c714d6-2d05-493e-8f33-c66711864ca7.png'),
+  /** Alt de la imagen de producto — un `background-image` no tiene un atributo
+   *  `alt` nativo como un `<img>`, así que se expone como `role="img"
+   *  aria-label="..."` en el mismo `<td>` (ver renderImageCell). El maestro no
+   *  trae ningún valor de fábrica acá (no hay accesibilidad de por medio en
+   *  este elemento), así que no hay un literal que "reproducir" — default
+   *  elegido por la app. Pedido explícito del usuario 2026-09-09: "para todas
+   *  las imagenes que son agregadas como fondo, tambien agregales un campo
+   *  ALT, por ejemplo las imagenes de productos de los deals, no tienen ALT". */
+  productImageAlt: z.string().default('Producto'),
   /** Cuál de las 2 formas de logo del maestro se muestra — ver el comentario
    *  grande de DEAL_LOGO_SHAPE_VALUES arriba. Default 'cuadrado': preserva el
    *  comportamiento de siempre para toda tarjeta/documento ya existente. */

@@ -162,9 +162,17 @@ export type ImgAutomaticaModuloFields = z.infer<typeof imgAutomaticaModuloFields
 export const defaultImgAutomaticaModuloFields: ImgAutomaticaModuloFields = imgAutomaticaModuloFieldsSchema.parse({})
 
 export const imgFijaFieldsSchema = z.object({
-  // heroImageUrl NO tiene alt propio — el maestro lo pinta como
-  // `background-image: url(...)` de un <td>, nunca un <img> real.
+  // heroImageUrl va dentro de `background-image: url(...)` de un <td>, nunca
+  // un <img> real — sin un atributo `alt` nativo, así que su texto
+  // alternativo (heroImageAlt, abajo) se expone como `role="img"
+  // aria-label="..."` en ese mismo <td> (ver renderImgFijaSnippet).
   heroImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1DUvbZ8_lGdt1N_jZUSt4vyHHblvbVg9P'),
+  /** Alt de heroImageUrl — el maestro no trae ningún valor de fábrica acá (no
+   *  hay accesibilidad de por medio en un `background-image`), así que no hay
+   *  un literal que "reproducir" — default elegido por la app. Pedido
+   *  explícito del usuario 2026-09-09: "para todas las imagenes que son
+   *  agregadas como fondo, tambien agregales un campo ALT". */
+  heroImageAlt: z.string().default('Imagen'),
   logoImageUrl: z.string().default('https://lh3.googleusercontent.com/d/1a9-c_8otztz8MJvWa6G-TczJ3NEO083G'),
   /** Alt del `<img class="banner-logo1-1">` — default reproduce el `alt="LOGO"`
    *  que modulo_img_altofijo_{horizontal,vertical}.html ya trae de fábrica. */

@@ -5,6 +5,8 @@ import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
 import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
+import { tagOpenInsertionPoint } from './htmlEdits'
+import { backgroundImageAltAttrs } from './htmlText'
 
 /**
  * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
@@ -54,6 +56,17 @@ const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/
 const CIERRE_MARKER = '<!-- CIERRES -->'
 
 /**
+ * `<td class="fondomobile" ... style="background-image: url({{bg_imgevento_mail_general}}); ...">`
+ * — el `<td>` de la imagen de fondo global (global.fondoUrl). Un
+ * `background-image` no tiene un atributo `alt` nativo, así que su texto
+ * alternativo (global.fondoAlt) se agrega acá como `role="img"
+ * aria-label="..."`, solo cuando hay imagen (vacío = sin fondo = sin
+ * aria-label tampoco). Pedido explícito del usuario 2026-09-09: "para todas
+ * las imagenes que son agregadas como fondo, tambien agregales un campo ALT".
+ */
+const FONDOMOBILE_ANCHOR = 'class="fondomobile"'
+
+/**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
  * por scripts/sync-master.mjs), deja el tema ya resuelto y reemplaza, por
  * string literal, cada marcador de slot que tenga una entrada en el registry.
@@ -83,6 +96,15 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   // haya o no piezas de banner / bloques DEALS en el documento: el Liquid de
   // ejemplo viene del maestro, no de lo que armó el usuario.
   let html = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
+
+  if (doc.global.fondoUrl.trim() !== '') {
+    const fondoIndex = html.indexOf(FONDOMOBILE_ANCHOR)
+    if (fondoIndex === -1) {
+      throw new Error(`No se encontró ${FONDOMOBILE_ANCHOR} en template_base.html`)
+    }
+    const fondoTdInsertAt = tagOpenInsertionPoint(html, fondoIndex, 'td', 'template_base.html')
+    html = html.slice(0, fondoTdInsertAt) + backgroundImageAltAttrs(doc.global.fondoAlt) + html.slice(fondoTdInsertAt)
+  }
 
   if (!html.includes(CIERRE_MARKER)) {
     throw new Error(`No se encontró el marcador ${CIERRE_MARKER} en template_base.html`)

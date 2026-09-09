@@ -15,7 +15,9 @@
 // de PROMO/TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO — ver richText/render.ts.
 // ============================================================================
 import type { EmailDocument } from '../../../model'
-import { escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../../template/htmlText'
+import { cssUrlValue } from '../../../global/vars'
+import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../../template/htmlText'
+import { indexOfOrThrow, tagOpenInsertionPoint } from '../../../template/htmlEdits'
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { DARK_THEME_SLUGS } from '../../../themes/themes'
@@ -410,7 +412,9 @@ export function renderImgAutomaticaModuloSnippet(fields: ImgAutomaticaModuloFiel
 
 /** El fondo va en `background-image: url(...)`, no un `<img>` — un valor
  *  vacío ya no deja ningún ícono roto ahí (el navegador simplemente no pinta
- *  nada), así que sigue con `substituteOnce` normal, sin `substituteImgSrcOrRemove`. */
+ *  nada), así que sigue con `substituteOnce` normal, sin `substituteImgSrcOrRemove`.
+ *  Su texto alternativo (heroImageAlt) sí se agrega, como `role="img"
+ *  aria-label="..."` en el `<td>` que lo pinta (ver renderImgFijaSnippet). */
 const IMG_FIJA_HERO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1DUvbZ8_lGdt1N_jZUSt4vyHHblvbVg9P'
 const IMG_FIJA_LOGO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1a9-c_8otztz8MJvWa6G-TczJ3NEO083G'
 /** Solo la variante VERTICAL envuelve el logo en este link — asimetría real
@@ -421,7 +425,17 @@ const IMG_FIJA_LOGO_LINK_PLACEHOLDER = 'AQUIELLINKDELOGO1'
 export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `modulo_img_altofijo_${ctx.bannerType}.html`
   let html = stripComments(loadBannerMoleculaFile(fileName))
-  html = substituteOnce(html, IMG_FIJA_HERO_URL_PLACEHOLDER, escapeHtmlAttr(fields.heroImageUrl), fileName)
+  // El role="img" aria-label="..." se inserta ANTES de sustituir el
+  // placeholder: se ubica por el placeholder (todavía literal en este punto),
+  // pero la propia inserción no lo toca — substituteOnce de abajo lo vuelve a
+  // buscar por texto, así que el corrimiento de índices no rompe nada.
+  const heroIndex = indexOfOrThrow(html, IMG_FIJA_HERO_URL_PLACEHOLDER, fileName)
+  const heroTdInsertAt = tagOpenInsertionPoint(html, heroIndex, 'td', fileName)
+  html = html.slice(0, heroTdInsertAt) + backgroundImageAltAttrs(fields.heroImageAlt) + html.slice(heroTdInsertAt)
+  // cssUrlValue, no escapeHtmlAttr: va SIN comillas dentro de `url(...)`, un
+  // `)` o un espacio en la URL rompería la declaración CSS (mismo motivo que
+  // deals/productImageUrl y logos/imageUrl, ver global/vars.ts#cssUrlValue).
+  html = substituteOnce(html, IMG_FIJA_HERO_URL_PLACEHOLDER, cssUrlValue(fields.heroImageUrl), fileName)
   html = substituteImgSrcOrRemove(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, fields.logoImageUrl, fields.logoImageAlt, fileName)
   if (ctx.bannerType === 'vertical') {
     html = substituteOnce(html, IMG_FIJA_LOGO_LINK_PLACEHOLDER, escapeHtmlAttr(fields.logoLink), fileName)

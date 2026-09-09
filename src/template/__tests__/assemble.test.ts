@@ -178,6 +178,33 @@ describe('assembleEmailHtml · fondo personalizado', () => {
       'background-image: url({{content_blocks.${FONDO}}})',
     )
   })
+
+  // El background-image del <td class="fondomobile"> no tiene un alt nativo —
+  // se expone como role="img" aria-label="..." en el mismo <td>, solo cuando
+  // hay imagen. Pedido explícito del usuario 2026-09-09 ("para todas las
+  // imagenes que son agregadas como fondo, tambien agregales un campo ALT").
+  // Se escopea al <td class="fondomobile"> puntual (no a "not.toContain
+  // role=img" en TODO el documento): el doc por defecto ya trae deals con su
+  // propio role="img" (productImageAlt), sin relación con este campo.
+  const fondomobileTag = (html: string): string => {
+    const anchor = html.indexOf('class="fondomobile"')
+    const start = html.lastIndexOf('<td', anchor)
+    const end = html.indexOf('>', anchor) + 1
+    return html.slice(start, end)
+  }
+
+  it('exposes global.fondoAlt as role="img" aria-label="..." on the fondomobile td, only when there is a background', () => {
+    const withAlt = (fondoUrl: string, fondoAlt: string) =>
+      assembleEmailHtml({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, fondoUrl, fondoAlt } })
+
+    expect(fondomobileTag(withAlt('https://x.test/a.png', 'Paisaje de la promo'))).toContain(
+      'role="img" aria-label="Paisaje de la promo"',
+    )
+
+    const withoutImage = withAlt('', 'no debería aparecer')
+    expect(fondomobileTag(withoutImage)).not.toContain('role="img"')
+    expect(withoutImage).not.toContain('no debería aparecer')
+  })
 })
 
 it('never carries the preview-only dark-client filter — that is view-only, in preview/liquidPreview.ts', () => {

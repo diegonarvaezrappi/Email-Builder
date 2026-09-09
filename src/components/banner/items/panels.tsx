@@ -254,6 +254,14 @@ export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanel
         />
       </label>
       <label className="field">
+        <span>Alt de la imagen de fondo</span>
+        <input
+          type="text"
+          value={value.heroImageAlt}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, heroImageAlt: e.target.value })}
+        />
+      </label>
+      <label className="field">
         <span>Logo</span>
         <input
           type="text"

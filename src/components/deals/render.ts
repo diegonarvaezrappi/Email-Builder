@@ -40,7 +40,7 @@
 import dealColumnasRaw from '../../assets/templates/deals/deal_columnas.html?raw'
 import type { EmailDocument } from '../../model'
 import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
-import { escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
+import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
 import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
 import * as htmlEdits from '../../template/htmlEdits'
 import type { Bounds, Edit } from '../../template/htmlEdits'
@@ -140,6 +140,8 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
     end: productIndex + PRODUCT_IMAGE_PLACEHOLDER.length,
     replacement: cssUrlValue(fields.productImageUrl),
   })
+  const productTdInsertAt = htmlEdits.tagOpenInsertionPoint(cell, productIndex, 'td', FILE_NAME)
+  edits.push({ start: productTdInsertAt, end: productTdInsertAt, replacement: backgroundImageAltAttrs(fields.productImageAlt) })
 
   // LOGO_ANCHOR (`role="molecula-iconoL"`) se repite en los 2 <img> del maestro
   // (cuadrado Y pastilla) — indexOfOrThrow toma el PRIMERO, que en el HTML real

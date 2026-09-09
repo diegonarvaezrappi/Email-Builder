@@ -84,6 +84,14 @@ export function LogosPropertiesPanel({ value, onChange }: LogosPropertiesPanelPr
               onChange={(e: ChangeEvent<HTMLInputElement>) => updateLogo(index, { imageUrl: e.target.value })}
             />
           </label>
+          <label className="field">
+            <span>Alt de la imagen</span>
+            <input
+              type="text"
+              value={logo.imageAlt}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => updateLogo(index, { imageAlt: e.target.value })}
+            />
+          </label>
           <label className="field field-checkbox">
             <input
               type="checkbox"

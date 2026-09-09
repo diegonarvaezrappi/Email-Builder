@@ -68,6 +68,23 @@ describe('renderLogosSnippet · grilla de 3 logos (default)', () => {
     expect(html.match(/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A/g)?.length).toBe(6)
   })
 
+  // El background-image de cada logo no tiene un alt nativo — se expone como
+  // role="img" aria-label="..." en la misma celda, pedido explícito del
+  // usuario 2026-09-09 ("para todas las imagenes que son agregadas como
+  // fondo, tambien agregales un campo ALT").
+  it('exposes each logo\'s own imageAlt as role="img" aria-label="..." on its cell, in BOTH tables', () => {
+    const fields = withLogo(defaultLogosFields, 0, { imageAlt: 'Logo de Aliado 1' })
+    const html = render(fields)
+    expect(html.match(/role="img" aria-label="Logo de Aliado 1"/g)?.length).toBe(2)
+  })
+
+  it('omits the aria-label entirely when imageUrl is blank — no image to describe', () => {
+    const fields = withLogo(defaultLogosFields, 1, { imageUrl: '', imageAlt: 'no debería aparecer' })
+    const html = render(fields)
+    expect(html).not.toContain('no debería aparecer')
+    expect(html.match(/role="img" aria-label=/g)?.length).toBe(4) // los otros 2 logos × 2 tablas
+  })
+
   it('logosBorderRadiusEnabled=true (default) adds 7px to every logo cell, in BOTH tables', () => {
     const html = render(defaultLogosFields)
     expect(html.match(/border-radius: 7px/g)?.length).toBe(6)

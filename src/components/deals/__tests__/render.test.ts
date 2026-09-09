@@ -388,6 +388,19 @@ describe('renderDealsSnippet · enlaces, escapado y limpieza', () => {
     expect(html).not.toContain('a b(c).png')
   })
 
+  // El background-image de producto no tiene un alt nativo — se expone como
+  // role="img" aria-label="..." en el mismo <td>, pedido explícito del
+  // usuario 2026-09-09 ("para todas las imagenes que son agregadas como
+  // fondo, tambien agregales un campo ALT, por ejemplo las imagenes de
+  // productos de los deals, no tienen ALT").
+  it('expone productImageAlt como role="img" aria-label="..." en el <td> del fondo de producto', () => {
+    const html = render(cards(card('a', { productImageAlt: 'Hamburguesa doble' })))
+    expect(html).toContain('role="img" aria-label="Hamburguesa doble"')
+    const tdIndex = html.indexOf('role="img" aria-label="Hamburguesa doble"')
+    expect(html.slice(0, tdIndex)).toMatch(/<td[^>]*$/)
+    expect(html.slice(tdIndex)).toContain('background-image: url(https://images.rappi.com/products')
+  })
+
   it('no deja comentarios del maestro ni Liquid sin resolver, en ninguno de los 11 temas', () => {
     for (const tema of THEME_SLUGS) {
       const html = render(cards(card('a'), card('b', { legalEnabled: true })), {

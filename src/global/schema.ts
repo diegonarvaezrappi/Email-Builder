@@ -106,6 +106,18 @@ export const globalSchema = z.object({
   fondoUrl: z.string().default(''),
 
   /**
+   * Alt de fondoUrl — pinta un `background-image: url(...)` (el `<td
+   * class="fondomobile">` de arriba), sin un atributo `alt` nativo, así que se
+   * expone como `role="img" aria-label="..."` en ese mismo `<td>` (ver
+   * template/assemble.ts), solo cuando hay imagen — vacío = sin fondo = sin
+   * aria-label tampoco, mismo criterio que fondoUrl. Sin valor de fábrica que
+   * reproducir (ningún tema asigna esta variable), default elegido por la
+   * app. Pedido explícito del usuario 2026-09-09: "para todas las imagenes
+   * que son agregadas como fondo, tambien agregales un campo ALT".
+   */
+  fondoAlt: z.string().default('Imagen de fondo'),
+
+  /**
    * `style_Look` del content block CTA-template — GLOBAL a propósito (pedido
    * explícito del usuario): un solo control, todas las instancias de CTA lo
    * leen al renderizar, así que cambiar el estilo en cualquier lado cambia

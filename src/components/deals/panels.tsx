@@ -150,6 +150,10 @@ export function DealCardPropertiesPanel({ value, onChange }: DealCardPropertiesP
         <input type="text" placeholder="https://..." value={value.productImageUrl} onChange={(e) => set('productImageUrl', e.target.value)} />
       </label>
       <label className="field">
+        <span>Alt de la imagen del producto</span>
+        <input type="text" value={value.productImageAlt} onChange={(e) => set('productImageAlt', e.target.value)} />
+      </label>
+      <label className="field">
         <span>Forma del logo</span>
         <select value={value.logoShape} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoShape', e.target.value as DealLogoShape)}>
           {DEAL_LOGO_SHAPE_VALUES.map((shape) => (

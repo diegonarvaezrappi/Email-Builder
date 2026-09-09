@@ -7,7 +7,7 @@ const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [d
 const imgFija = (id: string): BannerItem => ({
   id,
   type: 'IMG_FIJA',
-  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
+  fields: { heroImageUrl: '', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
 })
 const imgAutoModulo = (id: string): BannerItem => ({
   id,

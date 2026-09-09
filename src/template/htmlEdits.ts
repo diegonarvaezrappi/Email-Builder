@@ -91,6 +91,24 @@ export function elementBounds(html: string, anchorIndex: number, tag: string, fi
   }
 }
 
+/**
+ * Punto de inserción (posición, no un rango) justo después del nombre de tag
+ * de la apertura del elemento `<tag>` que contiene anchorIndex — para agregar
+ * un atributo nuevo sin tocar los que ya tiene. Mismo `lastIndexOf` que
+ * elementBounds/voidElementBounds, pero nunca busca el cierre: no hace falta
+ * para insertar acá. Primer uso: agregar `role="img" aria-label="..."` al
+ * elemento que carga un `background-image: url(...)` (ver
+ * template/htmlText.ts#backgroundImageAltAttrs).
+ */
+export function tagOpenInsertionPoint(html: string, anchorIndex: number, tag: string, fileName: string): number {
+  const open = `<${tag}`
+  const start = html.lastIndexOf(open, anchorIndex)
+  if (start === -1) {
+    throw new Error(`${fileName}: no se encontró la apertura ${open} antes de la posición ${anchorIndex} — revisar el render que la busca`)
+  }
+  return start + open.length
+}
+
 /** Elemento sin cierre (`<img>`): de su apertura hasta el `>` que la termina. */
 export function voidElementBounds(html: string, anchorIndex: number, tag: string, fileName: string): Bounds {
   const open = `<${tag}`

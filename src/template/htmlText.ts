@@ -79,3 +79,32 @@ export function substituteImgSrcOrRemove(html: string, placeholder: string, url:
   const nextTag = tag.replace(placeholder, () => escapeHtmlAttr(url)).replace(IMG_ALT_ATTR_RE, () => `alt="${escapeHtmlAttr(alt)}"`)
   return html.slice(0, tagStart) + nextTag + html.slice(tagEnd)
 }
+
+/**
+ * `role="img" aria-label="..."` — técnica estándar de accesibilidad para un
+ * elemento pintado con `background-image: url(...)`, que a diferencia de un
+ * `<img>` no tiene un atributo `alt` nativo. Pedido explícito del usuario
+ * 2026-09-09 (mismo día que el resto de la app ganó `alt` en cada `<img>`
+ * real, ver el comentario grande de substituteImgSrcOrRemove arriba): "para
+ * todas las imagenes que son agregadas como fondo, tambien agregales un campo
+ * ALT, por ejemplo las imagenes de productos de los deals, no tienen ALT".
+ */
+export function backgroundImageAltAttrs(alt: string): string {
+  return ` role="img" aria-label="${escapeHtmlAttr(alt)}"`
+}
+
+/**
+ * Inserta backgroundImageAltAttrs justo después del nombre de tag de la
+ * apertura de `html` — para fragmentos que arrancan exactamente en su propia
+ * apertura (una celda ya recortada por elementBounds/findRepeatedElementBounds,
+ * que puede ser `<td>` o `<th>` según la celda — ver components/logos/render.ts).
+ * Falla ruidoso si `html` no arranca con la apertura de un tag real.
+ */
+export function insertBackgroundImageAltAtStart(html: string, alt: string, fileName: string): string {
+  const match = /^<[a-zA-Z][a-zA-Z0-9]*/.exec(html)
+  if (!match) {
+    throw new Error(`${fileName}: el fragmento no arranca con la apertura de un tag — revisar insertBackgroundImageAltAtStart`)
+  }
+  const insertAt = match[0].length
+  return html.slice(0, insertAt) + backgroundImageAltAttrs(alt) + html.slice(insertAt)
+}

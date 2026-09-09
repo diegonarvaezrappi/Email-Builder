@@ -22,7 +22,7 @@ const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', field
 const imgFija = (id: string): BannerItem => ({
   id,
   type: 'IMG_FIJA',
-  fields: { heroImageUrl: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
+  fields: { heroImageUrl: '', heroImageAlt: '', logoImageUrl: '', logoImageAlt: '', logoLink: '' },
 })
 
 describe('renderBannerSnippet', () => {
@@ -106,7 +106,7 @@ describe('renderBannerSnippet', () => {
       { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', imageAlt: 'x', widthPercent: 80, borderRadiusEnabled: false } },
-      { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', logoImageUrl: 'x', logoImageAlt: 'x', logoLink: '' } },
+      { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', heroImageAlt: 'x', logoImageUrl: 'x', logoImageAlt: 'x', logoLink: '' } },
       { id: '7', type: 'TAGS', fields: { tags: [defaultTagItem('a')] } },
     ]
     for (const tema of THEME_SLUGS) {

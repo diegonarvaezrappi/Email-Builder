@@ -51,6 +51,16 @@ export function ToolbarGlobals({ value, onChange }: ToolbarGlobalsProps) {
           </button>
         )}
       </label>
+
+      <label className="toolbar-field">
+        <span>Alt del fondo</span>
+        <input
+          type="text"
+          disabled={value.fondoUrl.trim() === ''}
+          value={value.fondoAlt}
+          onChange={(e) => onChange({ ...value, fondoAlt: e.target.value })}
+        />
+      </label>
     </>
   )
 }
