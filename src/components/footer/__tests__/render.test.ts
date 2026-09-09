@@ -49,7 +49,7 @@ describe('renderFooterSnippet', () => {
       [
         "                            {% assign cond = '' %}",
         "                            {% assign font_style_look = 'beige100' %}",
-        "                            {% assign firma = 'sin firma' %}",
+        "                            {% assign firma = 'sinfirma' %}",
         '                            {% assign show_legal_tyc = false %}',
         '                            {% assign show_legal_turbo = false %}',
         '                            {% assign show_legal_liquor = false %}',
@@ -58,8 +58,8 @@ describe('renderFooterSnippet', () => {
     )
   })
 
-  it('defaults firma to "sin firma", and reflects an explicit choice verbatim', () => {
-    expect(renderFooterSnippet(defaultFooterFields, 'beige100')).toContain("firma = 'sin firma'")
+  it('defaults firma to "sinfirma", and reflects an explicit choice verbatim', () => {
+    expect(renderFooterSnippet(defaultFooterFields, 'beige100')).toContain("firma = 'sinfirma'")
     expect(renderFooterSnippet({ ...defaultFooterFields, firma: 'general' }, 'beige100')).toContain("firma = 'general'")
     expect(renderFooterSnippet({ ...defaultFooterFields, firma: 'turbo' }, 'beige100')).toContain("firma = 'turbo'")
   })
