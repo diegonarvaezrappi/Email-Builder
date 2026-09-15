@@ -13,6 +13,7 @@ import { logosFieldsSchema, type LogosFields } from './components/logos/schema'
 import { cuponesFieldsSchema, type CuponesFields } from './components/cupones/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
+import { tropicalizationsSchema, type Tropicalizations } from './tropicalize/schema'
 
 /** Re-exportados para que el resto de la app siga importando desde model.ts,
  *  igual que ContentBlock — ver la nota en components/banner/items/schemas.ts
@@ -274,6 +275,16 @@ export interface EmailDocument {
   banner: BannerFields
   footer: FooterFields
   contenidos: ContentBlock[]
+  /**
+   * Condicionales de país por elemento ("Tropicalizar", ver src/tropicalize/).
+   * Mapa keyeado por una clave plana (tropicalize/keys.ts: `slot:HEADER`,
+   * `block:<id>`, `bitem:<id>`, `dcard:<id>`, `mitem:<id>`) — mismo criterio
+   * que el resto del documento: los ids son únicos en todo el documento, así
+   * que el dueño se busca, nunca viaja en la clave. `.default({})` en el
+   * schema de abajo: un documento sin tropicalizaciones renderiza byte a
+   * byte igual que antes de esta feature (ver tropicalize/render.ts).
+   */
+  tropicalizations: Tropicalizations
 }
 
 /** Usado por store/persistence.ts para validar lo que viene de localStorage.
@@ -287,4 +298,5 @@ export const emailDocumentSchema = z.object({
   banner: bannerSchema.default(defaultBannerFields),
   footer: footerSchema,
   contenidos: z.array(contentBlockSchema).default([]),
+  tropicalizations: tropicalizationsSchema,
 })

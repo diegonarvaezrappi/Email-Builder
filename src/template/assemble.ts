@@ -7,6 +7,8 @@ import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
 import { tagOpenInsertionPoint } from './htmlEdits'
 import { backgroundImageAltAttrs } from './htmlText'
+import { slotKey } from '../tropicalize/keys'
+import { renderTropicalized } from '../tropicalize/render'
 
 /**
  * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
@@ -116,7 +118,14 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     if (!def) continue
 
     const fields = doc[def.docKey]
-    const rendered = def.render(fields, doc)
+    // CONTENIDOS no es un elemento tropicalizable en sí — es el array de
+    // bloques; cada bloque tiene su propia clave (`block:<id>`, ver
+    // components/contenidos/render.ts). Los otros 3 son singletons, cada uno
+    // con su propia clave `slot:<SLOT>` (tropicalize/keys.ts).
+    const rendered =
+      slot === 'CONTENIDOS'
+        ? def.render(fields, doc)
+        : renderTropicalized(doc, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER'), fields, (f) => def.render(f, doc))
 
     if (slot === 'HEADER') {
       if (!HEADER_WRAPPER_PLACEHOLDER_RE.test(html)) {

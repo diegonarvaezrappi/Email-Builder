@@ -18,25 +18,15 @@ import footerRtsRaw from '../assets/templates/footer_rts.html?raw'
 import footerSinAmorRaw from '../assets/templates/footer_sinamor.html?raw'
 import ctaTemplateRaw from '../assets/templates/cta-template.html?raw'
 import { FOOTER_CONTENT_BLOCK_BY_TIPO } from '../components/footer/render'
-import type { TipoFooter } from '../components/footer/schema'
+import { TIPO_FOOTER_VALUES, type TipoFooter } from '../components/footer/schema'
 import { CTA_CONTENT_BLOCK_NAME } from '../components/cta/render'
 import type { EmailDocument } from '../model'
 import { assembleEmailHtml } from '../template/assemble'
+import type { PreviewCountry } from './countries'
 
-export const PREVIEW_COUNTRIES = ['AR', 'BR', 'CL', 'CO', 'CR', 'EC', 'MX', 'PE', 'UY'] as const
-export type PreviewCountry = (typeof PREVIEW_COUNTRIES)[number]
-
-export const PREVIEW_COUNTRY_LABELS: Record<PreviewCountry, string> = {
-  AR: 'Argentina',
-  BR: 'Brasil',
-  CL: 'Chile',
-  CO: 'Colombia',
-  CR: 'Costa Rica',
-  EC: 'Ecuador',
-  MX: 'México',
-  PE: 'Perú',
-  UY: 'Uruguay',
-}
+/** Re-exportados desde ./countries.ts (hoja sin imports, ver la nota ahí) —
+ *  ningún import existente de estos 3 símbolos tiene que cambiar. */
+export { PREVIEW_COUNTRIES, PREVIEW_COUNTRY_LABELS, type PreviewCountry } from './countries'
 
 /** Cuerpo real (documentación/referencia) de cada content block de Braze. */
 const CONTENT_BLOCK_BODY_BY_TIPO: Record<TipoFooter, string> = {
@@ -95,10 +85,23 @@ function inlineAllContentBlockOccurrences(html: string, reference: string, body:
  * Braze al enviar. Tiene que correr ANTES de preprocessBrazeShorthand: esa
  * función stubea cualquier `algo.${...}` a `"#"`, así que si el orden se
  * invirtiera el footer desaparecería del preview.
+ *
+ * Recorre los 3 `TipoFooter` SIEMPRE, no solo el de `doc.footer` — con
+ * Tropicalizar, una rama del FOOTER puede fijar un `tipoFooter` DISTINTO al
+ * de la base, y el HTML exportado lleva entonces más de una referencia de
+ * content block a la vez (una por rama que lo cambie). Cada
+ * `inlineAllContentBlockOccurrences` es un no-op si su referencia no está
+ * presente, así que para un documento sin tropicalizar el resultado es
+ * idéntico al de antes (solo la referencia real del documento aparece, las
+ * otras 2 simplemente no matchean nada).
  */
-export function inlineFooterContentBlock(html: string, tipoFooter: TipoFooter): string {
-  const reference = `{{content_blocks.\${${FOOTER_CONTENT_BLOCK_BY_TIPO[tipoFooter]}}}}`
-  return inlineAllContentBlockOccurrences(html, reference, CONTENT_BLOCK_BODY_BY_TIPO[tipoFooter])
+export function inlineFooterContentBlock(html: string): string {
+  let out = html
+  for (const tipoFooter of TIPO_FOOTER_VALUES) {
+    const reference = `{{content_blocks.\${${FOOTER_CONTENT_BLOCK_BY_TIPO[tipoFooter]}}}}`
+    out = inlineAllContentBlockOccurrences(out, reference, CONTENT_BLOCK_BODY_BY_TIPO[tipoFooter])
+  }
+  return out
 }
 
 /**
@@ -158,7 +161,7 @@ export async function renderEmailPreview(
   country: PreviewCountry,
 ): Promise<EmailPreviewResult> {
   try {
-    let withContentBlocks = inlineFooterContentBlock(assembleEmailHtml(doc), doc.footer.tipoFooter)
+    let withContentBlocks = inlineFooterContentBlock(assembleEmailHtml(doc))
     withContentBlocks = inlineCtaContentBlock(withContentBlocks)
     const preprocessed = preprocessBrazeShorthand(withContentBlocks)
     const html = await getPreviewEngine().parseAndRender(preprocessed, { user_id: country })

@@ -44,7 +44,7 @@ describe('preprocessBrazeShorthand', () => {
 
 describe('inlineFooterContentBlock', () => {
   it('swaps the opaque content block reference for its real body', () => {
-    const out = inlineFooterContentBlock('antes {{content_blocks.${FOOTER_q1_2024_legales}}} después', 'General')
+    const out = inlineFooterContentBlock('antes {{content_blocks.${FOOTER_q1_2024_legales}}} después')
     expect(out).not.toContain('content_blocks')
     expect(out).toContain('antes ')
     expect(out).toContain(' después')
@@ -56,7 +56,21 @@ describe('inlineFooterContentBlock', () => {
     // así que invertirlo borraría el footer del preview.
     const reference = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
     expect(preprocessBrazeShorthand(reference)).toBe('{{"#"}}')
-    expect(inlineFooterContentBlock(reference, 'General').length).toBeGreaterThan(1000)
+    expect(inlineFooterContentBlock(reference).length).toBeGreaterThan(1000)
+  })
+
+  // Con Tropicalizar, una rama del FOOTER puede fijar un tipoFooter DISTINTO
+  // al de la base — el HTML exportado lleva entonces más de una referencia
+  // de content block. Las 3 se inlinean sin importar cuál sea "la" del
+  // documento (cada replaceAll es un no-op si su referencia no está).
+  it('inlines all 3 TipoFooter references at once, regardless of which the document uses', () => {
+    const out = inlineFooterContentBlock(
+      'A {{content_blocks.${FOOTER_q1_2024_legales}}} B {{content_blocks.${FOOTER_VERSION2}}} C {{content_blocks.${FOOTER_RTS_q3_2024_legales}}}',
+    )
+    expect(out).not.toContain('content_blocks')
+    expect(out).toContain('A ')
+    expect(out).toContain(' B ')
+    expect(out).toContain(' C ')
   })
 })
 

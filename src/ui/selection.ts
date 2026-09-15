@@ -74,3 +74,19 @@ export function isBannerItemSelected(selected: Selection | null, bannerItemId: s
 export function isModuleItemSelected(selected: Selection | null, moduleItemId: string): boolean {
   return selected?.slot === 'CONTENIDOS' && selected.moduleItemId === moduleItemId
 }
+
+/**
+ * Al entrar a la pestaña Tropicalizar, una línea de deal seleccionada
+ * (`dealCardPieceType` presente) no es un objetivo tropicalizable (decisión
+ * explícita del usuario) — se sube la selección a la tarjeta dueña, para que
+ * el lienzo/panel de Tropicalizar tengan algo coherente que resaltar en vez
+ * de mostrar la tarjeta mientras nada en el lienzo aparece seleccionado
+ * (`isDealCardSelected` exige `dealCardPieceType === undefined`). El resto de
+ * las formas de `Selection` pasan sin cambios.
+ */
+export function normalizeTropicalizationTarget(selected: Selection | null): Selection | null {
+  if (selected?.slot === 'CONTENIDOS' && selected.dealCardId && selected.dealCardPieceType) {
+    return selectDealCard(selected.dealCardId)
+  }
+  return selected
+}

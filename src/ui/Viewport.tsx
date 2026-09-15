@@ -29,13 +29,17 @@
 // La pestaña "Código" muestra el HTML ensamblado (con el Liquid intacto), que
 // es lo que se copia/descarga — nunca pasa por LiquidJS.
 // ============================================================================
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ContentBlockType, EmailDocument, SlotName } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
 import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
 import type { ModuleItemType } from '../moduleItems/schemas'
 import { registry, SLOT_LABELS } from '../registry'
+import { VIEWPORT_TAB_LABELS, VIEWPORT_TAB_ORDER, type ViewportTab } from './viewportTab'
+import { withoutTropicalizations } from '../tropicalize/doc'
+import { normalizeBranches, type Tropicalizations } from '../tropicalize/schema'
+import { bannerItemKey, blockKey, dealCardKey, moduleItemKey, slotKey, type TropicalizeKey } from '../tropicalize/keys'
 import { getContentBlockDef, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
@@ -124,9 +128,14 @@ interface ViewportProps {
   /** Pestaña "Importar" — reemplaza el documento entero por uno subido, ver
    *  ui/ImportPanel.tsx. Misma acción del store que "Deshacer" sabe revertir. */
   onImportDocument: (doc: EmailDocument) => void
+  /** Pestaña activa y país "de vista" — subidos a App.tsx (antes vivían acá
+   *  como useState local) porque el panel derecho de Tropicalizar y el aviso
+   *  de Preview también necesitan leerlos/escribirlos, no solo este panel. */
+  tab: ViewportTab
+  onChangeTab: (next: ViewportTab) => void
+  country: PreviewCountry
+  onChangeCountry: (next: PreviewCountry) => void
 }
-
-type Tab = 'preview' | 'code' | 'import'
 
 /**
  * Ancho del preview — Escritorio (todo el ancho del panel, como la ventana de
@@ -178,9 +187,11 @@ export function Viewport({
   onReorderModuleItem,
   onRemoveModuleItem,
   onImportDocument,
+  tab,
+  onChangeTab,
+  country,
+  onChangeCountry,
 }: ViewportProps) {
-  const [tab, setTab] = useState<Tab>('preview')
-  const [country, setCountry] = useState<PreviewCountry>('CO')
   const [device, setDevice] = useState<PreviewDevice>('desktop')
   // Simula el color-scheme del CLIENTE de correo (Gmail/Outlook/Apple Mail con
   // dark mode activado), no de la app. Es un ajuste de vista, no del email:
@@ -190,10 +201,23 @@ export function Viewport({
   const [previewError, setPreviewError] = useState<string | undefined>()
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
   const [pngStatus, setPngStatus] = useState<'idle' | 'generating' | 'error'>('idle')
+  // Solo tiene efecto en la pestaña Tropicalizar: 'base' renderiza el
+  // documento SIN condicionales (withoutTropicalizations) — todo elemento
+  // queda siempre seleccionable, sin importar qué rama oculte qué país —
+  // 'country' renderiza el documento real, para verificar qué recibe
+  // efectivamente el país elegido (a costa de que un elemento oculto ahí deje
+  // de tener rect y se vuelva inseleccionable — para eso está el índice de la
+  // izquierda). Arranca en 'base': es el modo seguro para seguir editando.
+  const [tropicalizeViewMode, setTropicalizeViewMode] = useState<'base' | 'country'>('base')
+
+  const docForPreview = useMemo(
+    () => (tab === 'tropicalize' && tropicalizeViewMode === 'base' ? withoutTropicalizations(doc) : doc),
+    [doc, tab, tropicalizeViewMode],
+  )
 
   useEffect(() => {
     let cancelled = false
-    renderEmailPreview(doc, country).then((result) => {
+    renderEmailPreview(docForPreview, country).then((result) => {
       if (cancelled) return
       setPreviewHtml(result.html)
       setPreviewError(result.error)
@@ -201,7 +225,7 @@ export function Viewport({
     return () => {
       cancelled = true
     }
-  }, [doc, country])
+  }, [docForPreview, country])
 
   const handleCopy = async () => {
     try {
@@ -220,7 +244,7 @@ export function Viewport({
   const handleDownloadPng = async () => {
     setPngStatus('generating')
     try {
-      await downloadPng(doc, 'email-footer')
+      await downloadPng(doc, 'email-footer', country)
       setPngStatus('idle')
     } catch {
       setPngStatus('error')
@@ -253,20 +277,37 @@ export function Viewport({
   return (
     <div className="panel-viewport">
       <div className="viewport-bar">
-        <button type="button" className={tab === 'preview' ? 'active' : ''} onClick={() => setTab('preview')}>
-          Preview
-        </button>
-        <button type="button" className={tab === 'code' ? 'active' : ''} onClick={() => setTab('code')}>
-          Exportar
-        </button>
-        <button type="button" className={tab === 'import' ? 'active' : ''} onClick={() => setTab('import')}>
-          Importar
-        </button>
-        {tab === 'preview' && (
+        {VIEWPORT_TAB_ORDER.map((t) => (
+          <button key={t} type="button" className={tab === t ? 'active' : ''} onClick={() => onChangeTab(t)}>
+            {VIEWPORT_TAB_LABELS[t]}
+          </button>
+        ))}
+        {(tab === 'preview' || tab === 'tropicalize') && (
           <>
+            {tab === 'tropicalize' && (
+              <div className="tropicalize-view-mode" role="group" aria-label="Qué muestra el lienzo de Tropicalizar">
+                <button
+                  type="button"
+                  className={tropicalizeViewMode === 'base' ? 'active' : ''}
+                  aria-pressed={tropicalizeViewMode === 'base'}
+                  onClick={() => setTropicalizeViewMode('base')}
+                >
+                  Diseño base
+                </button>
+                <button
+                  type="button"
+                  className={tropicalizeViewMode === 'country' ? 'active' : ''}
+                  aria-pressed={tropicalizeViewMode === 'country'}
+                  onClick={() => setTropicalizeViewMode('country')}
+                >
+                  Vista país
+                </button>
+              </div>
+            )}
+
             <label className="country-select">
-              <span>País (solo preview)</span>
-              <select value={country} onChange={(e) => setCountry(e.target.value as PreviewCountry)}>
+              <span>{tab === 'tropicalize' ? 'País (vista)' : 'País (solo preview)'}</span>
+              <select value={country} onChange={(e) => onChangeCountry(e.target.value as PreviewCountry)}>
                 {PREVIEW_COUNTRIES.map((c) => (
                   <option key={c} value={c}>
                     {PREVIEW_COUNTRY_LABELS[c]}
@@ -318,13 +359,15 @@ export function Viewport({
         )}
       </div>
 
-      {tab === 'preview' ? (
+      {tab === 'preview' || tab === 'tropicalize' ? (
         previewError ? (
           <div className="viewport-canvas">
             <div className="preview-error">{previewError}</div>
           </div>
         ) : (
           <EmailFrame
+            mode={tab === 'tropicalize' ? 'tropicalize' : 'edit'}
+            tropicalizations={doc.tropicalizations}
             html={previewHtml}
             device={device}
             clientScheme={clientScheme}
@@ -407,6 +450,26 @@ interface EmailFrameProps {
   onDuplicateModuleItem: (itemId: string) => void
   onReorderModuleItem: (itemId: string, toIndex: number) => void
   onRemoveModuleItem: (itemId: string) => void
+  /** 'edit' = el lienzo de siempre (Preview): arrastre, duplicar, eliminar.
+   *  'tropicalize' = mismo lienzo, pero SOLO se selecciona — sin arrastre, sin
+   *  duplicar/eliminar, y sin las 7 líneas de una tarjeta de deal (no son
+   *  objetivo tropicalizable). Los elementos que ya tienen una condicional se
+   *  marcan con `.has-liquid` en ambos modos; el estilo visual asociado solo
+   *  se activa en tropicalize (ver App.css). */
+  mode: 'edit' | 'tropicalize'
+  /** El mapa CRUDO del documento (no una proyección) — cada overlay resuelve
+   *  su propia clave (blockKey/bannerItemKey/etc., ver tropicalize/keys.ts) y
+   *  chequea si tiene ramas emitibles. Pasar el mapa entero evita que
+   *  EmailFrame tenga que conocer la forma de una rama para nada más que
+   *  "¿tiene contenido o no?". */
+  tropicalizations: Tropicalizations
+}
+
+/** `true` si la clave tiene al menos una rama con países (normalizeBranches
+ *  ya descarta las vacías) — usado para la marca `.has-liquid` de cada
+ *  overlay. */
+function isTropicalized(tropicalizations: Tropicalizations, key: TropicalizeKey): boolean {
+  return normalizeBranches(tropicalizations[key]?.branches ?? []).length > 0
 }
 
 /** Dónde cayó un slot dentro del documento del iframe. */
@@ -598,6 +661,8 @@ function EmailFrame({
   onDuplicateModuleItem,
   onReorderModuleItem,
   onRemoveModuleItem,
+  mode,
+  tropicalizations,
 }: EmailFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const frameElRef = useRef<HTMLDivElement>(null)
@@ -609,6 +674,11 @@ function EmailFrame({
   const [dealCardPieceRects, setDealCardPieceRects] = useState<MarkedBlockRect[]>([])
   const [moduleItemRects, setModuleItemRects] = useState<MarkedBlockRect[]>([])
   const [dragOver, setDragOver] = useState(false)
+
+  // El modo cambia con la pestaña, no con un gesto: si venías de un arrastre
+  // abortado en Preview, `dragOver` quedaría en true para siempre en
+  // tropicalize (ya no hay onDragLeave que lo apague ahí).
+  useEffect(() => setDragOver(false), [mode])
 
   const syncFrame = useCallback(() => {
     const root = iframeRef.current?.contentDocument
@@ -745,7 +815,7 @@ function EmailFrame({
     <div className="viewport-canvas">
       <div
         ref={frameElRef}
-        className={`email-frame${dragOver ? ' drag-over' : ''}`}
+        className={`email-frame${dragOver ? ' drag-over' : ''}${mode === 'tropicalize' ? ' tropicalize-mode' : ''}`}
         style={device === 'mobile' ? { width: MOBILE_WIDTH } : undefined}
         // Los handlers van en este ancestro común (no en canvas-drop-layer
         // directamente) para que también reciban, por bubbling normal del
@@ -756,6 +826,10 @@ function EmailFrame({
         // drag (restaurar singleton / insertar bloque nuevo / reordenar) se
         // despachan acá según qué dataTransfer type venga presente.
         onDragOver={(e) => {
+          // En tropicalize el lienzo solo selecciona: ningún arrastre debe
+          // mutar el documento base desde la única pestaña cuyo propósito es
+          // "no estás tocando la base acá".
+          if (mode !== 'edit') return
           const types = e.dataTransfer.types
           const reorderTypes = [
             CONTENT_BLOCK_REORDER_DRAG_TYPE,
@@ -780,6 +854,7 @@ function EmailFrame({
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
+          if (mode !== 'edit') return
           setDragOver(false)
 
           const slot = e.dataTransfer.getData(SLOT_DRAG_TYPE)
@@ -887,17 +962,17 @@ function EmailFrame({
         {slotRects.map(({ slot, top, left, width, height: h }) => (
           <div
             key={slot}
-            className={`slot-hit${isSlotSelected(selected, slot) ? ' selected' : ''}`}
+            className={`slot-hit${isSlotSelected(selected, slot) ? ' selected' : ''}${isTropicalized(tropicalizations, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER')) ? ' has-liquid' : ''}`}
             style={{ top, left, width, height: h }}
           >
             <button
               type="button"
               className="slot-select"
-              aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
+              aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${SLOT_LABELS[slot]}`}
               aria-pressed={isSlotSelected(selected, slot)}
               onClick={() => onSelect(selectSlot(slot))}
             />
-            {registry[slot]?.removable && (
+            {mode === 'edit' && registry[slot]?.removable && (
               <button
                 type="button"
                 className="slot-delete"
@@ -915,48 +990,56 @@ function EmailFrame({
         {blockRects.map(({ id, type, top, left, width, height: h }) => (
           <div
             key={id}
-            className={`slot-hit block-hit${isBlockSelected(selected, id) ? ' selected' : ''}`}
+            className={`slot-hit block-hit${isBlockSelected(selected, id) ? ' selected' : ''}${isTropicalized(tropicalizations, blockKey(id)) ? ' has-liquid' : ''}`}
             style={{ top, left, width, height: h }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(CONTENT_BLOCK_REORDER_DRAG_TYPE, id)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
+            draggable={mode === 'edit'}
+            onDragStart={
+              mode === 'edit'
+                ? (e) => {
+                    e.dataTransfer.setData(CONTENT_BLOCK_REORDER_DRAG_TYPE, id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }
+                : undefined
+            }
           >
             <button
               type="button"
               className="slot-select"
-              aria-label={`Seleccionar ${getContentBlockDef(type)?.label ?? type}`}
+              aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${getContentBlockDef(type)?.label ?? type}`}
               aria-pressed={isBlockSelected(selected, id)}
               onClick={() => onSelect(selectBlock(id))}
             />
-            {/* Duplicar una fila de DEALS es una forma más de agregar otra
-                (junto con arrastrar "Deals" de nuevo desde la librería) — sin
-                tope, ver components/deals/schema.ts. contentBlockRegistry.ts's
-                cloneFields le asigna ids nuevos a las tarjetas copiadas, así
-                que la fila duplicada nunca comparte id con la original. */}
-            <button
-              type="button"
-              className="slot-duplicate"
-              aria-label="Duplicar"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicateBlock(id)
-              }}
-            >
-              ⧉
-            </button>
-            <button
-              type="button"
-              className="slot-delete"
-              aria-label="Eliminar"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemoveBlock(id)
-              }}
-            >
-              ×
-            </button>
+            {mode === 'edit' && (
+              <>
+                {/* Duplicar una fila de DEALS es una forma más de agregar otra
+                    (junto con arrastrar "Deals" de nuevo desde la librería) — sin
+                    tope, ver components/deals/schema.ts. contentBlockRegistry.ts's
+                    cloneFields le asigna ids nuevos a las tarjetas copiadas, así
+                    que la fila duplicada nunca comparte id con la original. */}
+                <button
+                  type="button"
+                  className="slot-duplicate"
+                  aria-label="Duplicar"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDuplicateBlock(id)
+                  }}
+                >
+                  ⧉
+                </button>
+                <button
+                  type="button"
+                  className="slot-delete"
+                  aria-label="Eliminar"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveBlock(id)
+                  }}
+                >
+                  ×
+                </button>
+              </>
+            )}
           </div>
         ))}
         {/* Piezas de banner — se pintan DESPUÉS de slotRects para quedar
@@ -965,43 +1048,51 @@ function EmailFrame({
         {bannerItemRects.map(({ id, type, top, left, width, height: h }) => (
           <div
             key={id}
-            className={`slot-hit block-hit${isBannerItemSelected(selected, id) ? ' selected' : ''}`}
+            className={`slot-hit block-hit${isBannerItemSelected(selected, id) ? ' selected' : ''}${isTropicalized(tropicalizations, bannerItemKey(id)) ? ' has-liquid' : ''}`}
             style={{ top, left, width, height: h }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(BANNER_ITEM_REORDER_DRAG_TYPE, id)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
+            draggable={mode === 'edit'}
+            onDragStart={
+              mode === 'edit'
+                ? (e) => {
+                    e.dataTransfer.setData(BANNER_ITEM_REORDER_DRAG_TYPE, id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }
+                : undefined
+            }
           >
             <button
               type="button"
               className="slot-select"
-              aria-label={`Seleccionar ${getBannerItemDef(type)?.label ?? type}`}
+              aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${getBannerItemDef(type)?.label ?? type}`}
               aria-pressed={isBannerItemSelected(selected, id)}
               onClick={() => onSelect(selectBannerItem(id))}
             />
-            <button
-              type="button"
-              className="slot-duplicate"
-              aria-label="Duplicar"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicateBannerItem(id)
-              }}
-            >
-              ⧉
-            </button>
-            <button
-              type="button"
-              className="slot-delete"
-              aria-label="Eliminar"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemoveBannerItem(id)
-              }}
-            >
-              ×
-            </button>
+            {mode === 'edit' && (
+              <>
+                <button
+                  type="button"
+                  className="slot-duplicate"
+                  aria-label="Duplicar"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDuplicateBannerItem(id)
+                  }}
+                >
+                  ⧉
+                </button>
+                <button
+                  type="button"
+                  className="slot-delete"
+                  aria-label="Eliminar"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveBannerItem(id)
+                  }}
+                >
+                  ×
+                </button>
+              </>
+            )}
           </div>
         ))}
         {/* Tarjetas de deal — DESPUÉS de blockRects por el mismo motivo que las
@@ -1010,43 +1101,51 @@ function EmailFrame({
         {dealCardRects.map(({ id, top, left, width, height: h }) => (
           <div
             key={id}
-            className={`slot-hit block-hit${isDealCardSelected(selected, id) ? ' selected' : ''}`}
+            className={`slot-hit block-hit${isDealCardSelected(selected, id) ? ' selected' : ''}${isTropicalized(tropicalizations, dealCardKey(id)) ? ' has-liquid' : ''}`}
             style={{ top, left, width, height: h }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData(DEAL_CARD_REORDER_DRAG_TYPE, id)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
+            draggable={mode === 'edit'}
+            onDragStart={
+              mode === 'edit'
+                ? (e) => {
+                    e.dataTransfer.setData(DEAL_CARD_REORDER_DRAG_TYPE, id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }
+                : undefined
+            }
           >
             <button
               type="button"
               className="slot-select"
-              aria-label="Seleccionar deal"
+              aria-label={mode === 'tropicalize' ? 'Tropicalizar deal' : 'Seleccionar deal'}
               aria-pressed={isDealCardSelected(selected, id)}
               onClick={() => onSelect(selectDealCard(id))}
             />
-            <button
-              type="button"
-              className="slot-duplicate"
-              aria-label="Duplicar deal"
-              onClick={(e) => {
-                e.stopPropagation()
-                onDuplicateDealCard(id)
-              }}
-            >
-              ⧉
-            </button>
-            <button
-              type="button"
-              className="slot-delete"
-              aria-label="Eliminar deal"
-              onClick={(e) => {
-                e.stopPropagation()
-                onRemoveDealCard(id)
-              }}
-            >
-              ×
-            </button>
+            {mode === 'edit' && (
+              <>
+                <button
+                  type="button"
+                  className="slot-duplicate"
+                  aria-label="Duplicar deal"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDuplicateDealCard(id)
+                  }}
+                >
+                  ⧉
+                </button>
+                <button
+                  type="button"
+                  className="slot-delete"
+                  aria-label="Eliminar deal"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveDealCard(id)
+                  }}
+                >
+                  ×
+                </button>
+              </>
+            )}
           </div>
         ))}
         {/* Piezas de tarjeta de deal — DESPUÉS de dealCardRects para quedar
@@ -1061,7 +1160,7 @@ function EmailFrame({
             que bannerItemRects (badge + borde de selección), con un botón de
             eliminar propio (oculta la pieza) pero SIN duplicar: cada una de
             las 7 es un slot fijo del maestro, no una lista libre. */}
-        {dealCardPieceRects.map(({ id: pieceTypeRaw, type: cardId, top, left, width, height: h }) => {
+        {mode === 'edit' && dealCardPieceRects.map(({ id: pieceTypeRaw, type: cardId, top, left, width, height: h }) => {
           const pieceType = pieceTypeRaw as DealCardPieceType
           return (
             <div
@@ -1112,43 +1211,51 @@ function EmailFrame({
           return (
             <div
               key={id}
-              className={`slot-hit block-hit${isModuleItemSelected(selected, id) ? ' selected' : ''}`}
+              className={`slot-hit block-hit${isModuleItemSelected(selected, id) ? ' selected' : ''}${isTropicalized(tropicalizations, moduleItemKey(id)) ? ' has-liquid' : ''}`}
               style={{ top, left, width, height: h }}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData(MODULE_ITEM_REORDER_DRAG_TYPE, id)
-                e.dataTransfer.effectAllowed = 'move'
-              }}
+              draggable={mode === 'edit'}
+              onDragStart={
+                mode === 'edit'
+                  ? (e) => {
+                      e.dataTransfer.setData(MODULE_ITEM_REORDER_DRAG_TYPE, id)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }
+                  : undefined
+              }
             >
               <button
                 type="button"
                 className="slot-select"
-                aria-label={`Seleccionar ${itemDef?.label ?? item?.type ?? id}`}
+                aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${itemDef?.label ?? item?.type ?? id}`}
                 aria-pressed={isModuleItemSelected(selected, id)}
                 onClick={() => onSelect(selectModuleItem(id))}
               />
-              <button
-                type="button"
-                className="slot-duplicate"
-                aria-label="Duplicar"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDuplicateModuleItem(id)
-                }}
-              >
-                ⧉
-              </button>
-              <button
-                type="button"
-                className="slot-delete"
-                aria-label="Eliminar"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRemoveModuleItem(id)
-                }}
-              >
-                ×
-              </button>
+              {mode === 'edit' && (
+                <>
+                  <button
+                    type="button"
+                    className="slot-duplicate"
+                    aria-label="Duplicar"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDuplicateModuleItem(id)
+                    }}
+                  >
+                    ⧉
+                  </button>
+                  <button
+                    type="button"
+                    className="slot-delete"
+                    aria-label="Eliminar"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemoveModuleItem(id)
+                    }}
+                  >
+                    ×
+                  </button>
+                </>
+              )}
             </div>
           )
         })}

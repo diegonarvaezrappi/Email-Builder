@@ -205,3 +205,32 @@ describe('renderCol2Snippet · sin fugas de Liquid, en los 12 temas', () => {
     expect(html).not.toMatch(UNRESOLVED_MODULE_ALIGN_RE)
   })
 })
+
+describe('renderCol2Snippet · tropicalización', () => {
+  // COL2 splicea el MISMO itemsHtml en 2 tablas (escritorio + mobile) vía
+  // findRepeatedElementBounds, que busca sus anclas (FREE_AREA_H2/H3_LITERAL)
+  // sobre el HTML pre-splice — si renderTropicalized se llamara AFUERA de
+  // renderAreaItems en vez de adentro, un item tropicalizado ya insertado
+  // adelantaría esa búsqueda y podría desbalancear el conteo esperado.
+  it('un item tropicalizado en el área libre aparece en LAS 2 tablas, con el {% if %} intacto en ambas', () => {
+    const fields = col2FieldsSchema.parse({ items: [item('TITULO_TEXTO', 'x1', { text: 'Título base' })] })
+    const doc: EmailDocument = {
+      ...defaultEmailDocument,
+      tropicalizations: { 'mitem:x1': { branches: [{ countries: ['AR'], hidden: false, overrides: { text: 'Título AR' } }] } },
+    }
+    const html = renderCol2Snippet(fields, doc, { blockId: BLOCK_ID })
+    expect(html.match(/Título AR/g)).toHaveLength(2)
+    expect(html.match(/Título base/g)).toHaveLength(2)
+    expect(html.match(/\{% if \$\{user_id\} contains 'AR' %\}/g)).toHaveLength(2)
+  })
+
+  it('sin ramas emitibles, el HTML es idéntico al de no tropicalizar', () => {
+    const fields = col2FieldsSchema.parse({ items: [item('TITULO_TEXTO', 'x1', { text: 'Título' })] })
+    const withEmpty: EmailDocument = {
+      ...defaultEmailDocument,
+      tropicalizations: { 'mitem:x1': { branches: [{ countries: [], hidden: false, overrides: {} }] } },
+    }
+    const withNone = { ...defaultEmailDocument, tropicalizations: {} }
+    expect(renderCol2Snippet(fields, withEmpty, { blockId: BLOCK_ID })).toBe(renderCol2Snippet(fields, withNone, { blockId: BLOCK_ID }))
+  })
+})

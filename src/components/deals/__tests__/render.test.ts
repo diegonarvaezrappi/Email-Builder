@@ -3,6 +3,7 @@ import { defaultEmailDocument } from '../../../registry'
 import { THEME_SLUGS } from '../../../themes/themes'
 import { richTextFromPlain } from '../../../richText/model'
 import type { EmailDocument } from '../../../model'
+import type { TropicalizeBranch } from '../../../tropicalize/schema'
 import { renderDealsSnippet, stripDealsFieldAssigns } from '../render'
 import {
   DEAL_CARD_PIECE_TYPES,
@@ -510,5 +511,58 @@ describe('stripDealsFieldAssigns', () => {
   it('no toca otro Liquid del mail', () => {
     const input = "{% assign cond = '' %}\n{{content_blocks.${FOOTER}}}"
     expect(stripDealsFieldAssigns(input)).toBe(input)
+  })
+})
+
+describe('renderDealsSnippet · tropicalización', () => {
+  // El sitio de mayor riesgo de todo el motor: el HTML de una tarjeta vive
+  // repartido en 3 <td> no contiguos (imagen/textos/legales), y spliceRow
+  // revienta si cuenta más o menos de 2 celdas de cada tipo — una condicional
+  // mal insertada duplicaría <td>s y rompería ese conteo.
+  const tropicalized = (cardId: string, branches: TropicalizeBranch[]): Partial<EmailDocument> => ({
+    tropicalizations: { [`dcard:${cardId}`]: { branches } },
+  })
+
+  it('una tarjeta tropicalizada sigue dando EXACTAMENTE 2 celdas de imagen y de texto (spliceRow no revienta)', () => {
+    const html = render(
+      cards(card('a'), card('b')),
+      tropicalized('a', [{ countries: ['AR'], hidden: false, overrides: { copy1: 'Variante AR' } }]),
+    )
+    expect(countCells(html)).toBe(6) // 2 imagen + 2 texto + 2 legales (celda, aunque vacía)
+    expect(html).toContain("{% if \${user_id} contains 'AR' %}")
+    expect(html).toContain('Variante AR')
+  })
+
+  it('una rama OCULTA emite emptyCell (el <td> sobrevive), nunca una cadena vacía que colapse la celda', () => {
+    const html = render(
+      cards(card('a'), card('b')),
+      tropicalized('a', [{ countries: ['AR'], hidden: true, overrides: {} }]),
+    )
+    // Dentro de la rama {% if %}...{% elsif/else %}, el <td> de la tarjeta
+    // 'a' debe seguir presente para el país AR — countCells cuenta CADA
+    // aparición de width="50%" en TODAS las ramas, así que una celda
+    // colapsada (sin <td>) bajaría el conteo por debajo de lo esperado.
+    expect(countCells(html)).toBe(6)
+    expect(html).toContain('{% if')
+  })
+
+  it('showLegal se prende cuando SOLO una rama (no la base) activa legalEnabled', () => {
+    const withoutBranch = render(cards(card('a', { legalEnabled: false }), card('b', { legalEnabled: false })))
+    expect(withoutBranch).not.toContain('Aplican términos')
+
+    const withBranch = render(
+      cards(card('a', { legalEnabled: false }), card('b', { legalEnabled: false })),
+      tropicalized('a', [{ countries: ['AR'], hidden: false, overrides: { legalEnabled: true } }]),
+    )
+    expect(withBranch).toContain('Aplican términos')
+  })
+
+  it('sin ninguna rama emitible (países vacíos), el HTML es idéntico al de no tropicalizar', () => {
+    const base = render(cards(card('a'), card('b')))
+    const withEmptyBranch = render(
+      cards(card('a'), card('b')),
+      tropicalized('a', [{ countries: [], hidden: false, overrides: {} }]),
+    )
+    expect(withEmptyBranch).toBe(base)
   })
 })

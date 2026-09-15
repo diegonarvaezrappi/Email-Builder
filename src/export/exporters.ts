@@ -9,6 +9,7 @@
 import html2canvas from 'html2canvas'
 import { assembleEmailHtml } from '../template/assemble'
 import { renderEmailPreview } from '../preview/liquidPreview'
+import type { PreviewCountry } from '../preview/countries'
 import type { EmailDocument } from '../model'
 
 export function slug(name: string): string {
@@ -89,13 +90,16 @@ export function downloadJson(doc: EmailDocument, filename = 'email'): void {
 
 /**
  * País de ejemplo para resolver el Liquid de Braze (`{{...}}` de
- * personalización) al generar el PNG — mismo default con el que arranca el
- * selector "País (solo preview)" de ui/Viewport.tsx. El PNG no depende de qué
- * país/dispositivo/esquema tenga tocado el usuario en ese selector (igual que
- * Copiar HTML/Descargar .html tampoco dependen de la vista activa): es una
- * exportación del documento, no una foto de la vista actual.
+ * personalización) al generar el PNG cuando quien llama no especifica uno —
+ * mismo default con el que arranca el selector "País (solo preview)" de
+ * ui/Viewport.tsx. Antes de Tropicalizar esto era una decisión neutral
+ * (Copiar HTML/Descargar .html tampoco dependen de la vista activa), pero con
+ * condicionales de país por elemento un PNG "de Colombia siempre" puede ser
+ * la variante EQUIVOCADA para lo que el usuario está mirando — por eso
+ * `downloadPng` ahora recibe el país como parámetro, y la UI le pasa el que
+ * esté viendo en ese momento; esto queda solo como el valor por defecto.
  */
-const PNG_PREVIEW_COUNTRY = 'CO'
+const PNG_PREVIEW_COUNTRY: PreviewCountry = 'CO'
 /** Ancho real del contenido del mail (ver Viewport.tsx) — el PNG se genera a
  *  este ancho fijo de escritorio, no al ancho angosto de "Móvil" (esa vista
  *  es un ajuste del editor, no algo que timeString/assemble.ts conozca). */
@@ -276,8 +280,8 @@ async function inlineAllImagesForCapture(frameDoc: Document): Promise<void> {
  * trae Liquid vivo — {{color_x_mail_general}}, {% if %} de tema, etc. — y se
  * vería roto en una captura).
  */
-export async function downloadPng(doc: EmailDocument, filename = 'email'): Promise<void> {
-  const { html, error } = await renderEmailPreview(doc, PNG_PREVIEW_COUNTRY)
+export async function downloadPng(doc: EmailDocument, filename = 'email', country: PreviewCountry = PNG_PREVIEW_COUNTRY): Promise<void> {
+  const { html, error } = await renderEmailPreview(doc, country)
   if (error) throw new Error(error)
 
   const iframe = document.createElement('iframe')

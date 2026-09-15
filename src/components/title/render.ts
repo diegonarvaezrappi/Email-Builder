@@ -16,6 +16,8 @@ import type { EmailDocument } from '../../model'
 import { elementBounds, indexOfOrThrow, innerBounds } from '../../template/htmlEdits'
 import { wrapWithModuleItemMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
+import { moduleItemKey } from '../../tropicalize/keys'
+import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
 import { moduleBackgroundVars, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
@@ -51,7 +53,11 @@ export function renderTitleSnippet(fields: TitleFields, doc: EmailDocument, ctx:
     .map((item) => {
       const def = getModuleItemDef(item.type)
       if (!def) return ''
-      return wrapWithModuleItemMarkers(ctx.blockId, item.id, def.render(item.fields, doc, itemCtx))
+      return wrapWithModuleItemMarkers(
+        ctx.blockId,
+        item.id,
+        renderTropicalized(doc, moduleItemKey(item.id), item.fields, (fields) => def.render(fields, doc, itemCtx)),
+      )
     })
     .filter((html) => html !== '')
     .join('\n')

@@ -8,6 +8,8 @@ import type { EmailDocument } from '../../model'
 import { escapeHtmlAttr } from '../../template/htmlText'
 import { wrapWithBannerItemMarkers } from '../../template/contentBlocks'
 import { getBannerItemDef, type BannerItemRenderCtx } from '../../bannerItemRegistry'
+import { bannerItemKey } from '../../tropicalize/keys'
+import { renderTropicalized } from '../../tropicalize/render'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { PASTEL_THEME_SLUGS, themeVars } from '../../themes/themes'
 import { enforceHorizontalItemOrder } from './horizontalOrder'
@@ -218,13 +220,18 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
     const def = getBannerItemDef(item.type)
     if (!def || !def.orientations.includes(ctx.bannerType)) continue
 
-    let itemHtml = def.render(item.fields, doc, ctx)
-    if (ctx.bannerType === 'vertical' && ctx.moleculeAlign === 'left') {
-      itemHtml = alignMoleculeLeft(itemHtml)
-    } else if (ctx.bannerType === 'horizontal' && def.zone === 'MOLECULA' && ctx.horizontalMoleculeAlign === 'center') {
-      itemHtml = alignMoleculeCenter(itemHtml)
+    // Los transforms de alineado van ADENTRO de renderVariant (no aplicados
+    // una sola vez afuera) para que CADA rama los reciba — así el camino base
+    // (sin tropicalizar) queda exactamente igual que antes de esta feature.
+    const renderVariant = (fields: unknown): string => {
+      const itemHtml = def.render(fields, doc, ctx)
+      if (ctx.bannerType === 'vertical' && ctx.moleculeAlign === 'left') return alignMoleculeLeft(itemHtml)
+      if (ctx.bannerType === 'horizontal' && def.zone === 'MOLECULA' && ctx.horizontalMoleculeAlign === 'center') {
+        return alignMoleculeCenter(itemHtml)
+      }
+      return itemHtml
     }
-    const html = wrapWithBannerItemMarkers(item.type, item.id, itemHtml)
+    const html = wrapWithBannerItemMarkers(item.type, item.id, renderTropicalized(doc, bannerItemKey(item.id), item.fields, renderVariant))
     const last = groups[groups.length - 1]
     if (def.zone === 'MOLECULA' && last?.zone === 'MOLECULA') {
       last.html += `\n${html}`

@@ -5,6 +5,7 @@
 // ============================================================================
 import { emailDocumentSchema, type EmailDocument } from '../model'
 import { defaultEmailDocument } from '../registry'
+import { pruneTropicalizations } from '../tropicalize/doc'
 
 const STORAGE_KEY = 'email-builder:document'
 
@@ -17,7 +18,10 @@ export function loadDocument(): EmailDocument {
       console.warn('Documento guardado inválido, se descarta y se usa el valor por defecto', parsed.error)
       return defaultEmailDocument
     }
-    return parsed.data
+    // Poda tropicalizaciones huérfanas (apuntando a un elemento que ya no
+    // existe) una vez al cargar — mismo motivo que en cada acción de
+    // eliminar del store, ver store/store.ts.
+    return pruneTropicalizations(parsed.data)
   } catch (e) {
     console.error('No se pudo cargar el documento guardado', e)
     return defaultEmailDocument

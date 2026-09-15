@@ -426,4 +426,35 @@ describe('renderBannerSnippet', () => {
       expect(idxImg).toBeLessThan(idxTags)
     })
   })
+
+  describe('tropicalización', () => {
+    it('el alineado a la izquierda se aplica DENTRO de la rama tropicalizada, no solo en la base', () => {
+      const tropicalized = withItems([textom('t')], {
+        banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' },
+        tropicalizations: { 'bitem:t': { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } },
+      })
+      const html = renderBannerSnippet(tropicalized.banner, tropicalized)
+      // Acotado al fragmento DENTRO del único par de marcadores BITEM (el
+      // marcador va AFUERA de la condicional) — el resto del shell trae sus
+      // propios "margin: 0 auto;" ajenos a este transform, así que buscar en
+      // el documento entero daría un falso negativo.
+      const openMarker = '<!-- BITEM:TEXTOM:t -->'
+      const closeMarker = '<!-- /BITEM:TEXTOM:t -->'
+      const inner = html.slice(html.indexOf(openMarker) + openMarker.length, html.indexOf(closeMarker))
+      expect(inner).toContain("{% if \${user_id} contains 'AR' %}")
+      // Ni la rama AR ni el {% else %} (base) deben tener el margin centrado
+      // — si el transform solo se aplicara UNA vez afuera de las 2 copias,
+      // alguna de ellas lo conservaría.
+      expect(inner).not.toContain('margin: 0 auto;')
+      expect(inner.match(/margin: 0;/g)).toHaveLength(2)
+    })
+
+    it('sin ramas emitibles, el HTML es idéntico al de no tropicalizar', () => {
+      const withEmpty = withItems([textom('t')], {
+        tropicalizations: { 'bitem:t': { branches: [{ countries: [], hidden: false, overrides: {} }] } },
+      })
+      const withNone = withItems([textom('t')])
+      expect(renderBannerSnippet(withEmpty.banner, withEmpty)).toBe(renderBannerSnippet(withNone.banner, withNone))
+    })
+  })
 })

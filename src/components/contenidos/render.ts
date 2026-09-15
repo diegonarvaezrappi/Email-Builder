@@ -3,6 +3,8 @@ import type { ContentBlock, EmailDocument } from '../../model'
 import { contentBlockRegistry } from '../../contentBlockRegistry'
 import { wrapWithBlockMarkers } from '../../template/contentBlocks'
 import { elementBounds, indexOfOrThrow, innerBounds } from '../../template/htmlEdits'
+import { blockKey } from '../../tropicalize/keys'
+import { renderTropicalized } from '../../tropicalize/render'
 
 const SEPARADOR = '<div class="separador"></div>'
 
@@ -35,7 +37,9 @@ export function renderContentBlocksSnippet(blocks: ContentBlock[], doc: EmailDoc
     .map((block) => {
       const def = contentBlockRegistry[block.type]
       if (!def) return null
-      return { type: block.type, html: wrapWithBlockMarkers(block.type, block.id, def.render(block.fields, doc, { blockId: block.id })) }
+      const renderVariant = (fields: unknown) => def.render(fields, doc, { blockId: block.id })
+      const html = wrapWithBlockMarkers(block.type, block.id, renderTropicalized(doc, blockKey(block.id), block.fields, renderVariant))
+      return { type: block.type, html }
     })
     .filter((entry): entry is { type: ContentBlock['type']; html: string } => entry !== null && entry.html !== '')
 

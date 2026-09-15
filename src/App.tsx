@@ -9,7 +9,11 @@ import { LibraryPanel } from './ui/LibraryPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
 import { ToolbarGlobals } from './ui/ToolbarGlobals'
-import type { Selection } from './ui/selection'
+import { normalizeTropicalizationTarget, type Selection } from './ui/selection'
+import type { ViewportTab } from './ui/viewportTab'
+import type { PreviewCountry } from './preview/countries'
+import { TropicalizationPanel } from './ui/tropicalize/TropicalizationPanel'
+import { TropicalizationIndexPanel } from './ui/tropicalize/TropicalizationIndexPanel'
 
 function App() {
   const doc = useBuilder((s) => s.document)
@@ -40,11 +44,37 @@ function App() {
   const removeModuleItem = useBuilder((s) => s.removeModuleItem)
   const updateModuleItemFields = useBuilder((s) => s.updateModuleItemFields)
   const setDocument = useBuilder((s) => s.setDocument)
+  const addTropicalizeBranch = useBuilder((s) => s.addTropicalizeBranch)
+  const setTropicalizeBranchCountries = useBuilder((s) => s.setTropicalizeBranchCountries)
+  const setTropicalizeBranchHidden = useBuilder((s) => s.setTropicalizeBranchHidden)
+  const setTropicalizeBranchFields = useBuilder((s) => s.setTropicalizeBranchFields)
+  const removeTropicalizeBranch = useBuilder((s) => s.removeTropicalizeBranch)
+  const reorderTropicalizeBranch = useBuilder((s) => s.reorderTropicalizeBranch)
+  const clearTropicalization = useBuilder((s) => s.clearTropicalization)
   const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
+
+  // Pestaña activa del panel central y país "de vista" — antes vivían como
+  // useState local de ui/Viewport.tsx; se suben acá porque el panel derecho
+  // de Tropicalizar y el aviso de la pestaña Preview también necesitan
+  // leerlos/escribirlos (el país en particular: el botón "👁 Ver" de una rama
+  // y el "Ver en <país>" del aviso de elemento oculto lo escriben desde el
+  // panel derecho, no desde Viewport). Mismo criterio que `selected`: estado
+  // de UI, no del documento.
+  const [tab, setTab] = useState<ViewportTab>('preview')
+  const [country, setCountry] = useState<PreviewCountry>('CO')
+
+  // Al entrar a Tropicalizar, una línea de deal seleccionada (no es objetivo
+  // tropicalizable, ver decisión del usuario) sube a la tarjeta dueña — se
+  // hace acá, en el único punto que cambia de pestaña, no en un efecto del
+  // panel (no reentrante).
+  const handleChangeTab = (next: ViewportTab) => {
+    if (next === 'tropicalize') setSelected((current) => normalizeTropicalizationTarget(current))
+    setTab(next)
+  }
 
   // Ajustes por defecto del header/banner al cambiar el TEMA GENERAL — ver
   // themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100 cambian
@@ -143,7 +173,11 @@ function App() {
       </header>
 
       <div className="app-body">
-        <LibraryPanel document={doc} selected={selected} onSelect={setSelected} onChangeSlot={setSlotFields} />
+        {tab === 'tropicalize' ? (
+          <TropicalizationIndexPanel document={doc} country={country} onSelect={setSelected} onChangeCountry={setCountry} />
+        ) : (
+          <LibraryPanel document={doc} selected={selected} onSelect={setSelected} onChangeSlot={setSlotFields} />
+        )}
         <Viewport
           document={doc}
           selected={selected}
@@ -167,22 +201,46 @@ function App() {
           onReorderModuleItem={reorderModuleItem}
           onRemoveModuleItem={removeModuleItem}
           onImportDocument={setDocument}
+          tab={tab}
+          onChangeTab={handleChangeTab}
+          country={country}
+          onChangeCountry={setCountry}
         />
-        <InspectorPanel
-          document={doc}
-          selected={selected}
-          onSelect={setSelected}
-          onChange={setSlotFields}
-          onChangeBlock={updateContentBlockFields}
-          onChangeBannerItem={updateBannerItemFields}
-          onChangeGlobal={setGlobalFields}
-          onInsertBannerItem={insertBannerItem}
-          onSetBannerImageModule={setBannerImageModule}
-          onChangeDealCard={updateDealCardFields}
-          onInsertDealCard={insertDealCard}
-          onChangeModuleItem={updateModuleItemFields}
-          onInsertModuleItem={insertModuleItem}
-        />
+        {tab === 'tropicalize' ? (
+          <TropicalizationPanel
+            document={doc}
+            selected={selected}
+            country={country}
+            onChangeCountry={setCountry}
+            onChangeTab={handleChangeTab}
+            onChangeGlobal={setGlobalFields}
+            onAddBranch={addTropicalizeBranch}
+            onSetBranchCountries={setTropicalizeBranchCountries}
+            onSetBranchHidden={setTropicalizeBranchHidden}
+            onSetBranchFields={setTropicalizeBranchFields}
+            onRemoveBranch={removeTropicalizeBranch}
+            onReorderBranch={reorderTropicalizeBranch}
+            onClearTropicalization={clearTropicalization}
+          />
+        ) : (
+          <InspectorPanel
+            document={doc}
+            selected={selected}
+            onSelect={setSelected}
+            onChange={setSlotFields}
+            onChangeBlock={updateContentBlockFields}
+            onChangeBannerItem={updateBannerItemFields}
+            onChangeGlobal={setGlobalFields}
+            onInsertBannerItem={insertBannerItem}
+            onSetBannerImageModule={setBannerImageModule}
+            onChangeDealCard={updateDealCardFields}
+            onInsertDealCard={insertDealCard}
+            onChangeModuleItem={updateModuleItemFields}
+            onInsertModuleItem={insertModuleItem}
+            country={country}
+            onChangeTab={handleChangeTab}
+          />
+        )}
       </div>
     </div>
   )

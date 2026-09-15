@@ -46,6 +46,8 @@ import * as htmlEdits from '../../template/htmlEdits'
 import type { Bounds, Edit } from '../../template/htmlEdits'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../richText/render'
+import { dealCardKey } from '../../tropicalize/keys'
+import { fieldVariants, renderTropicalized } from '../../tropicalize/render'
 import {
   DEAL_CARD_PIECE_TYPES,
   DEALS_CARDS_PER_PAIR,
@@ -504,23 +506,43 @@ function removeLegalRow(html: string): string {
   return html.slice(0, rowStart) + html.slice(rowEnd)
 }
 
-function renderDealPair(cards: (DealCard | undefined)[], blockId: string): string {
+function renderDealPair(cards: (DealCard | undefined)[], blockId: string, doc: EmailDocument): string {
   let html = stripComments(dealColumnasRaw)
 
   // Cada celda que SÍ tiene tarjeta se envuelve en su par de comentarios
   // DCARD — una tarjeta produce 2 o 3 pares (imagen, textos y, si aparece, su
   // celda de legales), todos con el mismo id, porque su HTML vive repartido en
   // 3 `<tr>` que no son contiguos. ui/Viewport.tsx los une en un solo rect.
+  //
+  // La condicional de Tropicalizar va ADENTRO del par DCARD (marcador afuera,
+  // igual que el resto de la app): cada rama vuelve a llamar a `render` con
+  // los fields de esa rama. Una rama oculta emite `emptyCell(cell)`, NUNCA
+  // `''` — el maestro exige que el `<td>` sobreviva ("se eliminan los
+  // elementos no la celda"), y con `''` la fila de 2 celdas quedaría con una
+  // sola, deformando el layout.
   const cellFor = (cell: string, slot: number, render: (card: DealCard) => string): string => {
     const card = cards[slot]
     if (!card) return emptyCell(cell)
-    return wrapWithDealCardMarkers(blockId, card.id, render(card))
+    const body = renderTropicalized(
+      doc,
+      dealCardKey(card.id),
+      card.fields,
+      (fields) => render({ ...card, fields }),
+      () => emptyCell(cell),
+    )
+    return wrapWithDealCardMarkers(blockId, card.id, body)
   }
 
   html = spliceRow(html, IMAGE_CELL_RE, 'imagen', (cell, slot) => cellFor(cell, slot, (card) => renderImageCell(cell, card.fields)))
   html = spliceRow(html, TEXT_CELL_RE, 'textos', (cell, slot) => cellFor(cell, slot, (card) => renderTextCell(cell, card)))
 
-  const showLegal = cards.some((card) => card?.fields.legalEnabled === true)
+  // Estructural (se decide ANTES de elegir rama): si CUALQUIER variante
+  // (base o rama, de cualquiera de las 2 tarjetas) activa los legales, la
+  // fila tiene que existir — de lo contrario esa rama nunca podría
+  // imprimirlos, sin importar que la muestre `render` después.
+  const showLegal = cards.some(
+    (card) => card !== undefined && fieldVariants(doc, dealCardKey(card.id), card.fields).some((f) => f.legalEnabled),
+  )
   html = showLegal
     ? spliceRow(html, LEGAL_CELL_RE, 'legales', (cell, slot) => cellFor(cell, slot, (card) => renderLegalCell(cell, card)))
     : removeLegalRow(html)
@@ -572,7 +594,7 @@ export function renderDealsSnippet(fields: DealsFields, doc: EmailDocument, ctx:
   // misma razón por la que components/contenidos/render.ts tampoco pone
   // separador antes ni después de un bloque DEALS.
   const html = chunkPairs(fields.items)
-    .map((pair) => renderDealPair(pair, ctx.blockId))
+    .map((pair) => renderDealPair(pair, ctx.blockId, doc))
     .join('\n')
 
   return resolveThemeVars(html, resolveGlobalVars(doc.global))

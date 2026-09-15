@@ -9,7 +9,7 @@ import { renderBannerSnippet, stripBannerFieldAssigns } from '../../components/b
 import { stripDealsFieldAssigns } from '../../components/deals/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
-import type { CtaBlock } from '../../model'
+import type { CtaBlock, EmailDocument } from '../../model'
 
 const ctaBlock = (id: string, text: string): CtaBlock => ({
   id,
@@ -218,4 +218,47 @@ it('never carries the preview-only dark-client filter — that is view-only, in 
   })
   expect(html).not.toContain('filter:')
   expect(html).not.toContain('invert(')
+})
+
+describe('assembleEmailHtml · tropicalización de slots', () => {
+  it('HEADER tropicalizado envuelve el snippet en {% if %}...{% else %}, una sola vez, con la base en el {% else %}', () => {
+    const doc: EmailDocument = {
+      ...defaultEmailDocument,
+      tropicalizations: { 'slot:HEADER': { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } },
+    }
+    const html = assembleEmailHtml(doc)
+    expect(html.match(/\{% if \$\{user_id\} contains 'AR' %\}/g)).toHaveLength(1)
+    expect(html).toContain('{% else %}')
+    expect(html).toContain('{% endif %}')
+  })
+
+  it('CONTENIDOS no se tropicaliza como slot (cada bloque tiene su propia clave block:<id>)', () => {
+    // Una clave slot:CONTENIDOS no existe (parseTargetKey la rechaza), pero
+    // aunque alguien la escribiera a mano el render de CONTENIDOS jamás la
+    // consulta — confirmamos que el array de bloques sale intacto.
+    const doc = { ...defaultEmailDocument, tropicalizations: {} }
+    expect(assembleEmailHtml(doc)).toBe(assembleEmailHtml(defaultEmailDocument))
+  })
+
+  it('FOOTER tropicalizado con una rama que cambia tipoFooter deja las 2 referencias de content block presentes, ambas resolubles por el preview', () => {
+    const doc: EmailDocument = {
+      ...defaultEmailDocument,
+      tropicalizations: {
+        'slot:FOOTER': {
+          branches: [{ countries: ['BR'], hidden: false, overrides: { tipoFooter: 'RTS' } }],
+        },
+      },
+    }
+    const html = assembleEmailHtml(doc)
+    expect(html).toContain('FOOTER_q1_2024_legales') // base (General)
+    expect(html).toContain('FOOTER_RTS_q3_2024_legales') // rama BR
+  })
+
+  it('sin ramas emitibles, el documento es byte a byte idéntico al de no tropicalizar', () => {
+    const withEmpty = {
+      ...defaultEmailDocument,
+      tropicalizations: { 'slot:HEADER': { branches: [{ countries: [], hidden: false, overrides: {} }] } },
+    }
+    expect(assembleEmailHtml(withEmpty)).toBe(assembleEmailHtml(defaultEmailDocument))
+  })
 })

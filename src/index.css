@@ -17,6 +17,13 @@
   --accent-border: rgba(192, 132, 252, 0.5);
   --danger: #d1293d;
 
+  /* Tropicalizar: condicionales de país por elemento. Celeste, DISTINTO del
+     morado --accent — si compartieran color, "seleccionado" y "tiene
+     variantes" serían indistinguibles en el lienzo (ver App.css). */
+  --tropical: #38bdf8;
+  --tropical-bg: rgba(56, 189, 248, 0.15);
+  --tropical-border: rgba(56, 189, 248, 0.5);
+
   /* Sintaxis de la vista de código (ui/CodeView.tsx) */
   --code-text: #e6edf3;
   --code-gutter: #4b5263;

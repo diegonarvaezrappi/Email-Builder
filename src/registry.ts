@@ -152,4 +152,5 @@ export const defaultEmailDocument: EmailDocument = {
   banner: defaultBannerFields,
   footer: defaultFooterFields,
   contenidos: [defaultContenidosCtaBlock, defaultDealsBlock(1), defaultDealsBlock(2), defaultDealsBlock(3)],
+  tropicalizations: {},
 }

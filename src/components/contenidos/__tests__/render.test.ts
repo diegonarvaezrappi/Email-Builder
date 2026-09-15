@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
-import type { ContentBlock } from '../../../model'
+import type { ContentBlock, EmailDocument } from '../../../model'
 import { defaultCtaFields } from '../../cta/schema'
 import { defaultDealsFields } from '../../deals/schema'
 import { defaultCol1Fields } from '../../col1/schema'
@@ -64,6 +64,47 @@ describe('renderContentBlocksSnippet · separadores', () => {
 
   it('sin bloques devuelve vacío', () => {
     expect(render([])).toBe('')
+  })
+})
+
+describe('renderContentBlocksSnippet · tropicalización', () => {
+  it('un bloque tropicalizado conserva EXACTAMENTE un par de marcadores, con el {% if %} adentro', () => {
+    const block = cta('a')
+    const doc: EmailDocument = {
+      ...defaultEmailDocument,
+      contenidos: [block],
+      tropicalizations: { 'block:a': { branches: [{ countries: ['AR'], hidden: false, overrides: { text: 'Pedí ahora' } }] } },
+    }
+    const html = renderContentBlocksSnippet([block], doc)
+    expect(count(html, '<!-- BLOCK:CTA:a -->')).toBe(1)
+    expect(count(html, '<!-- /BLOCK:CTA:a -->')).toBe(1)
+    const openIndex = html.indexOf('<!-- BLOCK:CTA:a -->')
+    const ifIndex = html.indexOf("{% if \${user_id} contains 'AR' %}")
+    expect(ifIndex).toBeGreaterThan(openIndex)
+    expect(html).toContain('Pedí ahora')
+    expect(html).toContain("text_cta = 'a'") // el {% else %} sigue mostrando la base (cta('a') fija text: 'a')
+  })
+
+  it('una tropicalización con TODAS sus ramas sin países es indistinguible de no tenerla', () => {
+    const block = cta('a')
+    const withEmpty = {
+      ...defaultEmailDocument,
+      contenidos: [block],
+      tropicalizations: { 'block:a': { branches: [{ countries: [], hidden: false, overrides: {} }] } },
+    }
+    const withNone = { ...defaultEmailDocument, contenidos: [block], tropicalizations: {} }
+    expect(renderContentBlocksSnippet([block], withEmpty)).toBe(renderContentBlocksSnippet([block], withNone))
+  })
+
+  it('el separador entre bloques no depende de si alguno está tropicalizado', () => {
+    const a = cta('a')
+    const b = cta('b')
+    const doc: EmailDocument = {
+      ...defaultEmailDocument,
+      contenidos: [a, b],
+      tropicalizations: { 'block:a': { branches: [{ countries: ['AR'], hidden: true, overrides: {} }] } },
+    }
+    expect(count(renderContentBlocksSnippet([a, b], doc), SEPARADOR)).toBe(1)
   })
 })
 

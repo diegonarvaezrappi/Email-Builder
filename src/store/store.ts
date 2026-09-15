@@ -18,6 +18,9 @@ import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType
 import { enforceHorizontalItemOrder } from '../components/banner/horizontalOrder'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
+import { bannerItemKey, blockKey, dealCardKey, moduleItemKey } from '../tropicalize/keys'
+import { copyTropicalization, diffShallow, pruneTropicalizations } from '../tropicalize/doc'
+import { normalizeBranches, type TropicalizeBranch, type TropicalizeCountry } from '../tropicalize/schema'
 
 interface BuilderState {
   document: EmailDocument
@@ -124,6 +127,35 @@ interface BuilderState {
    * confirmación aparte.
    */
   setDocument: (doc: EmailDocument) => void
+
+  /**
+   * Operaciones sobre `doc.tropicalizations` (condicionales de país por
+   * elemento, ver src/tropicalize/) — keyeadas por la clave plana de
+   * tropicalize/keys.ts (`slot:HEADER`, `block:<id>`, `bitem:<id>`,
+   * `dcard:<id>`, `mitem:<id>`), no por un id de rama: las ramas no tienen
+   * id propio, se direccionan por índice (el orden ES la precedencia
+   * if/elsif), mismo criterio que `pieceOrder` en components/deals/schema.ts.
+   * Todas aplican `normalizeBranches` y BORRAN la clave del mapa cuando
+   * queda sin ramas — así el camino rápido byte-idéntico de
+   * tropicalize/render.ts vuelve a aplicar en cuanto no queda nada que
+   * emitir.
+   */
+  addTropicalizeBranch: (key: string, countries: TropicalizeCountry[]) => void
+  setTropicalizeBranchCountries: (key: string, index: number, countries: TropicalizeCountry[]) => void
+  setTropicalizeBranchHidden: (key: string, index: number, hidden: boolean) => void
+  /**
+   * Recibe el objeto de fields COMPLETO que devolvió el `PropertiesPanel` de
+   * la rama (`onChange`, mismo contrato que cualquier otro panel de la app)
+   * y calcula el `diffShallow` contra `baseFields` acá adentro — así ningún
+   * `PropertiesPanel` existente necesita saber que está editando una rama en
+   * vez de la base.
+   */
+  setTropicalizeBranchFields: (key: string, index: number, baseFields: unknown, nextFields: unknown) => void
+  removeTropicalizeBranch: (key: string, index: number) => void
+  reorderTropicalizeBranch: (key: string, index: number, toIndex: number) => void
+  /** "Quitar toda la tropicalización de este elemento" — borra la clave del
+   *  mapa entera, todas sus ramas de una vez. */
+  clearTropicalization: (key: string) => void
 }
 
 /** Reescribe la lista de tarjetas de un bloque DEALS dejando el resto del
@@ -144,6 +176,23 @@ function withModuleItems(document: EmailDocument, blockIndex: number, items: Mod
   const contenidos = [...document.contenidos]
   contenidos[blockIndex] = { ...block, fields: { ...block.fields, items } } as ContentBlock
   return { ...document, contenidos }
+}
+
+/**
+ * Reescribe las ramas de UNA tropicalización, dejando el resto del mapa
+ * intacto — aplica `normalizeBranches` y BORRA la clave si queda sin ramas
+ * (mismo motivo que documenta la interfaz `BuilderState` arriba). Patrón
+ * análogo a withDealCards/withModuleItems, un mapa en vez de un array.
+ */
+function withTropicalizationBranches(document: EmailDocument, key: string, branches: TropicalizeBranch[]): EmailDocument {
+  const normalized = normalizeBranches(branches)
+  const tropicalizations = { ...document.tropicalizations }
+  if (normalized.length === 0) {
+    delete tropicalizations[key]
+  } else {
+    tropicalizations[key] = { branches: normalized }
+  }
+  return { ...document, tropicalizations }
 }
 
 export const useBuilder = create<BuilderState>()(
@@ -186,7 +235,12 @@ export const useBuilder = create<BuilderState>()(
           const copy = { ...original, id: newId(), fields } as ContentBlock
           const next = [...s.document.contenidos]
           next.splice(idx + 1, 0, copy)
-          return { document: { ...s.document, contenidos: next } }
+          // La copia hereda la tropicalización del bloque ORIGINAL (exacta
+          // para un bloque sin ids propios adentro de `fields`; para un
+          // contenedor como TITLE/DEALS los hijos duplicados no heredan la
+          // suya — ver la nota grande de tropicalize/doc.ts#copyTropicalization).
+          const tropicalizations = copyTropicalization(s.document.tropicalizations, blockKey(id), blockKey(copy.id))
+          return { document: { ...s.document, contenidos: next, tropicalizations } }
         }),
 
       /**
@@ -208,7 +262,9 @@ export const useBuilder = create<BuilderState>()(
         }),
 
       removeContentBlock: (id) =>
-        set((s) => ({ document: { ...s.document, contenidos: s.document.contenidos.filter((b) => b.id !== id) } })),
+        set((s) => ({
+          document: pruneTropicalizations({ ...s.document, contenidos: s.document.contenidos.filter((b) => b.id !== id) }),
+        })),
 
       updateContentBlockFields: (id, fields) =>
         set((s) => ({
@@ -250,7 +306,8 @@ export const useBuilder = create<BuilderState>()(
           const next = [...filtered]
           next.splice(insertAt, 0, copy)
           const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
+          const tropicalizations = copyTropicalization(s.document.tropicalizations, bannerItemKey(id), bannerItemKey(copy.id))
+          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered }, tropicalizations } }
         }),
 
       reorderBannerItem: (id, toIndex) =>
@@ -267,7 +324,10 @@ export const useBuilder = create<BuilderState>()(
 
       removeBannerItem: (id) =>
         set((s) => ({
-          document: { ...s.document, banner: { ...s.document.banner, items: s.document.banner.items.filter((it) => it.id !== id) } },
+          document: pruneTropicalizations({
+            ...s.document,
+            banner: { ...s.document.banner, items: s.document.banner.items.filter((it) => it.id !== id) },
+          }),
         })),
 
       updateBannerItemFields: (id, fields) =>
@@ -312,9 +372,12 @@ export const useBuilder = create<BuilderState>()(
           if (!found) return s
           if (found.block.fields.items.length >= DEALS_MAX_CARDS) return s
           const cardIndex = found.block.fields.items.findIndex((c) => c.id === cardId)
+          const newCardId = newId()
           const items = [...found.block.fields.items]
-          items.splice(cardIndex + 1, 0, { ...items[cardIndex], id: newId() })
-          return { document: withDealCards(s.document, found.index, items) }
+          items.splice(cardIndex + 1, 0, { ...items[cardIndex], id: newCardId })
+          const document = withDealCards(s.document, found.index, items)
+          const tropicalizations = copyTropicalization(document.tropicalizations, dealCardKey(cardId), dealCardKey(newCardId))
+          return { document: { ...document, tropicalizations } }
         }),
 
       /** `toIndex` se interpreta contra el array ANTES de sacar la tarjeta
@@ -336,7 +399,7 @@ export const useBuilder = create<BuilderState>()(
           const found = findDealsBlockByCard(s.document.contenidos, cardId)
           if (!found) return s
           const items = found.block.fields.items.filter((c) => c.id !== cardId)
-          return { document: withDealCards(s.document, found.index, items) }
+          return { document: pruneTropicalizations(withDealCards(s.document, found.index, items)) }
         }),
 
       updateDealCardFields: (cardId, fields) =>
@@ -391,7 +454,9 @@ export const useBuilder = create<BuilderState>()(
           const copy = { ...found.items[itemIndex], id: newId() } as ModuleItem
           const items = [...found.items]
           items.splice(itemIndex + 1, 0, copy)
-          return { document: withModuleItems(s.document, found.index, items) }
+          const document = withModuleItems(s.document, found.index, items)
+          const tropicalizations = copyTropicalization(document.tropicalizations, moduleItemKey(itemId), moduleItemKey(copy.id))
+          return { document: { ...document, tropicalizations } }
         }),
 
       /** `toIndex` se interpreta contra los items de la MISMA área que el item
@@ -417,7 +482,9 @@ export const useBuilder = create<BuilderState>()(
         set((s) => {
           const found = findModuleBlockByItem(s.document.contenidos, itemId)
           if (!found) return s
-          return { document: withModuleItems(s.document, found.index, found.items.filter((it) => it.id !== itemId)) }
+          return {
+            document: pruneTropicalizations(withModuleItems(s.document, found.index, found.items.filter((it) => it.id !== itemId))),
+          }
         }),
 
       updateModuleItemFields: (itemId, fields) =>
@@ -428,7 +495,66 @@ export const useBuilder = create<BuilderState>()(
           return { document: withModuleItems(s.document, found.index, items) }
         }),
 
-      setDocument: (doc) => set(() => ({ document: doc })),
+      setDocument: (doc) => set(() => ({ document: pruneTropicalizations(doc) })),
+
+      addTropicalizeBranch: (key, countries) =>
+        set((s) => {
+          const branches = [...(s.document.tropicalizations[key]?.branches ?? []), { countries, hidden: false, overrides: {} }]
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      setTropicalizeBranchCountries: (key, index, countries) =>
+        set((s) => {
+          const existing = s.document.tropicalizations[key]?.branches ?? []
+          if (index < 0 || index >= existing.length) return s
+          const branches = existing.map((b, i) => (i === index ? { ...b, countries } : b))
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      setTropicalizeBranchHidden: (key, index, hidden) =>
+        set((s) => {
+          const existing = s.document.tropicalizations[key]?.branches ?? []
+          if (index < 0 || index >= existing.length) return s
+          const branches = existing.map((b, i) => (i === index ? { ...b, hidden } : b))
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      setTropicalizeBranchFields: (key, index, baseFields, nextFields) =>
+        set((s) => {
+          const existing = s.document.tropicalizations[key]?.branches ?? []
+          if (index < 0 || index >= existing.length) return s
+          const overrides = diffShallow(baseFields as object, nextFields as object)
+          const branches = existing.map((b, i) => (i === index ? { ...b, overrides } : b))
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      removeTropicalizeBranch: (key, index) =>
+        set((s) => {
+          const existing = s.document.tropicalizations[key]?.branches ?? []
+          const branches = existing.filter((_, i) => i !== index)
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      /** `toIndex` se interpreta contra las ramas ANTES de sacar la
+       *  arrastrada — misma convención que reorderContentBlock/reorderBannerItem. */
+      reorderTropicalizeBranch: (key, index, toIndex) =>
+        set((s) => {
+          const existing = s.document.tropicalizations[key]?.branches ?? []
+          if (index < 0 || index >= existing.length) return s
+          const adjusted = toIndex > index ? toIndex - 1 : toIndex
+          const branches = [...existing]
+          const [moved] = branches.splice(index, 1)
+          branches.splice(Math.max(0, Math.min(adjusted, branches.length)), 0, moved)
+          return { document: withTropicalizationBranches(s.document, key, branches) }
+        }),
+
+      clearTropicalization: (key) =>
+        set((s) => {
+          if (!(key in s.document.tropicalizations)) return s
+          const tropicalizations = { ...s.document.tropicalizations }
+          delete tropicalizations[key]
+          return { document: { ...s.document, tropicalizations } }
+        }),
     }),
     {
       limit: 100,

@@ -22,6 +22,9 @@
 // ============================================================================
 import type { EmailDocument } from '../model'
 import type { GlobalFields } from '../global/schema'
+import type { PreviewCountry } from '../preview/countries'
+import type { ViewportTab } from './viewportTab'
+import { TropicalizationNotice } from './tropicalize/TropicalizationNotice'
 import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
@@ -52,6 +55,10 @@ interface InspectorPanelProps {
   onInsertDealCard: (blockId: string, atIndex: number) => void
   onChangeModuleItem: (moduleItemId: string, fields: unknown) => void
   onInsertModuleItem: (blockId: string, areaKey: string, type: ModuleItemType, atIndex: number) => void
+  /** Para el aviso "esto está tropicalizado, acá editás la base" — ver
+   *  ui/tropicalize/TropicalizationNotice.tsx. */
+  country: PreviewCountry
+  onChangeTab: (next: ViewportTab) => void
 }
 
 function EmptyHint({ text }: { text: string }) {
@@ -76,6 +83,8 @@ export function InspectorPanel({
   onInsertDealCard,
   onChangeModuleItem,
   onInsertModuleItem,
+  country,
+  onChangeTab,
 }: InspectorPanelProps) {
   if (!selected) {
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
@@ -98,6 +107,7 @@ export function InspectorPanel({
           ← Volver a {contentBlockRegistry[found.block.type]?.label ?? found.block.type}
         </button>
         <h2>{def.label}</h2>
+        <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <def.PropertiesPanel
           value={item.fields}
           onChange={(next) => onChangeModuleItem(item.id, next)}
@@ -129,6 +139,7 @@ export function InspectorPanel({
             ← Volver al deal
           </button>
           <h2>{DEAL_CARD_PIECE_LABELS[selected.dealCardPieceType]}</h2>
+          <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
           <DealCardPiecePropertiesPanel
             pieceType={selected.dealCardPieceType}
             value={card.fields}
@@ -148,6 +159,7 @@ export function InspectorPanel({
         <h2>
           Deal {position} de {found.block.fields.items.length}
         </h2>
+        <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <DealCardPropertiesPanel value={card.fields} onChange={(next) => onChangeDealCard(card.id, next)} />
       </aside>
     )
@@ -165,6 +177,7 @@ export function InspectorPanel({
     return (
       <aside className="panel-inspector">
         <h2>{def.label}</h2>
+        <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <def.PropertiesPanel
           value={block.fields}
           onChange={(next) => onChangeBlock(block.id, next)}
@@ -224,6 +237,7 @@ export function InspectorPanel({
           ← Volver al banner
         </button>
         <h2>{def.label}</h2>
+        <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <def.PropertiesPanel
           value={item.fields}
           onChange={(next) => onChangeBannerItem(item.id, next)}
@@ -248,6 +262,7 @@ export function InspectorPanel({
     return (
       <aside className="panel-inspector">
         <h2>{SLOT_LABELS.BANNER}</h2>
+        <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <PropertiesPanel value={doc.banner} onChange={(next) => onChange('banner', next)} />
         {doc.banner.bannerType === 'horizontal' && (
           <BannerImageTypeSelector items={doc.banner.items} onSelect={onSetBannerImageModule} />
@@ -270,6 +285,7 @@ export function InspectorPanel({
   return (
     <aside className="panel-inspector">
       <h2>{SLOT_LABELS[selected.slot]}</h2>
+      <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
       <PropertiesPanel value={doc[def.docKey]} onChange={(next) => onChange(def.docKey, next)} />
     </aside>
   )

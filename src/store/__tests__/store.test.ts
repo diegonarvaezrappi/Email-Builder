@@ -6,7 +6,7 @@ import { defaultDealCardFields, type DealCardFields } from '../../components/dea
 import { defaultGeneralModuleFields } from '../../components/contentModules/generalFields'
 import { richTextFromPlain } from '../../richText/model'
 import type { ModuleItem } from '../../moduleItems/schemas'
-import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, TitleBlock } from '../../model'
+import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, EmailDocument, TitleBlock } from '../../model'
 
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
@@ -64,6 +64,7 @@ beforeEach(() => {
   setContenidos([])
   setBannerItems([])
   setBannerType('vertical')
+  useBuilder.setState((s) => ({ document: { ...s.document, tropicalizations: {} } }))
 })
 
 describe('insertContentBlock', () => {
@@ -731,5 +732,178 @@ describe('setDocument', () => {
 
     expect(ids()).toEqual(['nuevo'])
     expect(useBuilder.getState().document.global.tema).toBe('beige100')
+  })
+
+  it('poda tropicalizaciones huérfanas del documento importado (un .json exportado antes de borrar un bloque, por ejemplo)', () => {
+    const imported: EmailDocument = {
+      ...useBuilder.getState().document,
+      contenidos: [ctaBlock('vivo')],
+      tropicalizations: { 'block:fantasma': { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } },
+    }
+    useBuilder.getState().setDocument(imported)
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+})
+
+describe('acciones de tropicalización', () => {
+  beforeEach(() => setContenidos([ctaBlock('a')]))
+
+  it('addTropicalizeBranch agrega una rama con los países dados', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR', 'UY'])
+    expect(useBuilder.getState().document.tropicalizations['block:a'].branches).toEqual([
+      { countries: ['AR', 'UY'], hidden: false, overrides: {} },
+    ])
+  })
+
+  it('addTropicalizeBranch con países vacíos no crea la clave (normalizeBranches la descarta)', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', [])
+    expect(useBuilder.getState().document.tropicalizations['block:a']).toBeUndefined()
+  })
+
+  it('una 2da rama no puede reclamar un país que ya tiene una rama anterior — se descarta de la nueva', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR', 'BR'])
+    expect(useBuilder.getState().document.tropicalizations['block:a'].branches).toEqual([
+      { countries: ['AR'], hidden: false, overrides: {} },
+      { countries: ['BR'], hidden: false, overrides: {} },
+    ])
+  })
+
+  it('setTropicalizeBranchCountries reemplaza los países de la rama en ese índice, no de otra', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['BR'])
+    useBuilder.getState().setTropicalizeBranchCountries('block:a', 1, ['MX'])
+    const branches = useBuilder.getState().document.tropicalizations['block:a'].branches
+    expect(branches[0].countries).toEqual(['AR'])
+    expect(branches[1].countries).toEqual(['MX'])
+  })
+
+  it('setTropicalizeBranchCountries a [] elimina esa rama del todo (normalizeBranches)', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().setTropicalizeBranchCountries('block:a', 0, [])
+    expect(useBuilder.getState().document.tropicalizations['block:a']).toBeUndefined()
+  })
+
+  it('setTropicalizeBranchHidden marca la rama oculta sin tocar sus países/overrides', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().setTropicalizeBranchFields('block:a', 0, defaultCtaFields, { ...defaultCtaFields, text: 'x' })
+    useBuilder.getState().setTropicalizeBranchHidden('block:a', 0, true)
+    const branch = useBuilder.getState().document.tropicalizations['block:a'].branches[0]
+    expect(branch.hidden).toBe(true)
+    expect(branch.countries).toEqual(['AR'])
+    expect(branch.overrides).toEqual({ text: 'x' })
+  })
+
+  it('setTropicalizeBranchFields calcula el diff contra la base y guarda solo lo que cambió', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().setTropicalizeBranchFields('block:a', 0, defaultCtaFields, { ...defaultCtaFields, text: 'Pedí ahora' })
+    expect(useBuilder.getState().document.tropicalizations['block:a'].branches[0].overrides).toEqual({ text: 'Pedí ahora' })
+  })
+
+  it('removeTropicalizeBranch quita solo esa rama; si quedan otras, la clave sobrevive', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['BR'])
+    useBuilder.getState().removeTropicalizeBranch('block:a', 0)
+    expect(useBuilder.getState().document.tropicalizations['block:a'].branches).toEqual([
+      { countries: ['BR'], hidden: false, overrides: {} },
+    ])
+  })
+
+  it('removeTropicalizeBranch de la ÚLTIMA rama borra la clave entera', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().removeTropicalizeBranch('block:a', 0)
+    expect(useBuilder.getState().document.tropicalizations['block:a']).toBeUndefined()
+  })
+
+  it('reorderTropicalizeBranch mueve una rama a otra posición (misma convención toIndex que reorderContentBlock)', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['BR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['MX'])
+    useBuilder.getState().reorderTropicalizeBranch('block:a', 0, 3)
+    expect(useBuilder.getState().document.tropicalizations['block:a'].branches.map((b) => b.countries[0])).toEqual([
+      'BR',
+      'MX',
+      'AR',
+    ])
+  })
+
+  it('clearTropicalization borra TODAS las ramas de una — no solo una', () => {
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['BR'])
+    useBuilder.getState().clearTropicalization('block:a')
+    expect(useBuilder.getState().document.tropicalizations['block:a']).toBeUndefined()
+  })
+})
+
+describe('poda de tropicalizaciones al eliminar / copia al duplicar', () => {
+  it('removeContentBlock también borra la tropicalización del bloque eliminado', () => {
+    setContenidos([ctaBlock('a'), ctaBlock('b')])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().removeContentBlock('a')
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+
+  it('duplicateContentBlock copia la tropicalización del original a la copia', () => {
+    setContenidos([ctaBlock('a')])
+    useBuilder.getState().addTropicalizeBranch('block:a', ['AR'])
+    useBuilder.getState().duplicateContentBlock('a')
+    const copyId = ids()[1]
+    expect(useBuilder.getState().document.tropicalizations[`block:${copyId}`]).toEqual(
+      useBuilder.getState().document.tropicalizations['block:a'],
+    )
+  })
+
+  it('removeBannerItem también borra la tropicalización de la pieza eliminada', () => {
+    setBannerItems([tagsItem('t1')])
+    useBuilder.getState().addTropicalizeBranch('bitem:t1', ['AR'])
+    useBuilder.getState().removeBannerItem('t1')
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+
+  it('duplicateBannerItem copia la tropicalización a la copia', () => {
+    setBannerItems([tagsItem('t1')])
+    useBuilder.getState().addTropicalizeBranch('bitem:t1', ['AR'])
+    useBuilder.getState().duplicateBannerItem('t1')
+    const copyId = bannerIds()[1]
+    expect(useBuilder.getState().document.tropicalizations[`bitem:${copyId}`]).toBeDefined()
+  })
+
+  it('removeDealCard también borra la tropicalización de la tarjeta eliminada', () => {
+    useBuilder.getState().insertContentBlock('DEALS', 0)
+    const block = useBuilder.getState().document.contenidos[0] as DealsBlock
+    const cardId = block.fields.items[0].id
+    useBuilder.getState().addTropicalizeBranch(`dcard:${cardId}`, ['AR'])
+    useBuilder.getState().removeDealCard(cardId)
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+
+  it('duplicateDealCard copia la tropicalización a la copia', () => {
+    useBuilder.getState().insertContentBlock('DEALS', 0)
+    const block = useBuilder.getState().document.contenidos[0] as DealsBlock
+    const cardId = block.fields.items[0].id
+    // duplicateDealCard no hace nada si el bloque ya llegó a DEALS_MAX_CARDS
+    // (2, una fila completa) — se quita la 2da tarjeta para dejar lugar.
+    useBuilder.getState().removeDealCard(block.fields.items[1].id)
+    useBuilder.getState().addTropicalizeBranch(`dcard:${cardId}`, ['AR'])
+    useBuilder.getState().duplicateDealCard(cardId)
+    const nextBlock = useBuilder.getState().document.contenidos[0] as DealsBlock
+    expect(nextBlock.fields.items).toHaveLength(2)
+    const copyId = nextBlock.fields.items[1].id
+    expect(useBuilder.getState().document.tropicalizations[`dcard:${copyId}`]).toBeDefined()
+  })
+
+  it('removeModuleItem también borra la tropicalización de la molécula eliminada', () => {
+    setTitleBlock([moduleItem('x')])
+    useBuilder.getState().addTropicalizeBranch('mitem:x', ['AR'])
+    useBuilder.getState().removeModuleItem('x')
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+
+  it('duplicateModuleItem copia la tropicalización a la copia', () => {
+    setTitleBlock([moduleItem('x')])
+    useBuilder.getState().addTropicalizeBranch('mitem:x', ['AR'])
+    useBuilder.getState().duplicateModuleItem('x')
+    const copyId = moduleItemIds()[1]
+    expect(useBuilder.getState().document.tropicalizations[`mitem:${copyId}`]).toBeDefined()
   })
 })

@@ -24,6 +24,8 @@ import { elementBounds, indexOfOrThrow, innerBounds, voidElementBounds } from '.
 import { substituteImgSrcOrRemove } from '../../template/htmlText'
 import { wrapWithModuleItemMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
+import { moduleItemKey } from '../../tropicalize/keys'
+import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
 import type { ModuleItem } from '../../moduleItems/schemas'
@@ -78,7 +80,11 @@ function renderAreaItems(items: ModuleItem[], areaKey: string, doc: EmailDocumen
     .map((item) => {
       const def = getModuleItemDef(item.type)
       if (!def) return ''
-      return wrapWithModuleItemMarkers(itemCtx.blockId, item.id, def.render(item.fields, doc, itemCtx))
+      return wrapWithModuleItemMarkers(
+        itemCtx.blockId,
+        item.id,
+        renderTropicalized(doc, moduleItemKey(item.id), item.fields, (fields) => def.render(fields, doc, itemCtx)),
+      )
     })
     .filter((html) => html !== '')
     .join('\n')

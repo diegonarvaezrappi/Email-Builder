@@ -592,6 +592,8 @@
 .viewport-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 6px;
   gap: 4px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
@@ -1034,4 +1036,355 @@
 .tk-braze {
   color: var(--code-braze);
   font-weight: 600;
+}
+
+/* ============================================================================
+   Tropicalizar: pestaña + panel derecho + índice izquierdo + marcas en el
+   lienzo. Ver src/tropicalize/ para el motor de datos/render.
+   ============================================================================ */
+
+/* --- Barra de pestañas: toggle Diseño base / Vista país ------------------ */
+.viewport-bar .tropicalize-view-mode {
+  margin-left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.viewport-bar .tropicalize-view-mode button {
+  padding: 5px 10px;
+}
+
+/* --- Marca en el lienzo: elemento con condicional de país ---------------- */
+/* Se agrega en AMBOS modos (edit/tropicalize, ver ui/Viewport.tsx), pero el
+   estilo visual solo se activa dentro de .tropicalize-mode — en Preview un
+   elemento tropicalizado se ve exactamente como cualquier otro. */
+.tropicalize-mode .slot-hit.has-liquid .slot-select {
+  border-color: var(--tropical-border);
+  border-style: dashed;
+}
+
+.tropicalize-mode .slot-hit.has-liquid:hover .slot-select {
+  border-color: var(--tropical);
+}
+
+/* Seleccionado Y tropicalizado a la vez: el borde manda "tropicalizado"
+   (celeste sólido), el glow manda "seleccionado" (morado) — sin pelea de
+   especificidad porque cada uno toca una propiedad distinta. */
+.tropicalize-mode .slot-hit.has-liquid.selected .slot-select {
+  border-color: var(--tropical);
+  border-style: solid;
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* En tropicalize el lienzo solo selecciona (sin arrastre) — el cursor de
+   "agarrar" que .block-hit/.piece-hit ponen en modo edit mentiría acá. */
+.tropicalize-mode .block-hit .slot-select {
+  cursor: pointer;
+}
+
+/* --- Panel derecho: TropicalizationPanel --------------------------------- */
+.trop-summary {
+  font-size: 12px;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+
+.inspector-trop-notice {
+  font-size: 12px;
+  color: var(--tropical);
+  background: var(--tropical-bg);
+  border: 1px solid var(--tropical-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.trop-global-warn {
+  font-size: 12px;
+  color: var(--text-h);
+  background: rgba(209, 41, 61, 0.12);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+
+.link-button {
+  font: inherit;
+  font-size: 12px;
+  padding: 0;
+  margin-left: 4px;
+  border: none;
+  background: none;
+  color: var(--tropical);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  color: var(--text-h);
+}
+
+/* Una variante — acordeón: solo la abierta muestra el editor de campos. */
+.branch-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.branch-card.is-previewed {
+  border-color: var(--tropical-border);
+}
+
+.branch-card-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg);
+}
+
+.branch-card-toggle {
+  font: inherit;
+  font-size: 13px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-h);
+  cursor: pointer;
+  text-align: left;
+}
+
+.branch-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.branch-icon-btn {
+  font: inherit;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.branch-icon-btn:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+
+.branch-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.branch-icon-btn.slot-delete-inline {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.branch-body {
+  padding: 10px;
+}
+
+.branch-previewed-hint {
+  font-size: 11px;
+  color: var(--tropical);
+  margin: 0 0 10px;
+}
+
+.country-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.country-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.country-chip:has(input:checked) {
+  border-color: var(--tropical-border);
+  background: var(--tropical-bg);
+  color: var(--tropical);
+}
+
+.country-chip.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.country-chip input {
+  margin: 0;
+}
+
+.field-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-h);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.trop-copy-base {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.trop-copy-base:hover {
+  border-color: var(--accent-border);
+}
+
+.branch-card-base {
+  background: var(--bg);
+  border-style: dashed;
+}
+
+.branch-card-base .branch-card-header {
+  background: none;
+  justify-content: space-between;
+}
+
+.branch-base-hint {
+  font-size: 11px;
+  color: var(--text);
+  margin: 0;
+  padding: 0 10px 8px;
+}
+
+/* Escopado a .panel-inspector (no un `button.primary` global): la pestaña
+   Exportar también tiene un botón "primary" (Copiar HTML) dentro de
+   `.code-actions`, un `display:flex` en fila donde `width:100%` rompería el
+   layout de los 4 botones — acá SÍ tiene sentido (la columna del panel
+   derecho apila de a uno). */
+.panel-inspector button.primary {
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.panel-inspector button.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trop-liquid-details {
+  margin-bottom: 14px;
+}
+
+.trop-liquid-details summary {
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.trop-clear {
+  font: inherit;
+  font-size: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--danger);
+  background: none;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.trop-clear-hint {
+  font-size: 11px;
+  color: var(--text);
+  margin: 6px 0 0;
+  text-align: center;
+}
+
+/* --- Panel izquierdo: TropicalizationIndexPanel --------------------------- */
+.trop-index-count {
+  font-size: 12px;
+  color: var(--text);
+  margin: 0 0 14px;
+}
+
+.trop-index-group {
+  margin-bottom: 16px;
+}
+
+.trop-index-empty {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.6;
+  padding: 4px 10px;
+  margin: 0;
+}
+
+.lib-item-countries {
+  display: flex;
+  gap: 3px;
+}
+
+.country-chip-mini {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 8px;
+  background: var(--tropical-bg);
+  color: var(--tropical);
+}
+
+.trop-index-hidden {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.trop-index-hidden-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-h);
 }
