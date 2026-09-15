@@ -56,49 +56,25 @@ function stripComments(html: string): string {
 }
 
 /**
- * PROMO y CREDITOS son las 2 únicas piezas MOLECULA cuya <table> raíz trae
- * `bgcolor` (el fondo de color de su "pastillita") en la MISMA tabla que
- * carga el `padding-bottom: 7px` de separación con la pieza siguiente. Hasta
- * el pull 2026-08-21 (bd9f4a5) esa separación era `margin-bottom: 7px` —
- * transparente por definición, nunca se nota si vive en una tabla con o sin
- * `bgcolor`. Ese pull convirtió el margin de las 17 moléculas de banner a
- * padding-bottom "porque el margin no se aplicaba consistente en clientes de
- * mail" (CHANGELOG v0.7.0, ver la nota de MOLECULE_ADD_CENTER_MARGIN_RE en
- * components/banner/render.ts) — cambio cosmético e inocuo para el resto de
- * las moléculas (texto plano, sin fondo propio), pero con un efecto visual
- * real acá: el padding queda PINTADO del color de la pastillita en vez de
- * transparente, así que la pieza siguiente queda pegada sin espacio visible.
- * Reportado por el usuario 2026-08-25 ("entre Promo e Imagen automática no
- * hay espacio") — se notó recién ahora porque la pieza que sigue a PROMO por
- * default solía ser TEXTOM (texto plano, cuyo propio interlineado disimulaba
- * la falta de espacio real); con una imagen a ancho completo justo después,
- * la ausencia de espacio se vuelve obvia.
+ * PROMO y CREDITOS eran, hasta el 2026-09-15, las 2 únicas piezas MOLECULA
+ * cuya <table> raíz traía `bgcolor` (el fondo de color de su "pastillita") en
+ * la MISMA tabla que cargaba el `padding-bottom: 7px` de separación con la
+ * pieza siguiente — el padding quedaba PINTADO del color de la pastillita en
+ * vez de transparente, así que la pieza siguiente quedaba pegada sin espacio
+ * visible (reportado por el usuario 2026-08-25, "entre Promo e Imagen
+ * automática no hay espacio"). Esta app lo arreglaba envolviendo la tabla
+ * coloreada en una tabla exterior transparente propia (wrapColoredBadgeSpacing).
  *
- * Fix: se envuelve la tabla coloreada (intacta, con su propio `padding: 3px
- * 6px` de siempre para el look de la pastillita) en una tabla EXTERIOR
- * transparente con su propio `padding-bottom: 7px` — mismo mecanismo que ya
- * usan el resto de las moléculas (una tabla sin bgcolor cargando la
- * separación) — y se le quita el `padding-bottom: 7px` extra a la tabla
- * coloreada para no duplicar el espacio. THROW si el patrón ya no aparece:
- * significaría que el maestro cambió esta estructura y el parche quedó
- * huérfano.
+ * El barrido de componentes del 2026-09-15 (CLAUDE.md §4.1 del repo raíz)
+ * resolvió el problema de raíz, río arriba: `bgcolor` no acepta `rgba()` (lo
+ * que ya rompía 3 temas con alfa), así que el fondo se movió a un `<div
+ * style="background:...">` que envuelve la tabla — y ESE div es el que ahora
+ * carga la separación, como `margin-bottom: 7px` (horizontal) / `margin: 0px
+ * auto 7px auto` (vertical, con el `auto` de los lados haciendo el centrado
+ * que antes daba el wrapper). Un margin en un `<div>` nunca se pinta del
+ * fondo, así que el bug que wrapColoredBadgeSpacing existía para tapar ya no
+ * puede pasar — el envoltorio quedó sin trabajo y se retiró.
  */
-const COLORED_BADGE_PADDING_BOTTOM = 'padding-bottom: 7px;'
-
-function wrapColoredBadgeSpacing(html: string, bannerType: BannerItemRenderCtx['bannerType'], fileName: string): string {
-  const tagStart = html.indexOf('<table')
-  const tagEnd = tagStart === -1 ? -1 : html.indexOf('>', tagStart) + 1
-  const openTag = tagStart === -1 ? '' : html.slice(tagStart, tagEnd)
-  if (!openTag.includes('bgcolor="{{') || !openTag.includes(COLORED_BADGE_PADDING_BOTTOM)) {
-    throw new Error(
-      `${fileName}: la tabla raíz ya no trae bgcolor + "${COLORED_BADGE_PADDING_BOTTOM}" — revisar wrapColoredBadgeSpacing en components/banner/items/render.ts`,
-    )
-  }
-  const fixedOpenTag = openTag.replace(COLORED_BADGE_PADDING_BOTTOM, '')
-  const withoutOwnSpacing = html.slice(0, tagStart) + fixedOpenTag + html.slice(tagEnd)
-  const outerMargin = bannerType === 'vertical' ? ' margin: 0 auto;' : ''
-  return `<table cellpadding="0" cellspacing="0" border="0" style="width: auto;${outerMargin} padding-bottom: 7px;">\n  <tr>\n    <td>${withoutOwnSpacing}</td>\n  </tr>\n</table>\n`
-}
 
 // --- PROMO -------------------------------------------------------------------
 
@@ -162,28 +138,16 @@ export function renderPromoSnippet(fields: PromoFields, _doc: EmailDocument, ctx
       ctx.bannerType,
     ),
   }
-  return wrapColoredBadgeSpacing(resolveBannerVars(raw, vars, fileName), ctx.bannerType, fileName)
+  return resolveBannerVars(raw, vars, fileName)
 }
 
 // --- CREDITOS ------------------------------------------------------------------
-// BUG DEL MAESTRO (no se puede tocar el archivo — regla de solo lectura): el
-// <span> del monto en molecula_creditos_horizontal.html trae `font-siaze` en
-// vez de `font-size` (confirmado por diff contra el vertical, que sí lo
-// escribe bien) — el navegador descarta esa declaración inline inválida
-// entera, y como los `.bnr-xl/.bnr-lg` con !important de template_base.html
-// SOLO aplican en el breakpoint mobile (max-width:620px), en escritorio el
-// número de CREDITOS pierde su tamaño grande y queda con el font-size por
-// defecto — exactamente el "pierde sus estilos" reportado. Se corrige acá
-// después de cargar el archivo. THROW si el typo ya no aparece: significaría
-// que David lo arregló upstream y este parche quedó muerto, hay que borrarlo.
-const CREDITOS_HORIZONTAL_FONT_TYPO = 'font-siaze:'
-
-function fixCreditosHorizontalFontSizeTypo(html: string, fileName: string): string {
-  if (!html.includes(CREDITOS_HORIZONTAL_FONT_TYPO)) {
-    throw new Error(`${fileName}: ya no contiene el typo "${CREDITOS_HORIZONTAL_FONT_TYPO}" — quitar fixCreditosHorizontalFontSizeTypo en components/banner/items/render.ts`)
-  }
-  return html.replace(CREDITOS_HORIZONTAL_FONT_TYPO, 'font-size:')
-}
+// Hasta el 2026-09-15 el maestro tenía un typo real en
+// molecula_creditos_horizontal.html (`font-siaze` en vez de `font-size` en el
+// <span> del monto, confirmado por diff contra el vertical) que esta app
+// parcheaba con un fixCreditosHorizontalFontSizeTypo fail-loud. El barrido de
+// componentes de esa fecha lo corrigió upstream (ver CLAUDE.md del repo raíz,
+// bitácora 2026-09-15) — el parche quedó muerto y se retiró de acá.
 
 // --- CREDITOS: variante "Acento" --------------------------------------------
 // Pedido explícito del usuario (no del maestro — ver el comentario largo en
@@ -237,7 +201,6 @@ function applyDeReintegroCell(html: string, fields: CreditosFields, fileName: st
 export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_creditos_${ctx.bannerType}.html`
   let raw = stripComments(loadBannerMoleculaFile(fileName))
-  if (ctx.bannerType === 'horizontal') raw = fixCreditosHorizontalFontSizeTypo(raw, fileName)
   raw = withCreditosAcentoVariant(raw, fields.variant, fileName)
   raw = applyDeReintegroCell(raw, fields, fileName)
   const size = liveTextSizing(plainText(fields.creditosText), ctx.bannerType)
@@ -253,7 +216,7 @@ export function renderCreditosSnippet(fields: CreditosFields, _doc: EmailDocumen
       ctx.bannerType,
     ),
   }
-  return wrapColoredBadgeSpacing(resolveBannerVars(raw, vars, fileName), ctx.bannerType, fileName)
+  return resolveBannerVars(raw, vars, fileName)
 }
 
 // --- TEXTOXL / TEXTOM: color de acento por tema -----------------------------
@@ -299,12 +262,18 @@ export function renderTextoXlSnippet(fields: TextoXlFields, doc: EmailDocument, 
 // Sin lógica de tamaño: 30px/31px (horizontal) y 50px/51px (vertical) son
 // literales inline en el archivo real, con class="bnr-md" fija — no dependen
 // del largo del texto (a diferencia de PROMO/CREDITOS/TEXTOXL).
-// `molecula_texto_M_horizontal/_vertical.html` son duplicados byte a byte de
-// estos (05-docs/INDICE-DE-COMPONENTES.md los marca como duplicado sin
-// resolver) — no se sincronizan ni se usan.
+//
+// El archivo real se llama `molecula_texto_M_*.html`, NO `molecula_textom_*`:
+// el repo raíz tenía un duplicado byte a byte de los dos ("posible duplicado
+// sin resolver" en 05-docs/INDICE-DE-COMPONENTES.md) hasta el 2026-09-15, día
+// en que lo resolvió BORRANDO `molecula_textom_*` y quedándose con
+// `molecula_texto_M_*` (el nombre que usa la tarjeta del Figma) — la app
+// sincronizaba/usaba justo el que el maestro terminó eliminando. El tipo de
+// pieza sigue siendo 'TEXTOM' en el schema/registry (ver items/schemas.ts) —
+// solo cambió de qué archivo sale su HTML.
 
 export function renderTextoMSnippet(fields: TextoMFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
-  const fileName = `molecula_textom_${ctx.bannerType}.html`
+  const fileName = `molecula_texto_M_${ctx.bannerType}.html`
   const raw = withDarkThemeAccentOverride(stripComments(loadBannerMoleculaFile(fileName)), doc.global.tema, fileName)
   return resolveBannerVars(raw, { banner_copy_modulo_textom: renderRichText(fields.text, LIQUID_COLOR_TOKENS) }, fileName)
 }

@@ -5,7 +5,6 @@
 // Header/Cierre, extendido a una lista repetible de piezas.
 // ============================================================================
 import type { EmailDocument } from '../../model'
-import { escapeHtmlAttr } from '../../template/htmlText'
 import { wrapWithBannerItemMarkers } from '../../template/contentBlocks'
 import { getBannerItemDef, type BannerItemRenderCtx } from '../../bannerItemRegistry'
 import { bannerItemKey } from '../../tropicalize/keys'
@@ -16,11 +15,6 @@ import { enforceHorizontalItemOrder } from './horizontalOrder'
 import { bannerShell, ITEMS_MARKER, MOLECULAS_MARKER } from './shell'
 import type { BannerFields } from './schema'
 import type { BannerItem } from './items/schemas'
-
-/** Token de relleno manual del maestro (no es una variable Liquid), misma
- *  convención que AQUIELLINK# del CTA. Aparece 2 veces por archivo de banner
- *  (href + originalsrc) → replaceAll. */
-const BANNER_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
 
 /**
  * Los valores "apagado" que el propio maestro documenta en el comentario
@@ -254,8 +248,11 @@ export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): s
     .map((group) => (group.zone === 'MOLECULA' ? moleculeTable.replace(MOLECULAS_MARKER, () => group.html) : group.html))
     .join('\n')
 
-  let html = shell.replace(ITEMS_MARKER, () => body)
-  html = html.replaceAll(BANNER_LINK_PLACEHOLDER, () => escapeHtmlAttr(fields.link))
+  // `fields.link` ya NO se sustituye acá: desde el refactor HERO
+  // (2026-09-12) el <a> que lo lleva envuelve TODO el HERO (header + banner +
+  // imagen full width) a nivel de estructura_general.html, no cada archivo de
+  // banner por separado — ver template/assemble.ts (HERO_LINK_PLACEHOLDER).
+  const html = shell.replace(ITEMS_MARKER, () => body)
 
   // Resolución LOCAL de las {{xxx_mail_general}} que puedan quedar (bg_bannerimg,
   // bg_bannertono, padd_banner del shell + bg_descuento, color_descuento,

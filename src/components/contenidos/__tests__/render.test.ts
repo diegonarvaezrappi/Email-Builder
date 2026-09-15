@@ -110,7 +110,8 @@ describe('renderContentBlocksSnippet · tropicalización', () => {
 
 describe('renderContenidosSnippet', () => {
   // Marcador único del `<td>` de área libre en _contenidos_wrapper.html.
-  const WRAPPER_TD = '<td style="padding:0px;margin:0px;border-spacing:0;">'
+  // Ganó `class="mobile_paading"` en el barrido de módulos del 2026-09-15.
+  const WRAPPER_TD = '<td class="mobile_paading" style="padding:0px;margin:0px;border-spacing:0;">'
 
   const doc = (overrides: Partial<typeof defaultEmailDocument> = {}) => ({ ...defaultEmailDocument, ...overrides })
 

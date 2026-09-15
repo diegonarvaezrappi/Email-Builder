@@ -9,6 +9,8 @@ import { renderBannerSnippet, stripBannerFieldAssigns } from '../../components/b
 import { stripDealsFieldAssigns } from '../../components/deals/render'
 import { inlineTheme } from '../../themes/inlineTheme'
 import { resolveGlobalVars } from '../../global/vars'
+import { elementBounds, indexOfOrThrow } from '../htmlEdits'
+import { escapeHtmlAttr } from '../htmlText'
 import type { CtaBlock, EmailDocument } from '../../model'
 
 const ctaBlock = (id: string, text: string): CtaBlock => ({
@@ -17,34 +19,63 @@ const ctaBlock = (id: string, text: string): CtaBlock => ({
   fields: { text, deeplink: '#', align: 'center', size: 'big' },
 })
 
+// Reimplementación INDEPENDIENTE (no importada de assemble.ts) de sus 3
+// swallows de comentario/tabla — mismo criterio que el test original, que
+// duplicaba los regexes de assemble.ts en vez de importarlos: si el test
+// llamara a las mismas funciones que está probando, un bug ahí no se notaría.
+function replaceCommentPlaceholder(html: string, anchor: string, rendered: string): string {
+  const anchorIdx = indexOfOrThrow(html, anchor, 'test')
+  const commentStart = html.lastIndexOf('<!--', anchorIdx)
+  const commentEnd = html.indexOf('-->', anchorIdx) + 3
+  return html.slice(0, commentStart) + rendered + html.slice(commentEnd)
+}
+
+function replaceContenidosWrapperInTest(html: string, rendered: string): string {
+  const anchorIdx = indexOfOrThrow(html, 'WRAPPER DE CONTENIDOS', 'test')
+  const commentStart = html.lastIndexOf('<!--', anchorIdx)
+  const tableStart = html.indexOf('<table', anchorIdx)
+  const tableBounds = elementBounds(html, tableStart + 1, 'table', 'test')
+  return html.slice(0, commentStart) + rendered + html.slice(tableBounds.end)
+}
+
+function replaceFooterExampleInTest(html: string, rendered: string): string {
+  const endLiteral = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
+  const startIdx = indexOfOrThrow(html, "{% assign cond = '' %}", 'test')
+  const endIdx = html.indexOf(endLiteral, startIdx) + endLiteral.length
+  return html.slice(0, startIdx) + rendered + html.slice(endIdx)
+}
+
 describe('assembleEmailHtml', () => {
-  it('replaces the FOOTER marker exactly once with the rendered footer snippet', () => {
+  it('replaces the FOOTER example block exactly once with the rendered footer snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
     const expectedSnippet = renderFooterSnippet(defaultEmailDocument.footer, defaultEmailDocument.global.tema)
 
-    expect(html).not.toContain('<!-- FOOTER -->')
     expect(html.includes(expectedSnippet)).toBe(true)
+    // El ejemplo del maestro fija firma='general'; el default real de la app
+    // es 'sinfirma' (footer/schema.ts) — si el ejemplo sobreviviera sin
+    // reemplazar, este literal se colaría.
+    expect(html).not.toContain("firma = 'general'")
   })
 
-  it('replaces the HEADER WRAPPER placeholder exactly once with the rendered header snippet', () => {
+  it('replaces the "AQUÍ VA EL HEADER" placeholder with the rendered header snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
     const expectedSnippet = renderHeaderSnippet(defaultEmailDocument.header, defaultEmailDocument.global.tema)
 
-    expect(html).not.toContain('HEADER WRAPPER')
+    expect(html).not.toContain('AQUÍ VA EL HEADER')
     expect(html.includes(expectedSnippet)).toBe(true)
   })
 
-  it('leaves the CIERRES marker permanently empty (the Cierre molecule was retired 2026-09-07, folded into Footer\'s own firma select)', () => {
+  it('has no trace of the retired Cierre molecule (folded into Footer\'s own firma select 2026-09-07) nor its old <!-- CIERRES --> marker (removed from the master entirely 2026-09-15)', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    expect(html).not.toContain('<!-- CIERRES -->')
+    expect(html).not.toContain('CIERRES')
     expect(html).not.toContain('RappiFirma')
   })
 
-  it('replaces the BANNER placeholder (a prose comment, not a simple <!-- X -->) with the rendered banner snippet', () => {
+  it('replaces the "AQUÍ VA EL BANNER" placeholder with the rendered banner snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
     const expectedSnippet = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
 
-    expect(html).not.toMatch(/<!--\s*BANNER\s*:/)
+    expect(html).not.toContain('AQUÍ VA EL BANNER')
     expect(html.includes(expectedSnippet)).toBe(true)
     // El documento por defecto trae banner vertical + 1 tag (instrucción
     // explícita del maestro: "por defecto ... un banner vertical, con tags").
@@ -52,18 +83,23 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain('BITEM:TAGS:')
   })
 
-  it('leaves the other 2 mentions of the word BANNER in the master untouched (the placeholder regex must not over-match)', () => {
-    const html = assembleEmailHtml(defaultEmailDocument)
-    // "INICIO SECCION BANNER" no seguido de ":" — no es el placeholder.
-    expect(html).toContain('INICIO SECCION BANNER')
+  // Desde el refactor HERO (2026-09-12) el <a> que lleva doc.banner.link ya
+  // no vive dentro de cada archivo de banner (components/banner/render.ts) —
+  // envuelve TODO el HERO (header + banner + imagen full width) a nivel de
+  // estructura_general.html, así que la sustitución pasó a hacerse acá.
+  it('replaces both AQUIELLINKDELBANNER occurrences (the <a> that wraps the whole HERO) with doc.banner.link, HTML-attribute-escaped', () => {
+    const doc = { ...defaultEmailDocument, banner: { ...defaultEmailDocument.banner, link: 'https://x.test/a?b="c"' } }
+    const html = assembleEmailHtml(doc)
+    expect(html).not.toContain('AQUIELLINKDELBANNER')
+    expect((html.match(/https:\/\/x\.test\/a\?b=&quot;c&quot;/g) ?? []).length).toBe(2)
   })
 
-  it('replaces the WRAPPER DE CONTENIDOS placeholder with the rendered CTA blocks, joined by a single separator', () => {
+  it('replaces the WRAPPER DE CONTENIDOS placeholder (and the 480px table it introduces) with the rendered CTA blocks, joined by a single separator', () => {
     const doc = { ...defaultEmailDocument, contenidos: [ctaBlock('a', 'Uno'), ctaBlock('b', 'Dos')] }
     const html = assembleEmailHtml(doc)
     const expectedSnippet = renderContenidosSnippet(doc.contenidos, doc)
 
-    expect(html).not.toContain('<!-- WRAPPER DE CONTENIDOS:')
+    expect(html).not.toContain('WRAPPER DE CONTENIDOS')
     expect(html.includes(expectedSnippet)).toBe(true)
     // exactamente 1 separador entre los 2 CTA, ninguno colgando al final
     const afterFirst = html.slice(html.indexOf('BLOCK:CTA:a'))
@@ -118,18 +154,18 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme and the HEADER/BANNER/CONTENIDOS/FOOTER markers (plus the permanently-empty CIERRES one)', () => {
+  it('touches nothing besides the theme, the HERO link, and the HEADER/BANNER/CONTENIDOS/FOOTER anchors', () => {
     const doc = {
       ...defaultEmailDocument,
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
       contenidos: [ctaBlock('a', 'Uno')],
     }
-    const expected = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
-      .replace('<!-- CIERRES -->', () => '')
-      .replace(/<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/, () => renderHeaderSnippet(doc.header, 'beige100'))
-      .replace(/<!--\s*BANNER\s*:[\s\S]*?-->/, () => renderBannerSnippet(doc.banner, doc))
-      .replace(/<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/, () => renderContenidosSnippet(doc.contenidos, doc))
-      .replace('<!-- FOOTER -->', () => renderFooterSnippet(doc.footer, 'beige100'))
+    let expected = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
+    expected = expected.replaceAll('AQUIELLINKDELBANNER', () => escapeHtmlAttr(doc.banner.link))
+    expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL HEADER', renderHeaderSnippet(doc.header, 'beige100'))
+    expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL BANNER', renderBannerSnippet(doc.banner, doc))
+    expected = replaceContenidosWrapperInTest(expected, renderContenidosSnippet(doc.contenidos, doc))
+    expected = replaceFooterExampleInTest(expected, renderFooterSnippet(doc.footer, 'beige100'))
     expect(assembleEmailHtml(doc)).toBe(expected)
   })
 

@@ -289,22 +289,31 @@ const COUPONS_TITULO_FILE = 'celda_cupon_titulo.html'
 const CONTENIDOS_WRAPPER_FILE = '_contenidos_wrapper.html'
 
 /**
- * FOOTER y CIERRE: ver la nota de arriba sobre por qué CONTENIDOS queda
- * afuera. `text` es el texto real del marcador en el maestro — el de CIERRE
- * es plural ("CIERRES"), no el nombre del slot. BANNER se valida aparte, más
- * abajo (BANNER_PLACEHOLDER_RE) — su marcador es un comentario de instrucción
- * en prosa, no un `<!-- BANNER -->` de una sola palabra.
+ * El refactor HERO/CONTENTS/FOOTER (cerrado 2026-09-15, ver CLAUDE.md del
+ * repo raíz §1.1 y §9) reescribió estructura_general.html entero como
+ * esqueleto — ya no trae un `<!-- FOOTER -->` de una sola línea (el hueco del
+ * footer ahora muestra directamente el Liquid de ejemplo que reemplazará,
+ * ver FOOTER_EXAMPLE_START/END abajo) ni un `<!-- CIERRES -->` (la molécula
+ * de Cierre se retiró del todo, ver template/assemble.ts). El viejo
+ * SLOT_MARKERS (que validaba ambos como `<!-- TEXTO -->`) ya no aplica a
+ * ninguno de los dos.
  */
-const SLOT_MARKERS = [
-  { slot: 'FOOTER', text: 'FOOTER' },
-  { slot: 'CIERRE', text: 'CIERRES' },
-]
-
 const TEMPLATE_BASE_NAME = 'estructura_general.html'
 /** Ruta relativa al repo, solo para los mensajes. */
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
 const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
+
+/**
+ * El hueco del footer en estructura_general.html ya no es un `<!-- FOOTER -->`
+ * de una sola línea: el 2026-09-15 el archivo pasó a mostrar directamente el
+ * Liquid de ejemplo que la app reemplaza entero (los 6 `{% assign %}` +
+ * la referencia al content block General) — mismo criterio que el resto del
+ * refactor ("los contenedores que nunca se editan van embebidos, con un
+ * comentario en cada hueco que SÍ cambia"). Debe quedar sincronizado con
+ * FOOTER_EXAMPLE_START/END de src/template/assemble.ts. */
+const FOOTER_EXAMPLE_START = "{% assign cond = '' %}"
+const FOOTER_EXAMPLE_END = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
 /**
  * Solo cta-template.html: es el content block real que src/preview/liquidPreview.ts
  * infla donde aparezca `{{content_blocks.${CTA-template}}}`. cta-llamado.html
@@ -314,25 +323,30 @@ const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', '
  */
 const CTA_FILE = 'cta-template.html'
 
-/** Debe quedar sincronizado con WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE de src/template/assemble.ts. */
-const CONTENIDOS_WRAPPER_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/g
+/**
+ * Debe quedar sincronizado con WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE de
+ * src/template/assemble.ts. Desde 2026-09-15 el comentario trae un prefijo
+ * de sección ("2.1 · WRAPPER DE CONTENIDOS") — `[^\n]{0,20}`, no `\s*`, para
+ * tolerarlo sin dejar que el match salte a un `<!--` lejano. Esta versión
+ * SOLO valida que el comentario exista 1 vez; a diferencia de assemble.ts,
+ * acá no hace falta swallowear la tabla de 480px que lo sigue (es una copia
+ * ilustrativa idéntica a _contenidos_wrapper.html, ya validada aparte por
+ * CONTENIDOS_WRAPPER_ANCHOR_COUNTS más abajo). */
+const CONTENIDOS_WRAPPER_PLACEHOLDER_RE = /<!--[^\n]{0,20}WRAPPER DE CONTENIDOS[\s\S]*?-->/g
 
-/** Debe quedar sincronizado con BANNER_PLACEHOLDER_RE de src/template/assemble.ts.
- *  Prefijo, no la frase completa: el texto tras "BANNER :" cambia seguido en
- *  el repo. Exigir que "BANNER" vaya pegado a `<!--` y seguido de `:` excluye
- *  las otras 2 apariciones de la palabra en el maestro ("EJEMPLO DE DEFINICION
- *  DE CAMPOS PARA BANNER", "INICIO SECCION BANNER") — verificado. */
-const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/g
+/**
+ * Debe quedar sincronizado con BANNER_PLACEHOLDER_RE de src/template/assemble.ts.
+ * Hasta 2026-09-15 este era un `<!-- BANNER : texto libre -->` de una sola
+ * línea; el refactor lo reemplazó por un comentario multilínea ("▸ AQUÍ VA EL
+ * BANNER…") con el mismo prefijo corto que HEADER_PLACEHOLDER_RE. */
+const BANNER_PLACEHOLDER_RE = /<!--[^\n]{0,20}AQUÍ VA EL BANNER[\s\S]*?-->/g
 
 const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
 
 /**
- * Las 19 piezas que la app importa de banner_moleculas/ (23 archivos reales).
- * Quedan FUERA a propósito 4 de los 23:
- *  - molecula_texto_M_horizontal.html / _vertical.html: duplicados byte a
- *    byte de molecula_textom_*, marcados como "posible duplicado sin
- *    resolver" en 05-docs/INDICE-DE-COMPONENTES.md. Sincronizar los 2 pares
- *    invitaría a usar el equivocado.
+ * Las 19 piezas que la app importa de banner_moleculas/ (21 archivos reales,
+ * tras la limpieza del duplicado — ver nota siguiente). Quedan FUERA a
+ * propósito 2 de los 21:
  *  - molecula_cta_interno_horizontal.html / _vertical.html: son solo los
  *    {% assign %} + la referencia al content block CTA-template, exactamente
  *    lo que emite src/components/cta/render.ts. No se copian (mismo criterio
@@ -350,6 +364,14 @@ const BANNER_FILES = ['big-banner-horizontal.html', 'big-banner-vertical.html']
  * contenido (ver [[project_body_modules_plan_2026-08-26]]) — hasta entonces
  * quedaban sin sincronizar (ver el warning de "archivo nuevo" de más abajo,
  * que hasta esa fase los señalaba en cada corrida).
+ *
+ * `molecula_textom_horizontal.html` / `_vertical.html` — el duplicado byte a
+ * byte de `molecula_texto_M_*` que este comentario señalaba como "posible
+ * duplicado sin resolver" — el repo lo resolvió el 2026-09-15 BORRANDO
+ * `molecula_textom_*` y quedándose con `molecula_texto_M_*` (el nombre que
+ * usa la tarjeta del Figma). Antes la app sincronizaba/usaba el que el
+ * maestro terminó eliminando — ver components/banner/items/render.ts
+ * (renderTextoMSnippet) para el fix simétrico del lado de la app.
  */
 const BANNER_MOLECULA_FILES = [
   'molecula_promo_horizontal.html',
@@ -358,8 +380,8 @@ const BANNER_MOLECULA_FILES = [
   'molecula_creditos_vertical.html',
   'molecula_textoxl_horizontal.html',
   'molecula_textoxl_vertical.html',
-  'molecula_textom_horizontal.html',
-  'molecula_textom_vertical.html',
+  'molecula_texto_M_horizontal.html',
+  'molecula_texto_M_vertical.html',
   'molecula_texto_complementario_horizontal.html',
   'molecula_texto_complementario_vertical.html',
   'molecula_img_automatica_horizontal.html',
@@ -382,12 +404,8 @@ const CTA_INTERNO_FIXED_ALIGN = {
 }
 
 /** Archivos de banner_moleculas/ que existen pero no se sincronizan ni se
- *  validan por nombre fijo (duplicados o content-block puro, ver arriba). */
-const BANNER_MOLECULA_KNOWN_EXTRA_FILES = [
-  'molecula_texto_M_horizontal.html',
-  'molecula_texto_M_vertical.html',
-  ...Object.keys(CTA_INTERNO_FIXED_ALIGN),
-]
+ *  validan por nombre fijo (content-block puro, ver arriba). */
+const BANNER_MOLECULA_KNOWN_EXTRA_FILES = [...Object.keys(CTA_INTERNO_FIXED_ALIGN)]
 
 /** Ancla que src/components/banner/shell.ts necesita en cada big-banner —
  *  aparece exactamente 1 vez en cada archivo (verificado). */
@@ -521,8 +539,11 @@ const TITLE_ANCHOR_COUNTS = {
  * archivo en content_moleculas/, no de este). Solo hacen falta las anclas del
  * SHELL (link + el <div> de fondo que envuelve toda el área libre).
  */
+// El barrido de módulos del 2026-09-15 cambió `display: inline-block` →
+// `display: contents` en los wrappers de módulo (4 archivos, bullet incluido)
+// — mismo motivo documentado en components/bullet/render.ts.
 const BULLET_AREA_DIV_ANCHOR =
-  '<div style="display: inline-block; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden; width: 100%; max-width: 480px;">'
+  '<div style="display: contents; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden; width: 100%; max-width: 480px;">'
 const BULLET_ANCHOR_COUNTS = {
   LINKMODULO: 1,
   [BULLET_AREA_DIV_ANCHOR]: 1,
@@ -768,8 +789,10 @@ const BENEFICIOS_TEXTO_LITERAL = 'En todos tus pedidos en la app, pidiendo desde
  * insertan los bloques de CONTENIDOS + Cierre, ambos dentro de esta misma
  * tabla (ver la nota grande en components/contenidos/render.ts).
  */
+// Ganó `class="mobile_paading"` en el barrido del 2026-09-15 (de ahí sale el
+// margen lateral en mobile, ver components/contenidos/render.ts).
 const CONTENIDOS_WRAPPER_ANCHOR_COUNTS = {
-  '<td style="padding:0px;margin:0px;border-spacing:0;">': 1,
+  '<td class="mobile_paading" style="padding:0px;margin:0px;border-spacing:0;">': 1,
 }
 
 const BENEFICIOS_ANCHOR_COUNTS = {
@@ -874,8 +897,17 @@ const HEADER_BRANDS = [
 const HEADER_VARIANT_FILES = ['centrado-claro.html', 'centrado-oscuro.html', 'columnas-claro.html', 'columnas-oscuro.html']
 const HEADER_WRAPPER_FILE = '_header-wrapper.html'
 const HEADER_WRAPPER_MARKER = '<!-- ACA VA EL HEADER -->'
-/** Debe quedar sincronizado con HEADER_WRAPPER_PLACEHOLDER_RE de src/template/assemble.ts. */
-const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/g
+/**
+ * Debe quedar sincronizado con HEADER_PLACEHOLDER_RE de src/template/assemble.ts.
+ * Hasta el refactor HERO/CONTENTS (cerrado 2026-09-15) este hueco era el
+ * comentario "HEADER WRAPPER … CIERRE HEADER WRAPPER"; ahora es un comentario
+ * corto ("▸ AQUÍ VA EL HEADER…") YA DENTRO de la tabla de 600px que el propio
+ * maestro conserva siempre — no hace falta swallowear ninguna tabla, solo
+ * reemplazar este comentario en el lugar. El prefijo `[^\n]{0,20}` (no `\s*`)
+ * tolera un número de sección tipo "1.1 · " sin permitir que el match salte
+ * a un `<!--` lejano (bug real que tuvo la versión `\s*` de
+ * WRAPPER_DE_CONTENIDOS, ver más abajo). */
+const HEADER_PLACEHOLDER_RE = /<!--[^\n]{0,20}AQUÍ VA EL HEADER[\s\S]*?-->/g
 
 /** Debe quedar sincronizado con TEMA_ASSIGN_RE de src/template/assemble.ts. */
 const TEMA_ASSIGN_RE = /\{%\s*assign\s+tema_general_mail_general\s*=\s*'[^']*'\s*%\}/g
@@ -895,7 +927,10 @@ const FOUNDATIONS_INJECTIONS = [
   },
   {
     file: 'global-styles.html',
-    placeholder: '<!--en este espacio se llama: global-styles.html con todo el head y css   -->',
+    // Espaciado exacto reescrito por el refactor HERO/CONTENTS (2026-09-15):
+    // antes "<!--en este espacio..." (sin espacio tras `<!--`, 3 espacios
+    // antes de `-->`); ahora 1 espacio en cada punta.
+    placeholder: '<!-- en este espacio se llama: global-styles.html con todo el head y css -->',
     required: true,
   },
 ]
@@ -911,14 +946,13 @@ if (!templateBasePath) {
   fail(`No se encontró ${TEMPLATE_BASE_SOURCE} en ${MASTER_DIR}`)
 } else {
   templateBaseHtml = fs.readFileSync(templateBasePath, 'utf8')
-  for (const { slot, text } of SLOT_MARKERS) {
-    const re = new RegExp(`<!--\\s*${text}\\s*-->`, 'g')
-    const matches = templateBaseHtml.match(re) ?? []
-    if (matches.length !== 1) {
-      fail(
-        `El marcador <!-- ${text} --> (slot ${slot}) aparece ${matches.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
-      )
-    }
+
+  const footerExampleMatches = templateBaseHtml.split(FOOTER_EXAMPLE_START).length - 1
+  if (footerExampleMatches !== 1) {
+    fail(`El bloque de ejemplo del footer ("${FOOTER_EXAMPLE_START.trim()}") aparece ${footerExampleMatches} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`)
+  }
+  if (!templateBaseHtml.includes(FOOTER_EXAMPLE_END)) {
+    fail(`No se encontró "${FOOTER_EXAMPLE_END}" (cierre del bloque de ejemplo del footer) en ${TEMPLATE_BASE_SOURCE}`)
   }
 
   // Ya NO aborta si falta (ver la nota grande del encabezado, pull
@@ -932,10 +966,10 @@ if (!templateBasePath) {
     )
   }
 
-  const headerPlaceholders = templateBaseHtml.match(HEADER_WRAPPER_PLACEHOLDER_RE) ?? []
+  const headerPlaceholders = templateBaseHtml.match(HEADER_PLACEHOLDER_RE) ?? []
   if (headerPlaceholders.length !== 1) {
     fail(
-      `El placeholder "HEADER WRAPPER … CIERRE HEADER WRAPPER" aparece ${headerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+      `El placeholder "AQUÍ VA EL HEADER" aparece ${headerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
     )
   }
 
@@ -949,7 +983,14 @@ if (!templateBasePath) {
   const bannerPlaceholders = templateBaseHtml.match(BANNER_PLACEHOLDER_RE) ?? []
   if (bannerPlaceholders.length !== 1) {
     fail(
-      `El placeholder "<!-- BANNER : …" aparece ${bannerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+      `El placeholder "AQUÍ VA EL BANNER" aparece ${bannerPlaceholders.length} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 1)`,
+    )
+  }
+
+  const heroLinkCount = templateBaseHtml.split(BANNER_LINK_PLACEHOLDER).length - 1
+  if (heroLinkCount !== 2) {
+    fail(
+      `"${BANNER_LINK_PLACEHOLDER}" aparece ${heroLinkCount} veces en ${TEMPLATE_BASE_SOURCE} (se esperaba 2: href + originalsrc) — desde el refactor HERO (2026-09-12) el <a> del banner envuelve TODO el HERO y vive acá, no en los 2 archivos de big-banner`,
     )
   }
 }
@@ -1045,9 +1086,12 @@ if (BANNERS_DIR) {
     if (anchorCount !== 1) {
       fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: el ancla "${BANNER_MOLECULAS_ANCHOR}" aparece ${anchorCount} veces (se esperaba 1) — revisar components/banner/shell.ts`)
     }
-    const linkCount = content.split(BANNER_LINK_PLACEHOLDER).length - 1
-    if (linkCount !== 2) {
-      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: "${BANNER_LINK_PLACEHOLDER}" aparece ${linkCount} veces (se esperaba 2: href + originalsrc)`)
+    // BANNER_LINK_PLACEHOLDER ya NO vive acá: desde el refactor HERO
+    // (2026-09-12) el <a> que lo lleva envuelve TODO el HERO a nivel de
+    // estructura_general.html, no cada archivo de banner por separado — se
+    // valida más arriba, contra templateBaseHtml (heroLinkCount).
+    if (content.includes(BANNER_LINK_PLACEHOLDER)) {
+      fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: "${BANNER_LINK_PLACEHOLDER}" volvió a aparecer acá — el <a> del HERO ya no debería estar duplicado en el propio archivo de banner`)
     }
     if (!content.includes('</div></td>')) {
       fail(`${COMPONENTS_DIR_NAME}/${BANNERS_SUBDIR_NAME}/${name}: no se encontró el cierre "</div></td>" que components/banner/shell.ts usa como ancla de cierre`)
@@ -1800,7 +1844,7 @@ for (const [brand, files] of Object.entries(headerBrandFileContents)) {
 }
 
 console.log(
-  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (${SLOT_MARKERS.length} marcadores + tema + HEADER WRAPPER + WRAPPER DE CONTENIDOS + BANNER + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
+  `${GREEN}✓${RESET} ${TEMPLATE_BASE_SOURCE} (footer de ejemplo + tema + HEADER + WRAPPER DE CONTENIDOS + BANNER + link del HERO + 2 inyecciones de ${FOUNDATIONS_DIR_NAME} OK) + ${Object.keys(footerFileContents).length} archivos de ${COMPONENTS_DIR_NAME}/${FOOTER_SUBDIR_NAME}/ + 1 archivo de ${COMPONENTS_DIR_NAME}/${CTAS_SUBDIR_NAME}/`,
 )
 console.log(
   `${GREEN}✓${RESET} ${headerFileCount} archivos de ${COMPONENTS_DIR_NAME}/${HEADERS_SUBDIR_NAME}/ (${HEADER_BRANDS.length} marcas) + ${HEADER_WRAPPER_FILE}`,

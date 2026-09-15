@@ -5,57 +5,112 @@ import { inlineTheme } from '../themes/inlineTheme'
 import { resolveGlobalVars } from '../global/vars'
 import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
-import { tagOpenInsertionPoint } from './htmlEdits'
-import { backgroundImageAltAttrs } from './htmlText'
+import { elementBounds, indexOfOrThrow, tagOpenInsertionPoint } from './htmlEdits'
+import { backgroundImageAltAttrs, escapeHtmlAttr } from './htmlText'
 import { slotKey } from '../tropicalize/keys'
 import { renderTropicalized } from '../tropicalize/render'
 
 /**
- * El maestro no trae un `<!-- HEADER -->` de una sola línea como los demás
- * slots: HEADER vive como el comentario multilínea "HEADER WRAPPER … CIERRE
- * HEADER WRAPPER" (ver 06-examples/test_claude_1_original.html). Regex no
- * codiciosa, mismo estilo que THEME_IF_RE en themes/inlineTheme.ts. Debe
- * quedar sincronizado con HEADER_WRAPPER_PLACEHOLDER_RE de
- * scripts/sync-master.mjs, que valida esta misma forma antes de sincronizar.
+ * El refactor HERO/CONTENTS/FOOTER del repo raíz (iniciado 2026-09-12,
+ * cerrado 2026-09-15 — ver CLAUDE.md del repo raíz §1.1 y §9) reescribió
+ * estructura_general.html entero: header/banner/imagen-full-width viven ahora
+ * dentro de UNA sola sección `role="HERO-SECTION"` (envuelta en un único
+ * `<a>`), y CONTENIDOS pasó a ser su propia `role="CONTENTS-SECTION"`. Las 4
+ * constantes de abajo reemplazan los viejos marcadores multilínea
+ * "HEADER WRAPPER…CIERRE HEADER WRAPPER" / "BANNER :…" / `<!-- CIERRES -->`:
+ * ya no son regexes que delimitan un bloque entero a reemplazar, son anclas
+ * (texto plano) que ubican un comentario corto YA DENTRO de un contenedor que
+ * el propio maestro conserva siempre — ver replaceCommentPlaceholder más abajo.
  */
-const HEADER_WRAPPER_PLACEHOLDER_RE = /<!--\s*HEADER WRAPPER[\s\S]*?CIERRE HEADER WRAPPER\s*-->/
+const HEADER_PLACEHOLDER_ANCHOR = 'AQUÍ VA EL HEADER'
+
+/** Análogo a HEADER_PLACEHOLDER_ANCHOR — hasta 2026-09-15 este era un
+ *  `<!-- BANNER : texto libre -->` de una sola línea (con contenido que el
+ *  repo reescribía seguido); ahora es un comentario multilínea fijo. */
+const BANNER_PLACEHOLDER_ANCHOR = 'AQUÍ VA EL BANNER'
 
 /**
- * CONTENIDOS tampoco trae un marcador de una sola línea: vive como el
- * comentario multilínea "WRAPPER DE CONTENIDOS: ..." que enumera los 9 tipos
- * de bloque posibles. No-codiciosa, mismo estilo que HEADER_WRAPPER_PLACEHOLDER_RE.
- * Debe quedar sincronizado con CONTENIDOS_WRAPPER_PLACEHOLDER_RE de
- * scripts/sync-master.mjs.
+ * CONTENIDOS es distinto a HEADER/BANNER: su comentario ("2.1 · WRAPPER DE
+ * CONTENIDOS") antecede a una tabla de 480px que el maestro también conserva
+ * embebida (idéntica a `_contenidos_wrapper.html`, ver
+ * components/contenidos/render.ts) — hay que reemplazar el comentario Y esa
+ * tabla entera por `renderContenidosSnippet(...)`, que ya reconstruye esa
+ * misma tabla con los bloques adentro. replaceContenidosWrapper hace el
+ * swallow de la tabla con elementBounds (anidamiento seguro), no con un
+ * regex — un regex no-codicioso no puede saber dónde termina la tabla sin
+ * contar profundidad.
  */
-const WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE = /<!--\s*WRAPPER DE CONTENIDOS[\s\S]*?-->/
+const WRAPPER_DE_CONTENIDOS_ANCHOR = 'WRAPPER DE CONTENIDOS'
 
 /**
- * BANNER sí es un marcador de una sola línea, pero con texto libre tras
- * "BANNER :" que el repo reescribe seguido ("por defecto el template debe
- * tener un banner vertical, con tags" al momento de escribir esto) — se
- * matchea el PREFIJO, no la frase completa. El maestro tiene otras 2
- * apariciones de la palabra BANNER ("EJEMPLO DE DEFINICION DE CAMPOS PARA
- * BANNER", "INICIO SECCION BANNER") que este regex excluye porque ninguna va
- * pegada a `<!--` seguida de `:` (verificado). Debe quedar sincronizado con
- * BANNER_PLACEHOLDER_RE de scripts/sync-master.mjs.
+ * El hueco del footer tampoco es un `<!-- FOOTER -->` de una sola línea desde
+ * el refactor: estructura_general.html muestra directamente el Liquid de
+ * ejemplo que se reemplaza entero (los 6 `{% assign %}` + la referencia al
+ * content block General) — mismo criterio que el resto del refactor. Deben
+ * quedar sincronizadas con FOOTER_EXAMPLE_START/END de scripts/sync-master.mjs.
  */
-const BANNER_PLACEHOLDER_RE = /<!--\s*BANNER\s*:[\s\S]*?-->/
+const FOOTER_EXAMPLE_START = "{% assign cond = '' %}"
+const FOOTER_EXAMPLE_END = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
 
 /**
- * El maestro (estructura_general.html) usa el plural "CIERRES" para este
- * marcador — inconsistencia real del repo, no un typo de acá. Debe quedar
- * sincronizado con SLOT_MARKERS de scripts/sync-master.mjs, que valida esta
- * misma forma antes de sincronizar.
- *
- * Ya no hay ningún slot "Cierre" que plantar acá — la molécula de Cierre
- * (imagen de firma) se retiró de la app el 2026-09-07: su rol pasó a vivir en
- * Footer (ver components/footer/schema.ts#firma), que ya tenía su propio
- * mecanismo de firma sin usar (`font_style_look`/`firma`). El marcador sigue
- * existiendo en el maestro y se deja SIEMPRE vacío — se exige que exista
- * (falla ruidoso si el maestro lo renombra o lo borra), pero nunca se
- * reemplaza por nada.
+ * Token de relleno manual (no es Liquid) que carga `doc.banner.link` — hasta
+ * el refactor HERO (2026-09-12) vivía DENTRO de cada archivo de banner
+ * (`components/banner/render.ts`); ahora el link envuelve TODO el HERO
+ * (header + banner + imagen full width) a nivel de estructura_general.html,
+ * así que se resuelve acá, no en el render del banner. 2 ocurrencias siempre
+ * (href + originalsrc), igual convención que el resto de los AQUIELLINK# del
+ * repo.
  */
-const CIERRE_MARKER = '<!-- CIERRES -->'
+const HERO_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
+
+/**
+ * Reemplaza el comentario `<!-- ... anchor ... -->` que contiene `anchor`
+ * literal por `rendered` — forma función del replace SIEMPRE (nunca un
+ * string), porque `rendered` puede traer un `$` real de usuario (ver el
+ * comentario grande de assembleEmailHtml más abajo).
+ */
+function replaceCommentPlaceholder(html: string, anchor: string, rendered: string, fileName: string): string {
+  const anchorIdx = indexOfOrThrow(html, anchor, fileName)
+  const commentStart = html.lastIndexOf('<!--', anchorIdx)
+  if (commentStart === -1) {
+    throw new Error(`${fileName}: no se encontró la apertura "<!--" del comentario que contiene "${anchor}"`)
+  }
+  const commentEnd = html.indexOf('-->', anchorIdx)
+  if (commentEnd === -1) {
+    throw new Error(`${fileName}: no se encontró el cierre "-->" del comentario que contiene "${anchor}"`)
+  }
+  return html.slice(0, commentStart) + rendered + html.slice(commentEnd + 3)
+}
+
+/** Ver el comentario grande de WRAPPER_DE_CONTENIDOS_ANCHOR: swallowea el
+ *  comentario Y la tabla de 480px que lo sigue, entera. */
+function replaceContenidosWrapper(html: string, rendered: string): string {
+  const fileName = 'template_base.html'
+  const anchorIdx = indexOfOrThrow(html, WRAPPER_DE_CONTENIDOS_ANCHOR, fileName)
+  const commentStart = html.lastIndexOf('<!--', anchorIdx)
+  if (commentStart === -1) {
+    throw new Error(`${fileName}: no se encontró la apertura "<!--" del comentario "${WRAPPER_DE_CONTENIDOS_ANCHOR}"`)
+  }
+  const tableStart = html.indexOf('<table', anchorIdx)
+  if (tableStart === -1) {
+    throw new Error(`${fileName}: no se encontró "<table" después del comentario "${WRAPPER_DE_CONTENIDOS_ANCHOR}"`)
+  }
+  const tableBounds = elementBounds(html, tableStart + 1, 'table', fileName)
+  return html.slice(0, commentStart) + rendered + html.slice(tableBounds.end)
+}
+
+/** Ver el comentario grande de FOOTER_EXAMPLE_START/END: swallowea todo el
+ *  bloque de ejemplo (asigna + referencia al content block), no solo un
+ *  comentario. */
+function replaceFooterExample(html: string, rendered: string): string {
+  const fileName = 'template_base.html'
+  const startIdx = indexOfOrThrow(html, FOOTER_EXAMPLE_START, fileName)
+  const endIdx = html.indexOf(FOOTER_EXAMPLE_END, startIdx)
+  if (endIdx === -1) {
+    throw new Error(`${fileName}: no se encontró "${FOOTER_EXAMPLE_END}" después de "${FOOTER_EXAMPLE_START}"`)
+  }
+  return html.slice(0, startIdx) + rendered + html.slice(endIdx + FOOTER_EXAMPLE_END.length)
+}
 
 /**
  * `<td class="fondomobile" ... style="background-image: url({{bg_imgevento_mail_general}}); ...">`
@@ -108,10 +163,14 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     html = html.slice(0, fondoTdInsertAt) + backgroundImageAltAttrs(doc.global.fondoAlt) + html.slice(fondoTdInsertAt)
   }
 
-  if (!html.includes(CIERRE_MARKER)) {
-    throw new Error(`No se encontró el marcador ${CIERRE_MARKER} en template_base.html`)
+  // El link del HERO (ver HERO_LINK_PLACEHOLDER) — SIEMPRE 2 ocurrencias,
+  // haya o no piezas de banner: el <a> lo trae el propio maestro, no algo que
+  // el documento decida agregar.
+  const heroLinkCount = html.split(HERO_LINK_PLACEHOLDER).length - 1
+  if (heroLinkCount !== 2) {
+    throw new Error(`Se encontraron ${heroLinkCount} ocurrencias de ${HERO_LINK_PLACEHOLDER} en template_base.html (se esperaban 2: href + originalsrc)`)
   }
-  html = html.replace(CIERRE_MARKER, () => '')
+  html = html.replaceAll(HERO_LINK_PLACEHOLDER, () => escapeHtmlAttr(doc.banner.link))
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
@@ -128,36 +187,23 @@ export function assembleEmailHtml(doc: EmailDocument): string {
         : renderTropicalized(doc, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER'), fields, (f) => def.render(f, doc))
 
     if (slot === 'HEADER') {
-      if (!HEADER_WRAPPER_PLACEHOLDER_RE.test(html)) {
-        throw new Error('No se encontró el placeholder "HEADER WRAPPER" en template_base.html')
-      }
-      html = html.replace(HEADER_WRAPPER_PLACEHOLDER_RE, () => rendered)
+      html = replaceCommentPlaceholder(html, HEADER_PLACEHOLDER_ANCHOR, rendered, 'template_base.html')
       continue
     }
 
     if (slot === 'CONTENIDOS') {
-      if (!WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE.test(html)) {
-        throw new Error('No se encontró el placeholder "WRAPPER DE CONTENIDOS" en template_base.html')
-      }
-      html = html.replace(WRAPPER_DE_CONTENIDOS_PLACEHOLDER_RE, () => rendered)
+      html = replaceContenidosWrapper(html, rendered)
       continue
     }
 
     if (slot === 'BANNER') {
-      if (!BANNER_PLACEHOLDER_RE.test(html)) {
-        throw new Error('No se encontró el placeholder "<!-- BANNER : …" en template_base.html')
-      }
-      html = html.replace(BANNER_PLACEHOLDER_RE, () => rendered)
+      html = replaceCommentPlaceholder(html, BANNER_PLACEHOLDER_ANCHOR, rendered, 'template_base.html')
       continue
     }
 
     // Único slot que llega hasta acá hoy: FOOTER (HEADER/CONTENIDOS/BANNER
     // ya se resolvieron arriba, cada uno con su propio branch).
-    const marker = `<!-- ${slot} -->`
-    if (!html.includes(marker)) {
-      throw new Error(`No se encontró el marcador ${marker} en template_base.html`)
-    }
-    html = html.replace(marker, () => rendered)
+    html = replaceFooterExample(html, rendered)
   }
 
   return html

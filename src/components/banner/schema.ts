@@ -86,7 +86,13 @@ export interface BannerItemRenderCtx {
 export const bannerSchema = z.object({
   bannerType: z.enum(BANNER_TYPE_VALUES).default('vertical'),
   /** Reemplaza las 2 apariciones del token de relleno manual
-   *  AQUIELLINKDELBANNER (href + originalsrc). Vacío = <a> sin destino. */
+   *  AQUIELLINKDELBANNER (href + originalsrc). Vacío = <a> sin destino. Desde
+   *  el refactor HERO (2026-09-12, ver template/assemble.ts) el <a> que lo
+   *  lleva ya no vive en cada archivo de banner: envuelve TODO el HERO
+   *  (header + banner + imagen full width) a nivel de estructura_general.html
+   *  — el campo sigue siendo del banner (sigue siendo "el link del banner"
+   *  conceptualmente) pero se resuelve en assemble.ts, no en
+   *  components/banner/render.ts. */
   link: z.string().default(''),
   items: z.array(bannerItemSchema).default([]),
   /** El contenedor de banner trae, por tema, un tono sólido

@@ -18,8 +18,10 @@ const SEPARADOR = '<div class="separador"></div>'
 const BLOCK_TYPES_WITHOUT_SEPARADOR: ReadonlySet<ContentBlock['type']> = new Set(['DEALS'])
 
 const WRAPPER_FILE_NAME = '_contenidos_wrapper.html'
-/** Única en el archivo — el `<td>` del área libre ("MOLECULAS BODY" en el maestro). */
-const AREA_TD_ANCHOR = '<td style="padding:0px;margin:0px;border-spacing:0;">'
+/** Única en el archivo — el `<td>` del área libre ("MOLECULAS BODY" en el
+ *  maestro). Ganó `class="mobile_paading"` en el barrido de módulos del
+ *  2026-09-15 (de ahí sale el margen lateral en mobile). */
+const AREA_TD_ANCHOR = '<td class="mobile_paading" style="padding:0px;margin:0px;border-spacing:0;">'
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 
 /**

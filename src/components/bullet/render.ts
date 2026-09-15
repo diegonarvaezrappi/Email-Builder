@@ -27,9 +27,11 @@ const FILE_NAME = 'modulo_bullet.html'
 const LINK_TOKEN = 'LINKMODULO'
 /** Única en el archivo — el `<div>` de fondo que envuelve TODA el área libre
  *  (icono+texto de fábrica incluidos). A diferencia de TITLE, no hay un <td>
- *  intermedio: este <div> es el padre directo de la <table> que se descarta. */
+ *  intermedio: este <div> es el padre directo de la <table> que se descarta.
+ *  `display: inline-block` → `display: contents` en el barrido de módulos del
+ *  2026-09-15 (mismo motivo en los otros 3 wrappers de módulo que cambiaron). */
 const AREA_DIV_ANCHOR =
-  '<div style="display: inline-block; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden; width: 100%; max-width: 480px;">'
+  '<div style="display: contents; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden; width: 100%; max-width: 480px;">'
 
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
 function stripComments(html: string): string {

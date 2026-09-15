@@ -1,4 +1,3 @@
-import wrapperRaw from '../../assets/templates/headers/_header-wrapper.html?raw'
 import { themeVars } from '../../themes/themes'
 import { escapeHtmlAttr, substituteImgSrcOrRemove } from '../../template/htmlText'
 import type { HeaderFields } from './schema'
@@ -14,8 +13,6 @@ const rawHeaderFiles = import.meta.glob('../../assets/templates/headers/*/*.html
   import: 'default',
   eager: true,
 }) as Record<string, string>
-
-const HEADER_WRAPPER_MARKER = '<!-- ACA VA EL HEADER -->'
 
 /**
  * Comentario que en los 40 archivos precede SIEMPRE, inmediatamente, al <td>
@@ -173,9 +170,19 @@ function resolveHeaderThemeVars(trHtml: string, tema: string): string {
 }
 
 /**
- * Genera el snippet que reemplaza el placeholder "HEADER WRAPPER" del
- * template maestro: el wrapper compartido (_header-wrapper.html) con el <tr>
- * de la marca/variante elegida insertado en su marcador.
+ * Genera el snippet que reemplaza el placeholder "AQUÍ VA EL HEADER" del
+ * template maestro: el contenido crudo de la marca/variante elegida, con sus
+ * overrides ya aplicados.
+ *
+ * Hasta el refactor HERO/CONTENTS (cerrado 2026-09-15) esto se envolvía en
+ * `_header-wrapper.html` (un `<div style="display:flex;"><table width="560"
+ * ...>` propio) antes de insertarse en el maestro. Ese archivo quedó
+ * DESACTUALIZADO por el refactor — sigue en 560px/flex/`align="left"`,
+ * mientras que estructura_general.html ahora trae su PROPIA tabla de 600px
+ * centrada ("1.1 · CONTENEDOR HEADER", que el maestro "conserva siempre") ya
+ * embebida alrededor del hueco — envolver acá otra vez produciría una tabla
+ * anidada rota. `_header-wrapper.html` sigue sincronizándose (scripts/sync-master.mjs)
+ * porque el repo raíz no lo retiró, pero ya no lo usa nadie en la app.
  *
  * Los comentarios pedagógicos de los archivos fuente (firma del header,
  * instrucciones de cobranding) no pasan al output — mismo criterio que
@@ -186,6 +193,5 @@ export function renderHeaderSnippet(fields: HeaderFields, tema: string): string 
   tr = applyLogoOverrides(tr, fields)
   tr = applyCobranding(tr, fields)
   tr = resolveHeaderThemeVars(tr, tema)
-  tr = tr.replace(HTML_COMMENT_RE, '')
-  return wrapperRaw.replace(HEADER_WRAPPER_MARKER, tr)
+  return tr.replace(HTML_COMMENT_RE, '')
 }

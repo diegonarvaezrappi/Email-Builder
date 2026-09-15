@@ -70,12 +70,10 @@ describe('renderBannerSnippet', () => {
     expect(idxMid).toBeLessThan(idxB)
   })
 
-  it('link replaces both AQUIELLINKDELBANNER occurrences and is HTML-attribute-escaped', () => {
-    const d = doc({ banner: { ...defaultEmailDocument.banner, link: 'https://x.test/a?b="c"' } })
-    const html = renderBannerSnippet(d.banner, d)
-    expect(html).not.toContain('AQUIELLINKDELBANNER')
-    expect(html).toContain('https://x.test/a?b=&quot;c&quot;')
-  })
+  // El link ("fields.link") ya NO se sustituye en renderBannerSnippet — desde
+  // el refactor HERO (2026-09-12) el <a> que lo lleva envuelve TODO el HERO a
+  // nivel de estructura_general.html, no cada archivo de banner por separado.
+  // Ver template/__tests__/assemble.test.ts para el test end-to-end de esto.
 
   it('items whose type has no file for the active orientation are skipped at render, not crashed on', () => {
     const d = withItems(
@@ -220,10 +218,14 @@ describe('renderBannerSnippet', () => {
       fields: { creditosText: richTextFromPlain('120'), variant: 'acento', deReintegroEnabled: true, deReintegroText: richTextFromPlain('DE REINTEGRO') },
     })
 
+    // El fondo de la pastillita se movió de `bgcolor` (atributo de tabla) a
+    // `background:` en el `<div>` exterior el 2026-09-15 (CLAUDE.md §4.1 del
+    // repo raíz — bgcolor no acepta rgba, y 3 temas con alfa lo necesitaban).
+
     it('en beige100 (pastel), bg_solid_generico100_mail_body y color_acento2 quedan baked, sin Liquid sin resolver', () => {
       const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
       const html = renderBannerSnippet(d.banner, d)
-      expect(html).toContain('bgcolor="#FFFFFF"') // bg_solid_generico100_mail_body de beige100
+      expect(html).toContain('background:#FFFFFF') // bg_solid_generico100_mail_body de beige100
       expect((html.match(/color:\s*#FF441F/g) ?? []).length).toBe(2) // color_acento2_mail_general, monto + "DE REINTEGRO"
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
@@ -231,18 +233,18 @@ describe('renderBannerSnippet', () => {
     it('en Pro, también hay swap (pedido explícito del usuario) — bg_solid_generico100/color_acento2 propios de Pro', () => {
       const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'pro' } })
       const html = renderBannerSnippet(d.banner, d)
-      expect(html).toContain('bgcolor="#000000"') // bg_solid_generico100_mail_body de Pro
+      expect(html).toContain('background:#000000') // bg_solid_generico100_mail_body de Pro
       expect((html.match(/color:\s*#A2A2A2/g) ?? []).length).toBe(2) // color_acento2_mail_general de Pro, monto + "DE REINTEGRO"
-      expect(html).not.toContain('bgcolor="#CC984E"') // bg_creditos_mail_general de Pro — ya no debe aparecer
+      expect(html).not.toContain('background:#CC984E') // bg_creditos_mail_general de Pro — ya no debe aparecer
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
 
     it('en ProBlack, también hay swap — bg_solid_generico100/color_acento2 propios de ProBlack', () => {
       const d = withItems([creditos('a')], { global: { ...defaultEmailDocument.global, tema: 'problack' } })
       const html = renderBannerSnippet(d.banner, d)
-      expect(html).toContain('bgcolor="#FFFFFF"') // bg_solid_generico100_mail_body de ProBlack
+      expect(html).toContain('background:#FFFFFF') // bg_solid_generico100_mail_body de ProBlack
       expect((html.match(/color:\s*#919AAA/g) ?? []).length).toBe(2) // color_acento2_mail_general de ProBlack
-      expect(html).not.toContain('bgcolor="#CC984E"')
+      expect(html).not.toContain('background:#CC984E')
       expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+\s*\}\}/)
     })
   })
@@ -347,19 +349,21 @@ describe('renderBannerSnippet', () => {
       const d = withItems([textom('b')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } })
       const html = renderBannerSnippet(d.banner, d)
       const textomHtml = html.slice(html.indexOf('BITEM:TEXTOM:b'), html.indexOf('/BITEM:TEXTOM:b'))
-      // padding-bottom desde el pull 2026-08-21 (bd9f4a5) — antes era margin-bottom.
-      expect(textomHtml).toMatch(/margin:\s*0\s*auto\s*;\s*padding-bottom:\s*7px;/)
+      // margin-bottom desde el barrido de componentes del 2026-09-15 (el
+      // maestro volvió atrás de padding-bottom a margin-bottom — pendiente #20
+      // de CLAUDE.md del repo raíz).
+      expect(textomHtml).toMatch(/margin:\s*0\s*auto\s*;\s*margin-bottom:\s*7px;/)
       expect(textomHtml).not.toMatch(/text-align:\s*left/)
       expect(textomHtml).toContain('text-align: center')
     })
 
-    it('"center" centers PROMO via its transparent OUTER wrapper (the colored badge table has no padding-bottom to match on anymore, see wrapColoredBadgeSpacing)', () => {
+    it('"center" centers PROMO by inserting margin: 0 auto right into the outer div\'s own margin-bottom (no extra wrapper needed since 2026-09-15)', () => {
       const d = withItems([promo('a')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' } })
       const html = renderBannerSnippet(d.banner, d)
       const promoHtml = html.slice(html.indexOf('BITEM:PROMO:a'), html.indexOf('/BITEM:PROMO:a'))
-      expect(promoHtml).toMatch(/margin:\s*0\s*auto\s*;\s*padding-bottom:\s*7px;/)
-      // Solo 1 occurrencia: la del wrapper transparente, no la de la pastillita coloreada.
-      expect((promoHtml.match(/padding-bottom:\s*7px;/g) ?? []).length).toBe(1)
+      expect(promoHtml).toMatch(/margin:\s*0\s*auto\s*;\s*margin-bottom:\s*7px;/)
+      // Solo 1 occurrencia: la del <div> exterior, no la de la pastillita coloreada (que ya no tiene ninguna).
+      expect((promoHtml.match(/margin-bottom:\s*7px;/g) ?? []).length).toBe(1)
     })
 
     it('"center" centers IMG_AUTOMATICA_MOLECULA via its own <img> margin (its outer table is already width:100%)', () => {

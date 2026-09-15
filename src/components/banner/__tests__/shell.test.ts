@@ -12,10 +12,13 @@ describe('bannerShell', () => {
     expect(moleculeTable.split(MOLECULAS_MARKER).length - 1).toBe(1)
   })
 
-  it.each(['horizontal', 'vertical'] as const)('%s: shell keeps the real @media hook id and both link placeholders', (bannerType) => {
+  it.each(['horizontal', 'vertical'] as const)('%s: shell keeps the real @media hook id', (bannerType) => {
     const { shell } = bannerShell(bannerType)
     expect(shell).toContain(bannerType === 'horizontal' ? 'BANNER_HORIZONTAL' : 'BANNER_VERTICAL')
-    expect(shell.split('AQUIELLINKDELBANNER').length - 1).toBe(2)
+    // Desde el refactor HERO (2026-09-12) el <a href="AQUIELLINKDELBANNER">
+    // ya no vive en el archivo de banner — envuelve TODO el HERO a nivel de
+    // estructura_general.html (ver template/assemble.ts#HERO_LINK_PLACEHOLDER).
+    expect(shell).not.toContain('AQUIELLINKDELBANNER')
   })
 
   it.each(['horizontal', 'vertical'] as const)('%s: shell has no leftover HTML comments besides our 2 markers', (bannerType) => {

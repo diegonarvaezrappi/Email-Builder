@@ -67,26 +67,30 @@ describe('renderPromoSnippet', () => {
   })
 
   // Regresión: reportado por el usuario 2026-08-25 ("entre Promo e Imagen
-  // automática no hay espacio"). La tabla coloreada de PROMO (bgcolor de la
-  // pastillita) traía el padding-bottom:7px de separación EN LA MISMA tabla
-  // -> ese padding queda pintado del color de fondo en vez de transparente,
-  // así que la pieza siguiente queda pegada. wrapColoredBadgeSpacing debe
-  // envolverla en una tabla exterior transparente que sea la que cargue esa
-  // separación.
+  // automática no hay espacio") — en ese momento la tabla coloreada de PROMO
+  // (bgcolor de la pastillita) traía el padding-bottom:7px de separación EN LA
+  // MISMA tabla, así que ese padding quedaba pintado del color de fondo en vez
+  // de transparente. El barrido de componentes del 2026-09-15 (CLAUDE.md §4.1
+  // del repo raíz) resolvió el problema de raíz: el fondo se movió a un <div>
+  // exterior (necesario también porque `bgcolor` no acepta rgba, ver verde100/
+  // pro/problack) y la separación pasó a vivir en el MARGIN de ese div — un
+  // margin nunca se pinta, así que ya no hace falta ningún wrapper adicional
+  // (wrapColoredBadgeSpacing se retiró, ver components/banner/items/render.ts).
   it.each(['horizontal', 'vertical'] as const)(
-    '%s: wraps the colored badge in a transparent outer table carrying the padding-bottom, instead of leaving it on the colored table',
+    '%s: the spacing lives in the outer div\'s own margin, never on the colored inner table',
     (bannerType) => {
       const html = renderPromoSnippet(promoFields('120'), doc(), ctx(bannerType))
-      const outerTagEnd = html.indexOf('>')
-      const outerOpenTag = html.slice(0, outerTagEnd + 1)
-      expect(outerOpenTag).not.toContain('bgcolor')
-      expect(outerOpenTag).toContain('padding-bottom: 7px;')
-      // La pastillita de siempre sigue adentro, intacta (bgcolor real, sin el padding-bottom extra).
+      const outerTagStart = html.indexOf('<div')
+      const outerTagEnd = html.indexOf('>', outerTagStart)
+      const outerOpenTag = html.slice(outerTagStart, outerTagEnd + 1)
+      expect(outerOpenTag).toContain('background:{{bg_descuento_mail_general}}')
+      expect(outerOpenTag).toMatch(/margin(-bottom)?:\s*[^;]*7px/)
+      // La pastillita de siempre sigue adentro, sin ningún padding-bottom extra.
       const innerTagStart = html.indexOf('<table', outerTagEnd)
       const innerTagEnd = html.indexOf('>', innerTagStart)
       const innerOpenTag = html.slice(innerTagStart, innerTagEnd + 1)
-      expect(innerOpenTag).toContain('bgcolor="{{bg_descuento_mail_general}}"')
-      expect(innerOpenTag).not.toContain('padding-bottom: 7px;')
+      expect(innerOpenTag).not.toContain('bgcolor')
+      expect(innerOpenTag).not.toContain('padding-bottom')
     },
   )
 
@@ -148,27 +152,34 @@ describe('renderCreditosSnippet', () => {
     expect(html).not.toMatch(UNRESOLVED_BANNER_VAR_RE)
   })
 
-  it('horizontal: fixes the master\'s "font-siaze" typo so the amount actually gets a font-size (was silently dropped by the browser)', () => {
+  // Hasta el 2026-09-15 el maestro tenía un typo real acá ("font-siaze" en vez
+  // de "font-size" en molecula_creditos_horizontal.html) que esta app parcheaba
+  // con un fixCreditosHorizontalFontSizeTypo fail-loud — el barrido de
+  // componentes de esa fecha lo corrigió upstream y el parche se retiró.
+  it('horizontal: the amount gets a real font-size (the master\'s old "font-siaze" typo is gone)', () => {
     const html = renderCreditosSnippet(creditosFields('120'), doc(), ctx('horizontal'))
     expect(html).not.toContain('font-siaze')
     expect(html).toMatch(/font-size:\s*\{\{banner_copy_modulo_creditos_fontsize\}\}|font-size:\s*\d/)
   })
 
   // Regresión: mismo bug que PROMO (ver el test homónimo más arriba) — CREDITOS
-  // también tiene bgcolor + padding-bottom:7px en la misma tabla.
+  // también tenía bgcolor + padding-bottom:7px en la misma tabla, resuelto de
+  // raíz el 2026-09-15 moviendo el fondo a un <div> exterior cuyo margin ya
+  // no necesita ningún wrapper adicional.
   it.each(['horizontal', 'vertical'] as const)(
-    '%s: wraps the colored badge in a transparent outer table carrying the padding-bottom, instead of leaving it on the colored table',
+    '%s: the spacing lives in the outer div\'s own margin, never on the colored inner table',
     (bannerType) => {
       const html = renderCreditosSnippet(creditosFields('120'), doc(), ctx(bannerType))
-      const outerTagEnd = html.indexOf('>')
-      const outerOpenTag = html.slice(0, outerTagEnd + 1)
-      expect(outerOpenTag).not.toContain('bgcolor')
-      expect(outerOpenTag).toContain('padding-bottom: 7px;')
+      const outerTagStart = html.indexOf('<div')
+      const outerTagEnd = html.indexOf('>', outerTagStart)
+      const outerOpenTag = html.slice(outerTagStart, outerTagEnd + 1)
+      expect(outerOpenTag).toContain('background:{{bg_creditos_mail_general}}')
+      expect(outerOpenTag).toMatch(/margin(-bottom)?:\s*[^;]*7px/)
       const innerTagStart = html.indexOf('<table', outerTagEnd)
       const innerTagEnd = html.indexOf('>', innerTagStart)
       const innerOpenTag = html.slice(innerTagStart, innerTagEnd + 1)
-      expect(innerOpenTag).toContain('bgcolor="{{bg_creditos_mail_general}}"')
-      expect(innerOpenTag).not.toContain('padding-bottom: 7px;')
+      expect(innerOpenTag).not.toContain('bgcolor')
+      expect(innerOpenTag).not.toContain('padding-bottom')
     },
   )
 

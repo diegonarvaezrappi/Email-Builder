@@ -18,10 +18,17 @@ describe('renderHeaderSnippet', () => {
     expect(snippet).not.toContain('alt="|"')
   })
 
-  it('wraps the chosen header <tr> inside the shared wrapper table', () => {
+  // Hasta el refactor HERO/CONTENTS (cerrado 2026-09-15) esto envolvía el <tr>
+  // elegido en _header-wrapper.html (su tabla de 560px con class="column
+  // column-1"). Ese archivo quedó desactualizado por el refactor —
+  // estructura_general.html ahora trae SU PROPIA tabla de 600px ya embebida
+  // alrededor del hueco del header ("1.1 · CONTENEDOR HEADER", que el maestro
+  // "conserva siempre") — así que renderHeaderSnippet devuelve el <tr> crudo,
+  // sin envolver, y es template/assemble.ts quien lo inserta en ese hueco.
+  it('returns the chosen header <tr> raw, unwrapped (the outer table is already embedded in template_base.html)', () => {
     const snippet = renderHeaderSnippet(defaultHeaderFields, 'beige100')
-    expect(snippet).toContain('class="column column-1"')
     expect(snippet).toContain('<tr>')
+    expect(snippet).not.toContain('class="column column-1"')
     expect(snippet).not.toContain('<!-- ACA VA EL HEADER -->')
   })
 
@@ -237,9 +244,14 @@ describe('renderHeaderSnippet', () => {
     expect(separator).toBeDefined()
     expect(separator).toContain('height: 30px; max-height: 30px; min-height: 30px')
     // El cobranding-m tampoco cambia (su propio tamaño se controla aparte).
+    // Desde el 2026-09-14 el maestro ya no clava height/max-height/min-height
+    // al mismo valor (eso aplastaba un logo aliado más ancho que 180px) — pasó
+    // a `height="36"` (atributo, respaldo para Outlook) + `height: auto;
+    // max-height: 36px;` en el style. Ver la nota grande de LOGO_HEIGHT_PROP_RE.
     const cobrandingImg = snippet.match(/<img class="cobranding-m"[^>]*>/)?.[0]
     expect(cobrandingImg).toBeDefined()
-    expect(cobrandingImg).toContain('height: 36px; max-height: 36px; min-height: 36px')
+    expect(cobrandingImg).toContain('height="36"')
+    expect(cobrandingImg).toContain('height: auto; max-height: 36px;')
   })
 
   it('escapes special characters in a user-provided cobranding URL', () => {
