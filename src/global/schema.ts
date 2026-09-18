@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { DEFAULT_THEME, THEME_SLUGS } from '../themes/themes'
+import { BACKGROUND_POSITION_VALUES, BACKGROUND_REPEAT_VALUES, BACKGROUND_SIZE_VALUES } from './background'
 
 /**
  * Los 15 valores reales de `style_Look` en 02-components/03_ctas/cta-template.html
@@ -116,6 +117,53 @@ export const globalSchema = z.object({
    * que son agregadas como fondo, tambien agregales un campo ALT".
    */
   fondoAlt: z.string().default('Imagen de fondo'),
+
+  /**
+   * Tamaño/posición/repeat del `background-image` de arriba (fondoUrl) —
+   * pedido explícito del usuario (2026-09-16), aplicado a los 3 fondos del
+   * mail (General acá, HERO/CONTENTS más abajo). Defaults = el CSS que el
+   * maestro ya trae hardcodeado en el `<td class="fondomobile">`
+   * (template_base.html): así un documento que nunca toque estos 3 campos
+   * exporta el mismo HTML que antes de que existieran. Ver global/background.ts
+   * y template/assemble.ts (la sección "fondo general").
+   */
+  fondoSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
+  fondoPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
+  fondoRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('no-repeat'),
+
+  /**
+   * Fondo de HERO-SECTION (header + banner + imagen full width) y de
+   * CONTENTS-SECTION (los módulos de body) — hasta acá una imagen fija del
+   * maestro (siempre `DEFAULT_HERO_CONTENTS_BG_URL` de global/background.ts,
+   * sin campo editable en la app), pedido explícito del usuario (2026-09-16)
+   * para poder reemplazarla y controlar su tamaño/posición/repeat, igual que
+   * fondoUrl. Quedan independientes entre sí (2 pares de campos, no 1
+   * compartido).
+   *
+   * Default de URL/alt es VACÍO (pedido explícito del usuario, 2026-09-18,
+   * que reemplaza la decisión anterior de arrancar con la imagen del
+   * maestro): un documento nuevo sale sin esa imagen — mismo criterio de
+   * "vacío = sin fondo" que fondoUrl. La imagen del maestro sigue
+   * disponible como opción manual, no como default.
+   *
+   * Default de tamaño/posición = el mismo `100% auto` / `center top` que el
+   * maestro ya trae en ambos `<td>`. Default de REPEAT es `'repeat'` (no
+   * `'no-repeat'` como General): ninguno de los 2 `<td>` del maestro declara
+   * `background-repeat`, así que el valor real vigente hoy es el inicial de
+   * CSS — `repeat` en los 2 ejes — no lo que uno intuitivamente asumiría.
+   */
+  heroBgUrl: z.string().default(''),
+  heroBgAlt: z.string().default('Imagen de fondo'),
+  heroBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
+  heroBgPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
+  heroBgRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('repeat'),
+
+  /** Análogo a heroBg* — ver el comentario grande de arriba. */
+  contentsBgUrl: z.string().default(''),
+  contentsBgAlt: z.string().default('Imagen de fondo'),
+  contentsBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
+  contentsBgPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
+  contentsBgRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('repeat'),
 
   /**
    * `style_Look` del content block CTA-template — GLOBAL a propósito (pedido

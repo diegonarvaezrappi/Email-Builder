@@ -2,11 +2,12 @@ import templateBaseRaw from '../assets/templates/template_base.html?raw'
 import { SLOT_ORDER, type EmailDocument } from '../model'
 import { registry } from '../registry'
 import { inlineTheme } from '../themes/inlineTheme'
-import { resolveGlobalVars } from '../global/vars'
+import { cssUrlValue, resolveGlobalVars } from '../global/vars'
+import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
-import { elementBounds, indexOfOrThrow, tagOpenInsertionPoint } from './htmlEdits'
-import { backgroundImageAltAttrs, escapeHtmlAttr } from './htmlText'
+import { elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
+import { escapeHtmlAttr, insertBackgroundImageAltAtStart } from './htmlText'
 import { slotKey } from '../tropicalize/keys'
 import { renderTropicalized } from '../tropicalize/render'
 
@@ -124,6 +125,66 @@ function replaceFooterExample(html: string, rendered: string): string {
 const FONDOMOBILE_ANCHOR = 'class="fondomobile"'
 
 /**
+ * Anclas de los otros 2 fondos del mail (pedido explícito del usuario,
+ * 2026-09-16) — el comentario literal que el maestro trae justo ANTES del
+ * `<td>` con el `background-image` de cada sección (ver CLAUDE.md del repo
+ * raíz §1.1). A diferencia de FONDOMOBILE_ANCHOR (un atributo DENTRO del
+ * `<td>`), estas 2 anclas viven en el comentario que lo antecede, así que
+ * hace falta `html.indexOf('<td', anchorIdx)` para llegar al `<td` real —
+ * ver applySectionBackground.
+ */
+const HERO_BG_ANCHOR = 'el background-image es reemplazable'
+const CONTENTS_BG_ANCHOR = 'mismo fondo que el HERO'
+
+/**
+ * Reemplaza `background-size`/`background-position` (los 2 SIEMPRE presentes
+ * en el maestro) y agrega o reemplaza `background-repeat` dentro de un
+ * `<td ...>` ya recortado a su apertura — General lo trae los 3 en su style;
+ * HERO/CONTENTS solo traen size/position (ningún `<td>` del maestro declara
+ * `background-repeat` ahí, así que se inserta a continuación de
+ * background-position). Nunca toca `background-image`: cada llamador decide
+ * aparte si reemplaza la URL.
+ */
+function withBackgroundDecl(openTag: string, size: BackgroundSize, position: BackgroundPosition, repeat: BackgroundRepeat): string {
+  let out = openTag.replace(/background-size:\s*[^;"]+;?/, `background-size: ${size};`)
+  out = out.replace(/background-position:\s*[^;"]+;?/, `background-position: ${position};`)
+  return /background-repeat:\s*[^;"]+;?/.test(out)
+    ? out.replace(/background-repeat:\s*[^;"]+;?/, `background-repeat: ${repeat};`)
+    : out.replace(/(background-position:\s*[^;"]+;)/, `$1 background-repeat: ${repeat};`)
+}
+
+interface SectionBackground {
+  url: string
+  alt: string
+  size: BackgroundSize
+  position: BackgroundPosition
+  repeat: BackgroundRepeat
+}
+
+/**
+ * HERO-SECTION/CONTENTS-SECTION: a diferencia de General (fondoUrl, una
+ * variable Liquid que ya resuelve inlineTheme), acá la imagen es un literal
+ * hardcodeado en el maestro (ver global/background.ts#DEFAULT_HERO_CONTENTS_BG_URL)
+ * — esta función reemplaza también el `url(...)`, no solo tamaño/posición/repeat.
+ * El alt (role="img" aria-label) se agrega solo cuando hay imagen, mismo
+ * criterio que el resto de los campos de fondo de la app.
+ */
+function applySectionBackground(html: string, commentAnchor: string, bg: SectionBackground, fileName: string): string {
+  const anchorIdx = indexOfOrThrow(html, commentAnchor, fileName)
+  const tdIdx = html.indexOf('<td', anchorIdx)
+  if (tdIdx === -1) {
+    throw new Error(`${fileName}: no se encontró "<td" después de "${commentAnchor}"`)
+  }
+  const bounds = voidElementBounds(html, tdIdx, 'td', fileName)
+  let openTag = html.slice(bounds.start, bounds.end).replace(/url\([^)]*\)/, `url(${cssUrlValue(bg.url)})`)
+  openTag = withBackgroundDecl(openTag, bg.size, bg.position, bg.repeat)
+  if (bg.url.trim() !== '') {
+    openTag = insertBackgroundImageAltAtStart(openTag, bg.alt, fileName)
+  }
+  return html.slice(0, bounds.start) + openTag + html.slice(bounds.end)
+}
+
+/**
  * Ensambla el HTML final de un email: toma template_base.html (sincronizado
  * por scripts/sync-master.mjs), deja el tema ya resuelto y reemplaza, por
  * string literal, cada marcador de slot que tenga una entrada en el registry.
@@ -154,14 +215,46 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   // ejemplo viene del maestro, no de lo que armó el usuario.
   let html = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
 
-  if (doc.global.fondoUrl.trim() !== '') {
-    const fondoIndex = html.indexOf(FONDOMOBILE_ANCHOR)
-    if (fondoIndex === -1) {
-      throw new Error(`No se encontró ${FONDOMOBILE_ANCHOR} en template_base.html`)
+  {
+    const fondoIndex = indexOfOrThrow(html, FONDOMOBILE_ANCHOR, 'template_base.html')
+    const fondoBounds = voidElementBounds(html, fondoIndex, 'td', 'template_base.html')
+    let fondoOpenTag = withBackgroundDecl(
+      html.slice(fondoBounds.start, fondoBounds.end),
+      doc.global.fondoSize,
+      doc.global.fondoPosition,
+      doc.global.fondoRepeat,
+    )
+    if (doc.global.fondoUrl.trim() !== '') {
+      fondoOpenTag = insertBackgroundImageAltAtStart(fondoOpenTag, doc.global.fondoAlt, 'template_base.html')
     }
-    const fondoTdInsertAt = tagOpenInsertionPoint(html, fondoIndex, 'td', 'template_base.html')
-    html = html.slice(0, fondoTdInsertAt) + backgroundImageAltAttrs(doc.global.fondoAlt) + html.slice(fondoTdInsertAt)
+    html = html.slice(0, fondoBounds.start) + fondoOpenTag + html.slice(fondoBounds.end)
   }
+
+  html = applySectionBackground(
+    html,
+    HERO_BG_ANCHOR,
+    {
+      url: doc.global.heroBgUrl,
+      alt: doc.global.heroBgAlt,
+      size: doc.global.heroBgSize,
+      position: doc.global.heroBgPosition,
+      repeat: doc.global.heroBgRepeat,
+    },
+    'template_base.html',
+  )
+
+  html = applySectionBackground(
+    html,
+    CONTENTS_BG_ANCHOR,
+    {
+      url: doc.global.contentsBgUrl,
+      alt: doc.global.contentsBgAlt,
+      size: doc.global.contentsBgSize,
+      position: doc.global.contentsBgPosition,
+      repeat: doc.global.contentsBgRepeat,
+    },
+    'template_base.html',
+  )
 
   // El link del HERO (ver HERO_LINK_PLACEHOLDER) — SIEMPRE 2 ocurrencias,
   // haya o no piezas de banner: el <a> lo trae el propio maestro, no algo que

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import { useBuilder, useTemporal } from './store/store'
-import { headerPatchForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme } from './themeDefaults'
+import { headerPatchForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme, footerFirmaForTheme } from './themeDefaults'
 import { contentBlockRegistry } from './contentBlockRegistry'
 import type { Col3Fields } from './components/col3/schema'
 import type { ContentBlock } from './model'
@@ -65,7 +65,7 @@ function App() {
   // panel derecho, no desde Viewport). Mismo criterio que `selected`: estado
   // de UI, no del documento.
   const [tab, setTab] = useState<ViewportTab>('preview')
-  const [country, setCountry] = useState<PreviewCountry>('CO')
+  const [country, setCountry] = useState<PreviewCountry>('MX')
 
   // Al entrar a Tropicalizar, una línea de deal seleccionada (no es objetivo
   // tropicalizable, ver decisión del usuario) sube a la tarjeta dueña — se
@@ -76,10 +76,12 @@ function App() {
     setTab(next)
   }
 
-  // Ajustes por defecto del header/banner al cambiar el TEMA GENERAL — ver
-  // themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100 cambian
-  // la marca del header; pastel/oscuros fuerzan la versión del logo; pastel
-  // apaga el fondo del banner por defecto). El estilo de CTA NO vive acá desde
+  // Ajustes por defecto del header/banner/footer al cambiar el TEMA GENERAL —
+  // ver themeDefaults.ts para las reglas (Pro/ProBlack/Dark Turbo/Verde 100
+  // cambian la marca del header; pastel/oscuros fuerzan la versión del logo;
+  // pastel apaga el fondo del banner por defecto; pastel fuerza la firma del
+  // footer a "Rappi", salvo Verde 100 que la fuerza a "Turbo"). El estilo de
+  // CTA NO vive acá desde
   // el pull del 2026-09-02 — global.ctaStyle usa su propio sentinel 'default'
   // resuelto al renderizar (themeDefaults.ts#resolveCtaStyle), no un efecto de
   // tema. Un solo patch por header, no 2
@@ -102,6 +104,9 @@ function App() {
 
     const backgroundEnabled = bannerBackgroundEnabledForTheme(doc.banner, doc.global.tema, prevTema)
     if (backgroundEnabled !== null) setSlotFields('banner', { ...doc.banner, backgroundEnabled })
+
+    const firma = footerFirmaForTheme(doc.footer, doc.global.tema, prevTema)
+    if (firma !== null) setSlotFields('footer', { ...doc.footer, firma })
 
     // Mismo ajuste, un nivel más adentro: cada bloque de CONTENIDOS que
     // spreadee generalModuleFieldsSchema (ver contentBlockRegistry.ts,

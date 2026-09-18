@@ -39,6 +39,8 @@ import { defaultHeaderFields } from './components/header/schema'
 import type { HeaderFields } from './components/header/schema'
 import { defaultBannerFields } from './components/banner/schema'
 import type { BannerFields } from './components/banner/schema'
+import { defaultFooterFields } from './components/footer/schema'
+import type { FooterFields, FooterFirma } from './components/footer/schema'
 import type { CtaStyle, CtaStyleSelect } from './global/schema'
 import { DARK_THEME_SLUGS, PASTEL_THEME_SLUGS } from './themes/themes'
 
@@ -66,10 +68,14 @@ const BRAND_FOR_THEME: Partial<Record<string, HeaderFields['brand']>> = {
  * los 6 pasteles gris100/beige100/beige150/rosa100/purpura100/celeste100
  * tienen una variante de `style_Look` con el MISMO nombre en
  * cta-template.html (pull 2026-09-02, "actualización del cta") — mapeo 1:1,
- * no una inferencia. verde100 y los 3 "oscuros/invertidos"
- * (darkneon/darkturbo/darkneutro) NO tienen variante propia todavía (el
- * maestro no la definió) — quedan fuera de este mapa y caen al fallback
- * general (ver resolveCtaStyle), igual que hoy.
+ * no una inferencia. Los 3 "oscuros/invertidos" (darkneon/darkturbo/darkneutro)
+ * NO tienen variante propia todavía (el maestro no la definió) — quedan fuera
+ * de este mapa y caen al fallback general (ver resolveCtaStyle), igual que hoy.
+ * verde100 es distinto: no tiene una variante `style_Look` propia en el
+ * maestro, pero reutiliza la variante `'verde'` por decisión explícita del
+ * usuario (2026-09-16) — coherente con el resto de sus especializaciones
+ * (BRAND_FOR_THEME y FIRMA_FOR_THEME, más abajo, ya lo tratan aparte del resto
+ * de los pasteles).
  */
 const STYLE_LOOK_FOR_THEME: Partial<Record<string, CtaStyle>> = {
   pro: 'pro',
@@ -80,6 +86,7 @@ const STYLE_LOOK_FOR_THEME: Partial<Record<string, CtaStyle>> = {
   rosa100: 'rosa100',
   purpura100: 'purpura100',
   celeste100: 'celeste100',
+  verde100: 'verde',
 }
 
 /**
@@ -171,6 +178,34 @@ export function headerPatchForTheme(
 export function resolveCtaStyle(ctaStyle: CtaStyleSelect, tema: string): CtaStyle {
   if (ctaStyle !== 'default') return ctaStyle
   return STYLE_LOOK_FOR_THEME[tema] ?? FALLBACK_CTA_STYLE
+}
+
+/**
+ * Firma del footer esperada por tema (pedido explícito del usuario,
+ * 2026-09-16): los pasteles muestran "Rappi" (`general`) salvo Verde 100, que
+ * muestra "Turbo" (`turbo`) — coherente con BRAND_FOR_THEME, que ya especializa
+ * Verde 100 a `rappi-turbo` en el header. El resto de los temas no tiene regla
+ * propia y cae al default del schema (`sinfirma`), igual que hoy.
+ */
+const FIRMA_FOR_THEME: Partial<Record<string, FooterFirma>> = {
+  ...Object.fromEntries(
+    PASTEL_THEME_SLUGS.filter((tema) => tema !== 'verde100').map((tema) => [tema, 'general'] as const),
+  ),
+  verde100: 'turbo',
+}
+
+function expectedFirmaForTema(tema: string): FooterFirma {
+  return FIRMA_FOR_THEME[tema] ?? defaultFooterFields.firma
+}
+
+/** Mismo patrón de "no tocado desde el tema anterior" que brand — ver headerPatchForTheme. */
+export function footerFirmaForTheme(footer: FooterFields, tema: string, prevTema: string | null): FooterFirma | null {
+  const untouchedSincePrevTema =
+    footer.firma === (prevTema === null ? defaultFooterFields.firma : expectedFirmaForTema(prevTema))
+  if (!untouchedSincePrevTema) return null
+
+  const firma = expectedFirmaForTema(tema)
+  return firma !== footer.firma ? firma : null
 }
 
 /** Análogo para banner.backgroundEnabled — ver expectedBackgroundEnabledForTema. */

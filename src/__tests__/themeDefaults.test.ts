@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { defaultHeaderFields } from '../components/header/schema'
 import { defaultBannerFields } from '../components/banner/schema'
-import { bannerBackgroundEnabledForTheme, headerPatchForTheme, moduleBackgroundEnabledForTheme, resolveCtaStyle } from '../themeDefaults'
+import { defaultFooterFields } from '../components/footer/schema'
+import {
+  bannerBackgroundEnabledForTheme,
+  footerFirmaForTheme,
+  headerPatchForTheme,
+  moduleBackgroundEnabledForTheme,
+  resolveCtaStyle,
+} from '../themeDefaults'
 
 // prevTema=null en la mayoría de estos tests = "primer render, sin tema
 // anterior" (mismo criterio que el chequeo original contra el default). Los
@@ -145,8 +152,11 @@ describe('resolveCtaStyle', () => {
     expect(resolveCtaStyle('default', 'celeste100')).toBe('celeste100')
   })
 
-  it('falls back to "neon" for themes with no matching style_Look variant (verde100, the 3 oscuros/invertidos)', () => {
-    expect(resolveCtaStyle('default', 'verde100')).toBe('neon')
+  it('resolves "default" to "verde" for Verde 100, a deliberate reuse (not a same-name style_Look variant)', () => {
+    expect(resolveCtaStyle('default', 'verde100')).toBe('verde')
+  })
+
+  it('falls back to "neon" for themes with no matching style_Look variant (the 3 oscuros/invertidos)', () => {
     expect(resolveCtaStyle('default', 'darkneon')).toBe('neon')
     expect(resolveCtaStyle('default', 'darkturbo')).toBe('neon')
     expect(resolveCtaStyle('default', 'darkneutro')).toBe('neon')
@@ -198,6 +208,57 @@ describe('bannerBackgroundEnabledForTheme', () => {
   it('does not re-disable a manually-enabled pastel background on an unrelated theme change between 2 pastel themes', () => {
     const bannerManuallyEnabled = { ...defaultBannerFields, backgroundEnabled: true }
     expect(bannerBackgroundEnabledForTheme(bannerManuallyEnabled, 'rosa100', 'beige100')).toBeNull()
+  })
+})
+
+describe('footerFirmaForTheme', () => {
+  it('switches to "general" (Rappi) while entering a pastel theme from the schema default (sinfirma)', () => {
+    for (const tema of ['beige100', 'beige150', 'rosa100', 'purpura100', 'celeste100']) {
+      expect(footerFirmaForTheme(defaultFooterFields, tema, null)).toBe('general')
+    }
+  })
+
+  it('switches to "turbo" for Verde 100 specifically, unlike the rest of the pastels', () => {
+    expect(footerFirmaForTheme(defaultFooterFields, 'verde100', null)).toBe('turbo')
+  })
+
+  it('returns null for non-pastel themes — sinfirma is already the schema default', () => {
+    expect(footerFirmaForTheme(defaultFooterFields, 'darkturbo', null)).toBeNull()
+    expect(footerFirmaForTheme(defaultFooterFields, 'pro', null)).toBeNull()
+  })
+
+  it('reverts pastel -> oscuro back to sinfirma, since the user never touched the select (same pattern as brand)', () => {
+    const afterPastel = footerFirmaForTheme(defaultFooterFields, 'beige100', null)
+    expect(afterPastel).toBe('general')
+
+    const footerAfterPastel = { ...defaultFooterFields, firma: afterPastel! }
+    expect(footerFirmaForTheme(footerAfterPastel, 'darkturbo', 'beige100')).toBe('sinfirma')
+  })
+
+  it('reverts verde100 -> beige100 from turbo back to general, since the user never touched the select', () => {
+    // A diferencia de brand (donde el default de beige100 coincide con el
+    // default estático del schema), el de firma en beige100 SÍ difiere del
+    // default del schema ('general' vs 'sinfirma') — hay que simular el
+    // montaje inicial en beige100 antes de pasar a verde100 y volver.
+    const initialFirma = footerFirmaForTheme(defaultFooterFields, 'beige100', null)
+    expect(initialFirma).toBe('general')
+    const footerAtBeige = { ...defaultFooterFields, firma: initialFirma! }
+
+    const afterVerde = footerFirmaForTheme(footerAtBeige, 'verde100', 'beige100')
+    expect(afterVerde).toBe('turbo')
+
+    const footerAfterVerde = { ...footerAtBeige, firma: afterVerde! }
+    expect(footerFirmaForTheme(footerAfterVerde, 'beige100', 'verde100')).toBe('general')
+  })
+
+  it('does not touch a manually-chosen firma when moving between pastel themes', () => {
+    const footerManuallyChanged = { ...defaultFooterFields, firma: 'sinfirma' as const }
+    expect(footerFirmaForTheme(footerManuallyChanged, 'rosa100', 'beige100')).toBeNull()
+  })
+
+  it('does not revert a manually-chosen firma when leaving a pastel theme', () => {
+    const footerManuallyChanged = { ...defaultFooterFields, firma: 'sinfirma' as const }
+    expect(footerFirmaForTheme(footerManuallyChanged, 'darkturbo', 'beige100')).toBeNull()
   })
 })
 

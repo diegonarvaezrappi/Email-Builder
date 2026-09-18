@@ -45,6 +45,43 @@ function replaceFooterExampleInTest(html: string, rendered: string): string {
   return html.slice(0, startIdx) + rendered + html.slice(endIdx)
 }
 
+// Reimplementación independiente de assemble.ts#withBackgroundDecl/applySectionBackground
+// — mismo criterio que el resto de este archivo (ver el comentario grande de arriba).
+function withBackgroundDeclInTest(openTag: string, size: string, position: string, repeat: string): string {
+  let out = openTag.replace(/background-size:\s*[^;"]+;?/, `background-size: ${size};`)
+  out = out.replace(/background-position:\s*[^;"]+;?/, `background-position: ${position};`)
+  return /background-repeat:\s*[^;"]+;?/.test(out)
+    ? out.replace(/background-repeat:\s*[^;"]+;?/, `background-repeat: ${repeat};`)
+    : out.replace(/(background-position:\s*[^;"]+;)/, `$1 background-repeat: ${repeat};`)
+}
+
+function applyFondomobileInTest(html: string, global: EmailDocument['global']): string {
+  const anchorIdx = indexOfOrThrow(html, 'class="fondomobile"', 'test')
+  const start = html.lastIndexOf('<td', anchorIdx)
+  const end = html.indexOf('>', anchorIdx) + 1
+  let openTag = withBackgroundDeclInTest(html.slice(start, end), global.fondoSize, global.fondoPosition, global.fondoRepeat)
+  if (global.fondoUrl.trim() !== '') {
+    openTag = openTag.slice(0, 3) + ` role="img" aria-label="${escapeHtmlAttr(global.fondoAlt)}"` + openTag.slice(3)
+  }
+  return html.slice(0, start) + openTag + html.slice(end)
+}
+
+function applySectionBackgroundInTest(
+  html: string,
+  commentAnchor: string,
+  bg: { url: string; alt: string; size: string; position: string; repeat: string },
+): string {
+  const anchorIdx = indexOfOrThrow(html, commentAnchor, 'test')
+  const start = html.indexOf('<td', anchorIdx)
+  const end = html.indexOf('>', start) + 1
+  let openTag = html.slice(start, end).replace(/url\([^)]*\)/, `url(${bg.url})`)
+  openTag = withBackgroundDeclInTest(openTag, bg.size, bg.position, bg.repeat)
+  if (bg.url.trim() !== '') {
+    openTag = openTag.slice(0, 3) + ` role="img" aria-label="${escapeHtmlAttr(bg.alt)}"` + openTag.slice(3)
+  }
+  return html.slice(0, start) + openTag + html.slice(end)
+}
+
 describe('assembleEmailHtml', () => {
   it('replaces the FOOTER example block exactly once with the rendered footer snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
@@ -154,13 +191,28 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain("{% assign cond = '' %}")
   })
 
-  it('touches nothing besides the theme, the HERO link, and the HEADER/BANNER/CONTENIDOS/FOOTER anchors', () => {
+  it('touches nothing besides the theme, the 3 background configs, the HERO link, and the HEADER/BANNER/CONTENIDOS/FOOTER anchors', () => {
     const doc = {
       ...defaultEmailDocument,
       global: { ...defaultEmailDocument.global, tema: 'beige100' },
       contenidos: [ctaBlock('a', 'Uno')],
     }
     let expected = stripDealsFieldAssigns(stripBannerFieldAssigns(inlineTheme(templateBaseRaw, resolveGlobalVars(doc.global))))
+    expected = applyFondomobileInTest(expected, doc.global)
+    expected = applySectionBackgroundInTest(expected, 'el background-image es reemplazable', {
+      url: doc.global.heroBgUrl,
+      alt: doc.global.heroBgAlt,
+      size: doc.global.heroBgSize,
+      position: doc.global.heroBgPosition,
+      repeat: doc.global.heroBgRepeat,
+    })
+    expected = applySectionBackgroundInTest(expected, 'mismo fondo que el HERO', {
+      url: doc.global.contentsBgUrl,
+      alt: doc.global.contentsBgAlt,
+      size: doc.global.contentsBgSize,
+      position: doc.global.contentsBgPosition,
+      repeat: doc.global.contentsBgRepeat,
+    })
     expected = expected.replaceAll('AQUIELLINKDELBANNER', () => escapeHtmlAttr(doc.banner.link))
     expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL HEADER', renderHeaderSnippet(doc.header, 'beige100'))
     expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL BANNER', renderBannerSnippet(doc.banner, doc))
@@ -240,6 +292,120 @@ describe('assembleEmailHtml · fondo personalizado', () => {
     const withoutImage = withAlt('', 'no debería aparecer')
     expect(fondomobileTag(withoutImage)).not.toContain('role="img"')
     expect(withoutImage).not.toContain('no debería aparecer')
+  })
+
+  // Tamaño/posición/repeat — pedido explícito del usuario (2026-09-16), sobre
+  // los mismos 3 valores de background-size que el maestro ya soporta
+  // literalmente (100% auto / 100% 100% / cover) y los 4 de background-repeat.
+  it('defaults to the size/position/repeat the master already hardcodes (100% auto / center top / no-repeat)', () => {
+    expect(fondomobileTag(assembleEmailHtml(defaultEmailDocument))).toBe(
+      '<td class="fondomobile" width="100%" style="background-image: url(); background-size: 100% auto; background-position: center top; background-repeat: no-repeat;">',
+    )
+  })
+
+  it('overrides size/position/repeat independently of the URL', () => {
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      global: {
+        ...defaultEmailDocument.global,
+        fondoUrl: 'https://x.test/a.png',
+        fondoSize: 'cover',
+        fondoPosition: 'left bottom',
+        fondoRepeat: 'repeat-x',
+      },
+    })
+    const tag = fondomobileTag(html)
+    expect(tag).toContain('background-size: cover;')
+    expect(tag).toContain('background-position: left bottom;')
+    expect(tag).toContain('background-repeat: repeat-x;')
+  })
+})
+
+describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => {
+  // Igual criterio de scoping que fondomobileTag: el <td> puntual de cada
+  // sección, ubicado por el comentario que el maestro trae justo antes.
+  const sectionTag = (html: string, commentAnchor: string): string => {
+    const anchor = html.indexOf(`<!-- ${commentAnchor}`)
+    const start = html.indexOf('<td', anchor)
+    const end = html.indexOf('>', start) + 1
+    return html.slice(start, end)
+  }
+  const heroTag = (html: string) => sectionTag(html, 'el background-image es reemplazable')
+  const contentsTag = (html: string) => sectionTag(html, 'mismo fondo que el HERO')
+
+  it('defaults to an empty URL (pedido explícito del usuario 2026-09-18) — the master\'s own placeholder is no longer the default', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    for (const tag of [heroTag(html), contentsTag(html)]) {
+      expect(tag).toContain('background-image: url();')
+      expect(tag).not.toContain('role="img"')
+      // El tamaño/posición/repeat siguen igualando lo que el maestro ya
+      // hardcodeaba, solo cambió el default de la URL.
+      expect(tag).toContain('background-size: 100% auto;')
+      expect(tag).toContain('background-position: center top;')
+      expect(tag).toContain('background-repeat: repeat;')
+    }
+  })
+
+  it('can still be set to the master\'s own placeholder image by hand', () => {
+    const placeholderUrl = 'https://lh3.googleusercontent.com/d/1neHPofSevbcNLyO2pymbZk6QHZSrJO5-'
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      global: { ...defaultEmailDocument.global, heroBgUrl: placeholderUrl, contentsBgUrl: placeholderUrl },
+    })
+    expect(heroTag(html)).toContain(`background-image: url(${placeholderUrl})`)
+    expect(contentsTag(html)).toContain(`background-image: url(${placeholderUrl})`)
+  })
+
+  it('lets HERO and CONTENTS diverge independently from each other', () => {
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      global: {
+        ...defaultEmailDocument.global,
+        heroBgUrl: 'https://x.test/hero.png',
+        heroBgSize: 'cover',
+        heroBgPosition: 'left top',
+        heroBgRepeat: 'no-repeat',
+        heroBgAlt: 'Fondo del hero',
+        contentsBgUrl: 'https://x.test/contents.png',
+        contentsBgSize: '100% 100%',
+        contentsBgPosition: 'right bottom',
+        contentsBgRepeat: 'repeat-y',
+        contentsBgAlt: 'Fondo de contenidos',
+      },
+    })
+
+    const hero = heroTag(html)
+    expect(hero).toContain('background-image: url(https://x.test/hero.png)')
+    expect(hero).toContain('background-size: cover;')
+    expect(hero).toContain('background-position: left top;')
+    expect(hero).toContain('background-repeat: no-repeat;')
+    expect(hero).toContain('role="img" aria-label="Fondo del hero"')
+
+    const contents = contentsTag(html)
+    expect(contents).toContain('background-image: url(https://x.test/contents.png)')
+    expect(contents).toContain('background-size: 100% 100%;')
+    expect(contents).toContain('background-position: right bottom;')
+    expect(contents).toContain('background-repeat: repeat-y;')
+    expect(contents).toContain('role="img" aria-label="Fondo de contenidos"')
+  })
+
+  it('removes the background entirely (empty url(), no alt) when the URL is cleared, same convention as fondoUrl', () => {
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      global: { ...defaultEmailDocument.global, heroBgUrl: '', contentsBgUrl: '' },
+    })
+    expect(heroTag(html)).toContain('background-image: url();')
+    expect(heroTag(html)).not.toContain('role="img"')
+    expect(contentsTag(html)).toContain('background-image: url();')
+    expect(contentsTag(html)).not.toContain('role="img"')
+  })
+
+  it('escapes what would break out of the url(...), same as fondoUrl', () => {
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      global: { ...defaultEmailDocument.global, heroBgUrl: 'https://x.test/a(b).png' },
+    })
+    expect(heroTag(html)).toContain('background-image: url(https://x.test/a%28b%29.png)')
   })
 })
 
