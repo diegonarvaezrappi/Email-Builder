@@ -18,6 +18,10 @@ import type { EmailDocument } from '../../../model'
 import { cssUrlValue } from '../../../global/vars'
 import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../../template/htmlText'
 import { indexOfOrThrow, tagOpenInsertionPoint } from '../../../template/htmlEdits'
+import {
+  IMG_FIJA_LOGO_LINK_PLACEHOLDER as IMG_FIJA_LOGO_LINK_TOKEN,
+  linkOrPlaceholder,
+} from '../../../template/linkPlaceholders'
 import { plainText } from '../../../richText/model'
 import { LIQUID_COLOR_TOKENS, renderRichText } from '../../../richText/render'
 import { DARK_THEME_SLUGS } from '../../../themes/themes'
@@ -388,8 +392,10 @@ const IMG_FIJA_HERO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1DUvb
 const IMG_FIJA_LOGO_URL_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1a9-c_8otztz8MJvWa6G-TczJ3NEO083G'
 /** Solo la variante VERTICAL envuelve el logo en este link — asimetría real
  *  del maestro entre modulo_img_altofijo_horizontal.html (sin link) y
- *  _vertical.html (con <a href="AQUIELLINKDELOGO1">), no un bug a "arreglar". */
-const IMG_FIJA_LOGO_LINK_PLACEHOLDER = 'AQUIELLINKDELOGO1'
+ *  _vertical.html (con <a href="AQUIELLINKDELOGO1">), no un bug a "arreglar".
+ *  Sin link del usuario se deja el token tal cual (ya trae el `1` puesto en el
+ *  maestro), en vez de un href="" — ver template/linkPlaceholders.ts. */
+const IMG_FIJA_LOGO_LINK_PLACEHOLDER = IMG_FIJA_LOGO_LINK_TOKEN
 
 export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `modulo_img_altofijo_${ctx.bannerType}.html`
@@ -407,7 +413,12 @@ export function renderImgFijaSnippet(fields: ImgFijaFields, _doc: EmailDocument,
   html = substituteOnce(html, IMG_FIJA_HERO_URL_PLACEHOLDER, cssUrlValue(fields.heroImageUrl), fileName)
   html = substituteImgSrcOrRemove(html, IMG_FIJA_LOGO_URL_PLACEHOLDER, fields.logoImageUrl, fields.logoImageAlt, fileName)
   if (ctx.bannerType === 'vertical') {
-    html = substituteOnce(html, IMG_FIJA_LOGO_LINK_PLACEHOLDER, escapeHtmlAttr(fields.logoLink), fileName)
+    html = substituteOnce(
+      html,
+      IMG_FIJA_LOGO_LINK_PLACEHOLDER,
+      escapeHtmlAttr(linkOrPlaceholder(fields.logoLink, IMG_FIJA_LOGO_LINK_TOKEN)),
+      fileName,
+    )
   }
   // {{img_overlay_2_mail_general}} queda para la pasada de tema de render.ts.
   return html

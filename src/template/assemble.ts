@@ -8,6 +8,7 @@ import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
 import { elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
 import { escapeHtmlAttr, insertBackgroundImageAltAtStart } from './htmlText'
+import { HERO_LINK_PLACEHOLDER, linkOrPlaceholder, numberLinkPlaceholders } from './linkPlaceholders'
 import { slotKey } from '../tropicalize/keys'
 import { renderTropicalized } from '../tropicalize/render'
 
@@ -53,16 +54,13 @@ const WRAPPER_DE_CONTENIDOS_ANCHOR = 'WRAPPER DE CONTENIDOS'
 const FOOTER_EXAMPLE_START = "{% assign cond = '' %}"
 const FOOTER_EXAMPLE_END = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
 
-/**
- * Token de relleno manual (no es Liquid) que carga `doc.banner.link` — hasta
- * el refactor HERO (2026-09-12) vivía DENTRO de cada archivo de banner
- * (`components/banner/render.ts`); ahora el link envuelve TODO el HERO
- * (header + banner + imagen full width) a nivel de estructura_general.html,
- * así que se resuelve acá, no en el render del banner. 2 ocurrencias siempre
- * (href + originalsrc), igual convención que el resto de los AQUIELLINK# del
- * repo.
- */
-const HERO_LINK_PLACEHOLDER = 'AQUIELLINKDELBANNER'
+// Token de relleno manual (no es Liquid) que carga `doc.banner.link` — hasta
+// el refactor HERO (2026-09-12) vivía DENTRO de cada archivo de banner
+// (`components/banner/render.ts`); ahora el link envuelve TODO el HERO
+// (header + banner + imagen full width) a nivel de estructura_general.html,
+// así que se resuelve acá, no en el render del banner. 2 ocurrencias siempre
+// (href + originalsrc). Sin link del usuario se deja el token tal cual, en vez
+// de un href="" — ver template/linkPlaceholders.ts.
 
 /**
  * Reemplaza el comentario `<!-- ... anchor ... -->` que contiene `anchor`
@@ -263,7 +261,9 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   if (heroLinkCount !== 2) {
     throw new Error(`Se encontraron ${heroLinkCount} ocurrencias de ${HERO_LINK_PLACEHOLDER} en template_base.html (se esperaban 2: href + originalsrc)`)
   }
-  html = html.replaceAll(HERO_LINK_PLACEHOLDER, () => escapeHtmlAttr(doc.banner.link))
+  html = html.replaceAll(HERO_LINK_PLACEHOLDER, () =>
+    escapeHtmlAttr(linkOrPlaceholder(doc.banner.link, HERO_LINK_PLACEHOLDER)),
+  )
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
@@ -299,5 +299,9 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     html = replaceFooterExample(html, rendered)
   }
 
-  return html
+  // Última pasada, con el documento ya completo: numerar los marcadores de
+  // link que quedaron sin link real (AQUIELLINKDELCTA1, LINKDEAL2, …). Va acá
+  // y no en cada render porque el número sale del ORDEN en el mail entero, que
+  // una pieza suelta no conoce — ver template/linkPlaceholders.ts.
+  return numberLinkPlaceholders(html)
 }

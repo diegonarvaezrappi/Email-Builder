@@ -42,6 +42,7 @@ import type { EmailDocument } from '../../model'
 import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
 import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
 import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
+import { DEAL_LINK_PLACEHOLDER, linkOrPlaceholder } from '../../template/linkPlaceholders'
 import * as htmlEdits from '../../template/htmlEdits'
 import type { Bounds, Edit } from '../../template/htmlEdits'
 import { resolveThemeVars } from '../../themes/inlineTheme'
@@ -188,7 +189,7 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
 
 // --- Celda de textos --------------------------------------------------------
 
-const LINK_PLACEHOLDER = 'LINKDEAL'
+const LINK_PLACEHOLDER = DEAL_LINK_PLACEHOLDER
 const COPY_1_VAR = '{{deals_copy_1_promo}}'
 const COPY_2_VAR = '{{deals_copy_2_promo}}'
 const MARKDOWN_ANCHOR = 'role="MARKDOWN"'
@@ -411,10 +412,16 @@ function renderTextCell(cell: string, card: DealCard): string {
   // la numeración LINKDEAL1/LINKDEAL2 que sugiere _contenidos_wrapper.html) —
   // se resuelve PRIMERO, sobre la celda completa: no se superpone con los
   // límites de ninguna pieza (vive en el <a> que las envuelve a todas), así
-  // que medirlas después de este paso es seguro.
+  // que medirlas después de este paso es seguro. Sin link del usuario queda el
+  // marcador, que assembleEmailHtml numera después — esa numeración que el
+  // maestro pide y no cumple, ver template/linkPlaceholders.ts.
   const linkIndex = indexOfOrThrow(cell, LINK_PLACEHOLDER)
   const withLink = applyEdits(cell, [
-    { start: linkIndex, end: linkIndex + LINK_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.link) },
+    {
+      start: linkIndex,
+      end: linkIndex + LINK_PLACEHOLDER.length,
+      replacement: escapeHtmlAttr(linkOrPlaceholder(fields.link, DEAL_LINK_PLACEHOLDER)),
+    },
   ])
 
   // Límites de las 7 piezas en orden NATURAL (el literal del maestro) —

@@ -1,4 +1,5 @@
 import { toLiquidStringLiteral } from '../../template/liquidText'
+import { CTA_LINK_PLACEHOLDER, linkOrPlaceholder } from '../../template/linkPlaceholders'
 import type { CtaFields } from './schema'
 
 /** Nombre del Content Block de Braze que trae el botón real — ver 02-components/03_ctas/cta-template.html. */
@@ -24,7 +25,9 @@ export function renderCtaAssignLines(fields: CtaFields, ctaStyle: string): strin
     `{% assign cta_alineado = '${fields.align}' %}`,
     `{% assign cta_size = '${fields.size}' %}`,
     `{% assign text_cta = ${toLiquidStringLiteral(fields.text)} %}`,
-    `{% assign deeplink_cta = ${toLiquidStringLiteral(fields.deeplink)} %}`,
+    // Sin link del usuario va el marcador, que assembleEmailHtml numera
+    // después (AQUIELLINKDELCTA1, …2) — ver template/linkPlaceholders.ts.
+    `{% assign deeplink_cta = ${toLiquidStringLiteral(linkOrPlaceholder(fields.deeplink, CTA_LINK_PLACEHOLDER))} %}`,
     `{% assign style_Look = '${ctaStyle}' %}`,
   ]
 }

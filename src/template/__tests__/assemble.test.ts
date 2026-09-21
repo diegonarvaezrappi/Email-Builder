@@ -45,6 +45,15 @@ function replaceFooterExampleInTest(html: string, rendered: string): string {
   return html.slice(0, startIdx) + rendered + html.slice(endIdx)
 }
 
+/** Reimplementación independiente de linkPlaceholders.ts#numberLinkPlaceholders. */
+function numberLinkPlaceholdersInTest(html: string): string {
+  let cta = 0
+  let deal = 0
+  return html
+    .replace(/deeplink_cta = 'AQUIELLINKDELCTA'/g, () => `deeplink_cta = 'AQUIELLINKDELCTA${++cta}'`)
+    .replace(/href="LINKDEAL"/g, () => `href="LINKDEAL${++deal}"`)
+}
+
 // Reimplementación independiente de assemble.ts#withBackgroundDecl/applySectionBackground
 // — mismo criterio que el resto de este archivo (ver el comentario grande de arriba).
 function withBackgroundDeclInTest(openTag: string, size: string, position: string, repeat: string): string {
@@ -213,11 +222,16 @@ describe('assembleEmailHtml', () => {
       position: doc.global.contentsBgPosition,
       repeat: doc.global.contentsBgRepeat,
     })
-    expected = expected.replaceAll('AQUIELLINKDELBANNER', () => escapeHtmlAttr(doc.banner.link))
+    // Sin link del usuario el token del HERO se conserva (no queda href="") —
+    // ver template/linkPlaceholders.ts.
+    expected = expected.replaceAll('AQUIELLINKDELBANNER', () =>
+      escapeHtmlAttr(doc.banner.link.trim() === '' ? 'AQUIELLINKDELBANNER' : doc.banner.link),
+    )
     expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL HEADER', renderHeaderSnippet(doc.header, 'beige100'))
     expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL BANNER', renderBannerSnippet(doc.banner, doc))
     expected = replaceContenidosWrapperInTest(expected, renderContenidosSnippet(doc.contenidos, doc))
     expected = replaceFooterExampleInTest(expected, renderFooterSnippet(doc.footer, 'beige100'))
+    expected = numberLinkPlaceholdersInTest(expected)
     expect(assembleEmailHtml(doc)).toBe(expected)
   })
 
@@ -406,6 +420,108 @@ describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => 
       global: { ...defaultEmailDocument.global, heroBgUrl: 'https://x.test/a(b).png' },
     })
     expect(heroTag(html)).toContain('background-image: url(https://x.test/a%28b%29.png)')
+  })
+})
+
+// Regla del propio maestro (_contenidos_wrapper.html, citada literal en
+// template/linkPlaceholders.ts): un link sin valor no se exporta como
+// href="", sale con el nombre del módulo y numerado, para que en la
+// implementación encuentren los espacios. El maestro no la cumple (LINKDEAL
+// ×2, deeplink_cta 'AQUIELLINK#' ×6) y no se toca, así que se resuelve acá.
+describe('assembleEmailHtml · marcadores de link (banner · CTA · deals)', () => {
+  const dealsDoc = (): EmailDocument => ({
+    ...defaultEmailDocument,
+    contenidos: [ctaBlock('a', 'Uno'), ctaBlock('b', 'Dos')].map((b) => ({
+      ...b,
+      fields: { ...b.fields, deeplink: '' },
+    })) as EmailDocument['contenidos'],
+  })
+
+  it('keeps AQUIELLINKDELBANNER on the HERO <a> when the banner has no link, instead of href=""', () => {
+    const html = assembleEmailHtml(defaultEmailDocument)
+    expect(html).toContain('href="AQUIELLINKDELBANNER"')
+    // Las 2 ocurrencias del maestro (href + originalsrc) siguen ahí.
+    expect(html.split('AQUIELLINKDELBANNER').length - 1).toBe(2)
+  })
+
+  it('still uses the real link when the banner has one', () => {
+    const html = assembleEmailHtml({
+      ...defaultEmailDocument,
+      banner: { ...defaultEmailDocument.banner, link: 'https://rappi.test/promo' },
+    })
+    expect(html).toContain('href="https://rappi.test/promo"')
+    expect(html).not.toContain('AQUIELLINKDELBANNER')
+  })
+
+  it('numbers every CTA without a link, in order of appearance', () => {
+    const html = assembleEmailHtml(dealsDoc())
+    expect(html).toContain("{% assign deeplink_cta = 'AQUIELLINKDELCTA1' %}")
+    expect(html).toContain("{% assign deeplink_cta = 'AQUIELLINKDELCTA2' %}")
+    // Sin marcador "crudo" sin numerar, ni el href="" de antes.
+    expect(html).not.toContain("deeplink_cta = 'AQUIELLINKDELCTA'")
+    expect(html).not.toContain("deeplink_cta = '' ")
+    expect(html.indexOf('AQUIELLINKDELCTA1')).toBeLessThan(html.indexOf('AQUIELLINKDELCTA2'))
+  })
+
+  it('leaves a CTA that does have a link untouched, and does not spend a number on it', () => {
+    const doc = {
+      ...defaultEmailDocument,
+      contenidos: [
+        { ...ctaBlock('a', 'Uno'), fields: { ...ctaBlock('a', 'Uno').fields, deeplink: 'https://rappi.test/a' } },
+        { ...ctaBlock('b', 'Dos'), fields: { ...ctaBlock('b', 'Dos').fields, deeplink: '' } },
+      ],
+    } as EmailDocument
+    const html = assembleEmailHtml(doc)
+    expect(html).toContain("{% assign deeplink_cta = 'https://rappi.test/a' %}")
+    // El único CTA sin link es el 1º que necesita marcador, así que va el 1.
+    expect(html).toContain("{% assign deeplink_cta = 'AQUIELLINKDELCTA1' %}")
+    expect(html).not.toContain('AQUIELLINKDELCTA2')
+  })
+
+  it('numbers every deal card without a link (LINKDEAL1, LINKDEAL2, …) in order of appearance', () => {
+    // El documento por defecto trae 3 filas de 2 tarjetas, todas sin link.
+    const html = assembleEmailHtml(defaultEmailDocument)
+    for (let n = 1; n <= 6; n++) {
+      expect(html).toContain(`href="LINKDEAL${n}"`)
+    }
+    expect(html).not.toContain('href="LINKDEAL"')
+    expect(html.indexOf('LINKDEAL1')).toBeLessThan(html.indexOf('LINKDEAL2'))
+  })
+
+  // Inmutable a propósito: las 6 tarjetas del documento por defecto comparten
+  // el MISMO objeto `fields` (defaultDealCardFields, reusado por referencia en
+  // registry.ts), así que mutar una en sitio las cambiaría las 6.
+  const withFirstDealLink = (link: string): EmailDocument => {
+    let patched = false
+    return {
+      ...defaultEmailDocument,
+      contenidos: defaultEmailDocument.contenidos.map((block) => {
+        if (block.type !== 'DEALS' || patched) return block
+        patched = true
+        return {
+          ...block,
+          fields: {
+            ...block.fields,
+            items: block.fields.items.map((card, i) => (i === 0 ? { ...card, fields: { ...card.fields, link } } : card)),
+          },
+        }
+      }),
+    }
+  }
+
+  it('never invents a placeholder for a link the user actually typed', () => {
+    const html = assembleEmailHtml(withFirstDealLink('https://rappi.test/deal'))
+    expect(html).toContain('href="https://rappi.test/deal"')
+    // Quedan 5 tarjetas sin link: se numeran 1..5, sin gastar un número en la
+    // que sí lo tiene.
+    expect(html).toContain('href="LINKDEAL1"')
+    expect(html).toContain('href="LINKDEAL5"')
+    expect(html).not.toContain('href="LINKDEAL6"')
+  })
+
+  it('does not renumber a real link that happens to contain the literal token', () => {
+    const html = assembleEmailHtml(withFirstDealLink('https://rappi.test/LINKDEAL/promo'))
+    expect(html).toContain('href="https://rappi.test/LINKDEAL/promo"')
   })
 })
 
