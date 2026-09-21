@@ -125,7 +125,7 @@ export const defaultTextoComplementarioFields: TextoComplementarioFields = texto
 /** `banner_img_modulo_auto_ancho` — el maestro lo asigna a '80' en su ejemplo;
  *  la misma variable alimenta tanto la molécula como el módulo. */
 export const imgAutomaticaMoleculaFieldsSchema = z.object({
-  imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1U4HZfNfRWpZ0XhMCmFF-4V4U2H3W8IcN'),
+  imageUrl: z.string().default('https://lh3.googleusercontent.com/d/1y5YLWextMJT5wMWkDnQ8ItGvRuvpkNQd'),
   /** Alt del `<img>` — default reproduce el `alt="img"` que
    *  molecula_img_automatica_{horizontal,vertical}.html ya trae de fábrica. */
   imageAlt: z.string().default('img'),

@@ -43,7 +43,7 @@ describe('renderBannerSnippet', () => {
     const html = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
     expect(html).toContain('>Desde<')
     expect(html).toContain('>50% OFF<')
-    expect(html).toContain('src="https://lh3.googleusercontent.com/d/1uhZpndNKQ7C9tt1dXlFkpS0EHGXQhx-L"')
+    expect(html).toContain('src="https://lh3.googleusercontent.com/d/1y5YLWextMJT5wMWkDnQ8ItGvRuvpkNQd"')
     expect(html).toContain('Tus combos y hamburguesas favoritas con descuento solo esta semana.')
     expect(html).toContain('url(https://lh3.googleusercontent.com/d/14_FBy89QriBRhPFmE08rTUKcq0YOYl4e)')
     expect(html).toContain('src="https://lh3.googleusercontent.com/d/133AXVYx3soz7FSck1bjiF5vBLh-5mzml"')

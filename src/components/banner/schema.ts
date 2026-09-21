@@ -183,7 +183,7 @@ export const defaultBannerFields: BannerFields = {
       id: 'banner-img-automatica-molecula-default',
       type: 'IMG_AUTOMATICA_MOLECULA',
       fields: {
-        imageUrl: 'https://lh3.googleusercontent.com/d/1uhZpndNKQ7C9tt1dXlFkpS0EHGXQhx-L',
+        imageUrl: 'https://lh3.googleusercontent.com/d/1y5YLWextMJT5wMWkDnQ8ItGvRuvpkNQd',
         imageAlt: 'img',
         widthPercent: 100,
         borderRadiusEnabled: false,
