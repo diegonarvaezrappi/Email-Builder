@@ -25,10 +25,12 @@ describe('resolveFontStyleLook', () => {
     }
   })
 
-  it('is pro for the Pro/ProBlack themes', () => {
-    for (const tema of TEMAS_PRO) {
-      expect(resolveFontStyleLook(tema, 'General')).toBe('pro')
-    }
+  // Hasta el pull 7f349d9 (2026-09-22) los 2 resolvían a 'pro': el maestro no
+  // le había dado rama propia a problack. Ese pull la agregó (negro puro) en
+  // footer_general.html — ver themes.ts#FONT_STYLE_LOOK_FOR_THEME.
+  it('resolves each premium theme to its own branch, now that problack has one', () => {
+    expect(resolveFontStyleLook('pro', 'General')).toBe('pro')
+    expect(resolveFontStyleLook('problack', 'General')).toBe('problack')
   })
 
   it('forces negro when Tipo de Footer is RTS, regardless of the theme', () => {
@@ -75,9 +77,9 @@ describe('renderFooterSnippet', () => {
     expect(snippet).toContain("font_style_look = 'negro'")
   })
 
-  it('sets font_style_look to pro for the ProBlack theme outside RTS', () => {
+  it('sets font_style_look to problack for the ProBlack theme outside RTS', () => {
     const snippet = renderFooterSnippet(defaultFooterFields, 'problack')
-    expect(snippet).toContain("font_style_look = 'pro'")
+    expect(snippet).toContain("font_style_look = 'problack'")
   })
 
   it('emits font_style_look as a resolved literal, never as nested interpolation', () => {

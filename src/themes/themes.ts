@@ -285,15 +285,28 @@ export const DARK_THEME_SLUGS = ['darkneon', 'darkturbo', 'darkneutro']
  * NO se actualizó para documentarlo (sigue diciendo "variantes 'negro' 'pro'"
  * únicamente) — silenciosamente agregado, encontrado leyendo el HTML real.
  *
- * `problack` NO tiene rama propia (el maestro no la definió) — se mapea a
- * 'pro' igual, PRESERVANDO el comportamiento que ya tenía antes de este mapa
- * (vía el fallback por grupo que este mapa reemplaza), no inventando nada
- * nuevo. `darkneon`/`darkturbo`/`darkneutro` tampoco tienen rama propia y
- * caen al fallback genérico ('negro'), también sin cambios de comportamiento.
+ * `problack` SÍ tiene rama propia desde el pull `7f349d9` (2026-09-22), que
+ * la agregó a `footer_general.html`, `footer_rts.html` y `footer_b2b.html`
+ * con negro puro (`color_letra = '#000000'`, bordes `#000000`) — otra adición
+ * silenciosa del maestro, encontrada diffeando los bloques de
+ * `font_style_look` a mano: nada truena si se ignora, simplemente el footer
+ * de un mail ProBlack seguía saliendo con el gris de Pro. Hasta ese pull se
+ * mapeaba a 'pro' porque el maestro no definía la rama.
+ *
+ * SALVEDAD CONOCIDA (decisión explícita del usuario, 2026-09-22): este mapa
+ * está indexado SOLO por tema, no por tipo de footer, y `footer_simple.html`
+ * (ex `footer_sinamor.html`) es el único de los 3 que NO ganó la rama. Así
+ * que con tema ProBlack: General y RTS quedan en negro (correcto), y Simple
+ * cae a su `{% else %}` (`#7D8188`) en vez del gris de Pro (`#9EA1A2`) que
+ * tenía antes — un gris por otro. Se aceptó a cambio de no complicar el mapa;
+ * si algún día molesta, la salida es indexar por `tipoFooter` además de tema.
+ *
+ * `darkneon`/`darkturbo`/`darkneutro` siguen sin rama propia y caen al
+ * fallback genérico ('negro').
  */
 const FONT_STYLE_LOOK_FOR_THEME: Partial<Record<string, string>> = {
   pro: 'pro',
-  problack: 'pro',
+  problack: 'problack',
   gris100: 'gris100',
   beige100: 'beige100',
   beige150: 'beige150',

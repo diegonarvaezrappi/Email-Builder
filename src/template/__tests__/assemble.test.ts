@@ -178,9 +178,10 @@ describe('assembleEmailHtml', () => {
       ...defaultEmailDocument,
       global: { ...defaultEmailDocument.global, tema: 'problack' },
     })
-    // ProBlack: bg_solid #ECEFF3 y footer 'pro'.
+    // ProBlack: bg_solid #ECEFF3 y footer 'problack' — su rama propia, que el
+    // maestro agregó en el pull 7f349d9 (antes caía en la de 'pro').
     expect(html).toContain('#ECEFF3')
-    expect(html).toContain("{% assign font_style_look = 'pro' %}")
+    expect(html).toContain("{% assign font_style_look = 'problack' %}")
     // Ni el assign de entrada, ni las 11 ramas, ni referencias sin resolver.
     expect(html).not.toContain('tema_general_mail_general')
     expect(html).not.toMatch(/\{\{\s*[a-z_0-9]+_mail_general\s*\}\}/)
