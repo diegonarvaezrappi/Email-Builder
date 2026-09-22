@@ -15,7 +15,11 @@
 import { Liquid } from 'liquidjs'
 import footerGeneralRaw from '../assets/templates/footer_general.html?raw'
 import footerRtsRaw from '../assets/templates/footer_rts.html?raw'
-import footerSinAmorRaw from '../assets/templates/footer_sinamor.html?raw'
+// El maestro renombró footer_sinamor.html → footer_simple.html (pull
+// 7f349d9). Es el mismo content block: el tipo de footer sigue llamándose
+// `SinAmor` en el dominio (schema.ts) y en Braze — cambió el ARCHIVO, no el
+// concepto.
+import footerSimpleRaw from '../assets/templates/footer_simple.html?raw'
 import ctaTemplateRaw from '../assets/templates/cta-template.html?raw'
 import { FOOTER_CONTENT_BLOCK_BY_TIPO } from '../components/footer/render'
 import { TIPO_FOOTER_VALUES, type TipoFooter } from '../components/footer/schema'
@@ -31,7 +35,7 @@ export { PREVIEW_COUNTRIES, PREVIEW_COUNTRY_LABELS, type PreviewCountry } from '
 /** Cuerpo real (documentación/referencia) de cada content block de Braze. */
 const CONTENT_BLOCK_BODY_BY_TIPO: Record<TipoFooter, string> = {
   General: footerGeneralRaw,
-  SinAmor: footerSinAmorRaw,
+  SinAmor: footerSimpleRaw,
   RTS: footerRtsRaw,
 }
 

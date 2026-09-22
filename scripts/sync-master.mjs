@@ -302,7 +302,24 @@ const TEMPLATE_BASE_NAME = 'estructura_general.html'
 /** Ruta relativa al repo, solo para los mensajes. */
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
-const FOOTER_FILES = ['footer.html', 'footer_general.html', 'footer_rts.html', 'footer_sinamor.html']
+/**
+ * `footer_sinamor.html` se renombró a `footer_simple.html` en el maestro
+ * (pull 7f349d9) — es el MISMO content block, solo cambió el nombre del
+ * archivo: el identificador de dominio del tipo de footer sigue siendo
+ * `SinAmor` (ver components/footer/schema.ts), que es lo que viaja en los
+ * documentos guardados y en el nombre del content block de Braze.
+ *
+ * `footer_b2b.html` llegó en el mismo pull y todavía no lo consume nadie: se
+ * sincroniza igual para que el día que se implemente el tipo de footer B2B el
+ * archivo ya esté, y para que este script avise si el maestro lo borra.
+ */
+const FOOTER_FILES = [
+  'footer.html',
+  'footer_general.html',
+  'footer_rts.html',
+  'footer_simple.html',
+  'footer_b2b.html',
+]
 
 /**
  * El hueco del footer en estructura_general.html ya no es un `<!-- FOOTER -->`
