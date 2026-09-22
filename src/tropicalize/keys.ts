@@ -68,6 +68,9 @@ export const isTropicalizeKey = (key: string): boolean => parseTargetKey(key) !=
  */
 export function targetKeyFromSelection(selected: Selection | null): TropicalizeKey | null {
   if (!selected) return null
+  // Un fondo de sección (HERO_BG/CONTENTS_BG, ver
+  // ui/selection.ts#GlobalBackgroundTarget) tampoco es tropicalizable.
+  if (selected.slot === 'HERO_BG' || selected.slot === 'CONTENTS_BG') return null
   if (selected.slot === 'CONTENIDOS') {
     if (selected.moduleItemId) return moduleItemKey(selected.moduleItemId)
     if (selected.dealCardId) return selected.dealCardPieceType ? null : dealCardKey(selected.dealCardId)

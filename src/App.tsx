@@ -10,6 +10,7 @@ import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
 import { ToolbarGlobals } from './ui/ToolbarGlobals'
 import { normalizeTropicalizationTarget, type Selection } from './ui/selection'
+import { focusForSelection, type TreeFocus, type TreeReorder } from './ui/componentTreeModel'
 import type { ViewportTab } from './ui/viewportTab'
 import type { PreviewCountry } from './preview/countries'
 import { TropicalizationPanel } from './ui/tropicalize/TropicalizationPanel'
@@ -57,6 +58,50 @@ function App() {
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
 
+  // Qué contenedor está abierto en el árbol de estructura (ui/ComponentTree.tsx).
+  // Vive acá y no dentro del árbol porque una selección hecha en el LIENZO
+  // también lo mueve: es la mitad "lienzo → árbol" del resaltado bidireccional.
+  const [treeFocus, setTreeFocus] = useState<TreeFocus | null>(null)
+
+  /**
+   * Cada cambio de selección pasa por acá (lienzo, catálogo, árbol, inspector):
+   * además de guardarla, baja el árbol al contenedor donde esa selección vive,
+   * así lo seleccionado siempre se ve en el árbol. Un contenedor clickeado
+   * DESDE el árbol llama a onChangeFocus después de esto para abrirlo (ver
+   * ComponentTree.tsx) — el último setState gana, que es justo lo que se
+   * quiere: seleccionar "Deals" y ver sus deals es un solo gesto.
+   *
+   * Acepta `null` (más ancho que la prop `onSelect` de los paneles) para poder
+   * reusarlo desde handleChangeTab, donde la normalización puede limpiar la
+   * selección.
+   */
+  const applySelection = (next: Selection | null) => {
+    setSelected(next)
+    setTreeFocus(focusForSelection(doc, next))
+  }
+
+  /**
+   * Reordenar arrastrando una fila del árbol — pedido explícito del usuario
+   * (2026-09-21): las moléculas también se reordenan desde ahí, no solo desde
+   * el lienzo. Cada tipo de fila cae en la MISMA acción del store que ya usa
+   * el arrastre del Viewport, con la misma convención de `toIndex` (se
+   * interpreta antes de sacar la fila arrastrada, el ajuste lo hace el store).
+   */
+  const handleTreeReorder = (reorder: TreeReorder, toIndex: number) => {
+    switch (reorder.kind) {
+      case 'block':
+        return reorderContentBlock(reorder.id, toIndex)
+      case 'bannerItem':
+        return reorderBannerItem(reorder.id, toIndex)
+      case 'dealCard':
+        return reorderDealCard(reorder.id, toIndex)
+      case 'dealCardPiece':
+        return reorderDealCardPiece(reorder.cardId, reorder.pieceType, toIndex)
+      case 'moduleItem':
+        return reorderModuleItem(reorder.id, toIndex)
+    }
+  }
+
   // Pestaña activa del panel central y país "de vista" — antes vivían como
   // useState local de ui/Viewport.tsx; se suben acá porque el panel derecho
   // de Tropicalizar y el aviso de la pestaña Preview también necesitan
@@ -72,7 +117,9 @@ function App() {
   // hace acá, en el único punto que cambia de pestaña, no en un efecto del
   // panel (no reentrante).
   const handleChangeTab = (next: ViewportTab) => {
-    if (next === 'tropicalize') setSelected((current) => normalizeTropicalizationTarget(current))
+    // Pasa por applySelection (no setSelected suelto) para que el árbol quede
+    // en un foco coherente con la selección ya normalizada.
+    if (next === 'tropicalize') applySelection(normalizeTropicalizationTarget(selected))
     setTab(next)
   }
 
@@ -179,14 +226,22 @@ function App() {
 
       <div className="app-body">
         {tab === 'tropicalize' ? (
-          <TropicalizationIndexPanel document={doc} country={country} onSelect={setSelected} onChangeCountry={setCountry} />
+          <TropicalizationIndexPanel document={doc} country={country} onSelect={applySelection} onChangeCountry={setCountry} />
         ) : (
-          <LibraryPanel document={doc} selected={selected} onSelect={setSelected} onChangeSlot={setSlotFields} />
+          <LibraryPanel
+            document={doc}
+            selected={selected}
+            onSelect={applySelection}
+            onChangeSlot={setSlotFields}
+            treeFocus={treeFocus}
+            onChangeTreeFocus={setTreeFocus}
+            onTreeReorder={handleTreeReorder}
+          />
         )}
         <Viewport
           document={doc}
           selected={selected}
-          onSelect={setSelected}
+          onSelect={applySelection}
           onChangeSlot={setSlotFields}
           onInsertBlock={insertContentBlock}
           onDuplicateBlock={duplicateContentBlock}
@@ -231,7 +286,7 @@ function App() {
           <InspectorPanel
             document={doc}
             selected={selected}
-            onSelect={setSelected}
+            onSelect={applySelection}
             onChange={setSlotFields}
             onChangeBlock={updateContentBlockFields}
             onChangeBannerItem={updateBannerItemFields}

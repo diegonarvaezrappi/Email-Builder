@@ -19,6 +19,7 @@ import {
   withRepeatY,
 } from '../global/background'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
+import type { GlobalFields } from '../global/schema'
 
 interface BackgroundSizePositionRepeatFieldsProps {
   size: BackgroundSize
@@ -91,5 +92,60 @@ export function BackgroundSizePositionRepeatFields({
         <span>No repetir</span>
       </label>
     </>
+  )
+}
+
+interface HeroContentsBackgroundPanelProps {
+  /** 'hero' → heroBgUrl/heroBgAlt/heroBgSize/…; 'contents' → contentsBg*. */
+  prefix: 'hero' | 'contents'
+  value: GlobalFields
+  onChange: (next: GlobalFields) => void
+}
+
+/**
+ * URL + Alt + tamaño/posición/repeat de HERO-SECTION o CONTENTS-SECTION —
+ * pedido explícito del usuario (2026-09-21): antes vivía en un popover del
+ * toolbar (ver ToolbarGlobals.tsx, que ahora solo conserva el de General),
+ * ahora se selecciona desde el panel izquierdo como Header/Banner/Footer (ver
+ * ui/selection.ts#GlobalBackgroundTarget) y este es su PropertiesPanel.
+ */
+export function HeroContentsBackgroundPanel({ prefix, value, onChange }: HeroContentsBackgroundPanelProps) {
+  const urlKey = `${prefix}BgUrl` as const
+  const altKey = `${prefix}BgAlt` as const
+  const sizeKey = `${prefix}BgSize` as const
+  const positionKey = `${prefix}BgPosition` as const
+  const repeatKey = `${prefix}BgRepeat` as const
+
+  return (
+    <div className="properties-panel">
+      <label className="field">
+        <span>URL de la imagen</span>
+        <input
+          type="text"
+          placeholder="URL de la imagen de fondo"
+          value={value[urlKey]}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [urlKey]: e.target.value })}
+        />
+      </label>
+
+      <label className="field">
+        <span>Alt de la imagen</span>
+        <input
+          type="text"
+          disabled={value[urlKey].trim() === ''}
+          value={value[altKey]}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
+        />
+      </label>
+
+      <BackgroundSizePositionRepeatFields
+        size={value[sizeKey]}
+        position={value[positionKey]}
+        repeat={value[repeatKey]}
+        onChangeSize={(next) => onChange({ ...value, [sizeKey]: next })}
+        onChangePosition={(next) => onChange({ ...value, [positionKey]: next })}
+        onChangeRepeat={(next) => onChange({ ...value, [repeatKey]: next })}
+      />
+    </div>
   )
 }

@@ -37,6 +37,8 @@ import { BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/sch
 import { isSlotSelected, selectSlot, type Selection } from './selection'
 import { SLOT_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, BANNER_TYPE_DRAG_TYPE } from './dragTypes'
 import { BANNER_TYPE_ICONS } from './moleculeIcons'
+import { ComponentTree } from './ComponentTree'
+import type { TreeFocus, TreeReorder } from './componentTreeModel'
 
 /** Los 9 tipos de contenido que el maestro documenta dentro de CONTENIDOS — ver el comentario "WRAPPER DE CONTENIDOS". */
 const CONTENT_BLOCK_LIBRARY_ITEMS: { type: string; label: string }[] = [
@@ -57,9 +59,24 @@ interface LibraryPanelProps {
   selected: Selection | null
   onSelect: (next: Selection) => void
   onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
+  /** El árbol de estructura vive en este mismo panel, debajo del catálogo —
+   *  ver ui/ComponentTree.tsx. Su estado (qué contenedor está abierto) vive en
+   *  App.tsx, junto a `selected`, porque una selección hecha en el LIENZO
+   *  también lo mueve. */
+  treeFocus: TreeFocus | null
+  onChangeTreeFocus: (next: TreeFocus | null) => void
+  onTreeReorder: (reorder: TreeReorder, toIndex: number) => void
 }
 
-export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }: LibraryPanelProps) {
+export function LibraryPanel({
+  document: doc,
+  selected,
+  onSelect,
+  onChangeSlot,
+  treeFocus,
+  onChangeTreeFocus,
+  onTreeReorder,
+}: LibraryPanelProps) {
   return (
     <aside className="panel-library">
       <section className="lib-section">
@@ -160,6 +177,15 @@ export function LibraryPanel({ document: doc, selected, onSelect, onChangeSlot }
           })}
         </ul>
       </section>
+
+      <ComponentTree
+        document={doc}
+        selected={selected}
+        focus={treeFocus}
+        onSelect={onSelect}
+        onChangeFocus={onChangeTreeFocus}
+        onReorder={onTreeReorder}
+      />
     </aside>
   )
 }

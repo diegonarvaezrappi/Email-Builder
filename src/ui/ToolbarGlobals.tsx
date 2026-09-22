@@ -3,7 +3,6 @@
 // mail entero (tema, imagen de fondo), no son propiedades de un componente, así
 // que no compiten por espacio con el panel del componente seleccionado.
 // ============================================================================
-import type { ChangeEvent } from 'react'
 import type { GlobalFields } from '../global/schema'
 import { groupedThemes, themeLabel } from '../themes/themes'
 import { Popover } from './Popover'
@@ -12,66 +11,6 @@ import { BackgroundSizePositionRepeatFields } from './BackgroundFields'
 interface ToolbarGlobalsProps {
   value: GlobalFields
   onChange: (next: GlobalFields) => void
-}
-
-/**
- * Fondo de HERO-SECTION o CONTENTS-SECTION — mismos 5 campos (url, alt,
- * tamaño, posición, repeat), solo cambia el prefijo de la clave en
- * GlobalFields ('hero' | 'contents'). Pedido explícito del usuario
- * (2026-09-16): además de General (fondoUrl, ya en el toolbar), estas 2
- * secciones también deben poder reemplazar su imagen y ajustar tamaño/
- * posición/repeat — hasta ahora era una imagen fija del maestro, sin ningún
- * campo editable en la app.
- */
-function SectionBackgroundPopover({
-  label,
-  prefix,
-  value,
-  onChange,
-}: {
-  label: string
-  prefix: 'hero' | 'contents'
-  value: GlobalFields
-  onChange: (next: GlobalFields) => void
-}) {
-  const urlKey = `${prefix}BgUrl` as const
-  const altKey = `${prefix}BgAlt` as const
-  const sizeKey = `${prefix}BgSize` as const
-  const positionKey = `${prefix}BgPosition` as const
-  const repeatKey = `${prefix}BgRepeat` as const
-
-  return (
-    <Popover label={label}>
-      <label className="field">
-        <span>URL de la imagen</span>
-        <input
-          type="text"
-          placeholder="URL de la imagen de fondo"
-          value={value[urlKey]}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [urlKey]: e.target.value })}
-        />
-      </label>
-
-      <label className="field">
-        <span>Alt de la imagen</span>
-        <input
-          type="text"
-          disabled={value[urlKey].trim() === ''}
-          value={value[altKey]}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
-        />
-      </label>
-
-      <BackgroundSizePositionRepeatFields
-        size={value[sizeKey]}
-        position={value[positionKey]}
-        repeat={value[repeatKey]}
-        onChangeSize={(next) => onChange({ ...value, [sizeKey]: next })}
-        onChangePosition={(next) => onChange({ ...value, [positionKey]: next })}
-        onChangeRepeat={(next) => onChange({ ...value, [repeatKey]: next })}
-      />
-    </Popover>
-  )
 }
 
 export function ToolbarGlobals({ value, onChange }: ToolbarGlobalsProps) {
@@ -126,7 +65,12 @@ export function ToolbarGlobals({ value, onChange }: ToolbarGlobalsProps) {
       </label>
 
       {/* Tamaño/posición/repeat de General — url/alt ya están arriba (Fondo/Alt
-          del fondo), así que este popover solo trae los 3 campos nuevos. */}
+          del fondo), así que este popover solo trae los 3 campos nuevos.
+          Hero/Contenidos YA NO viven acá — pedido explícito del usuario
+          (2026-09-21): se seleccionan desde el panel izquierdo, como
+          Header/Banner/Footer (ver ui/LibraryPanel.tsx +
+          ui/InspectorPanel.tsx). Solo General se queda en el toolbar: no
+          tiene un componente propio en el lienzo al cual anclarse. */}
       <Popover label="Ajustes de fondo ⚙">
         <BackgroundSizePositionRepeatFields
           size={value.fondoSize}
@@ -137,9 +81,6 @@ export function ToolbarGlobals({ value, onChange }: ToolbarGlobalsProps) {
           onChangeRepeat={(next) => onChange({ ...value, fondoRepeat: next })}
         />
       </Popover>
-
-      <SectionBackgroundPopover label="Fondo Hero" prefix="hero" value={value} onChange={onChange} />
-      <SectionBackgroundPopover label="Fondo Contenidos" prefix="contents" value={value} onChange={onChange} />
     </>
   )
 }

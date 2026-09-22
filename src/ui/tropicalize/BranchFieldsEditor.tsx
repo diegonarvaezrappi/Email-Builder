@@ -49,6 +49,11 @@ function GlobalFieldWarning() {
 }
 
 export function BranchFieldsEditor({ selected, doc, value, onChange, onChangeGlobal }: BranchFieldsEditorProps) {
+  // No debería llegar hasta acá: un fondo de sección no es tropicalizable
+  // (normalizeTropicalizationTarget los limpia al entrar a esta pestaña, ver
+  // tropicalize/keys.ts#targetKeyFromSelection) — rama defensiva solo para
+  // que `registry[selected.slot]` de más abajo tipe correcto.
+  if (selected.slot === 'HERO_BG' || selected.slot === 'CONTENTS_BG') return null
   if (selected.slot === 'CONTENIDOS' && selected.moduleItemId) {
     const found = findModuleBlockByItem(doc.contenidos, selected.moduleItemId)
     const item = found?.items.find((it) => it.id === selected.moduleItemId)

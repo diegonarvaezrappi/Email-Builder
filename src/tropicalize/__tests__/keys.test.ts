@@ -104,6 +104,11 @@ describe('targetKeyFromSelection / selectionFromTargetKey round-trip', () => {
     expect(targetKeyFromSelection({ slot: 'CONTENIDOS' })).toBeNull()
   })
 
+  it('a global background (HERO_BG/CONTENTS_BG) is not tropicalizable — resolves to null', () => {
+    expect(targetKeyFromSelection({ slot: 'HERO_BG' })).toBeNull()
+    expect(targetKeyFromSelection({ slot: 'CONTENTS_BG' })).toBeNull()
+  })
+
   it('null selection resolves to null', () => {
     expect(targetKeyFromSelection(null)).toBeNull()
   })

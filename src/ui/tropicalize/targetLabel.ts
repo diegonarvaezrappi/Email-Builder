@@ -6,6 +6,7 @@
 // ============================================================================
 import type { EmailDocument } from '../../model'
 import { SLOT_LABELS } from '../../registry'
+import { GLOBAL_BACKGROUND_LABELS } from '../selection'
 import { contentBlockRegistry } from '../../contentBlockRegistry'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 import { getModuleItemDef } from '../../bodyMoleculeRegistry'
@@ -15,6 +16,12 @@ import type { Selection } from '../selection'
 import { selectionFromTargetKey, type TropicalizeKey } from '../../tropicalize/keys'
 
 export function targetLabel(doc: EmailDocument, selected: Selection): string {
+  // No debería llegar hasta acá (normalizeTropicalizationTarget los limpia al
+  // entrar a Tropicalizar) — rama defensiva solo para que SLOT_LABELS[...]
+  // de más abajo tipe correcto.
+  if (selected.slot === 'HERO_BG' || selected.slot === 'CONTENTS_BG') {
+    return GLOBAL_BACKGROUND_LABELS[selected.slot]
+  }
   if (selected.slot === 'CONTENIDOS' && selected.moduleItemId) {
     const found = findModuleBlockByItem(doc.contenidos, selected.moduleItemId)
     const item = found?.items.find((it) => it.id === selected.moduleItemId)

@@ -72,8 +72,11 @@ import {
   selectBlock,
   selectDealCard,
   selectDealCardPiece,
+  selectGlobalBackground,
   selectModuleItem,
   selectSlot,
+  SECTION_LABELS,
+  type GlobalBackgroundTarget,
   type Selection,
 } from './selection'
 import {
@@ -162,6 +165,22 @@ const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER', string> = {
   // El footer no trae id ni role propios: es el hermano que sigue al
   // contenedor con padding donde viven header/banner/contenidos.
   FOOTER: 'table[role="paddedcontainer"]',
+}
+
+/**
+ * Las 2 secciones que envuelven al resto (CLAUDE.md del repo raíz §1.1) —
+ * pedido explícito del usuario (2026-09-21): seleccionar "Hero"/"Contenidos"
+ * en el árbol tiene que resaltarlas en el lienzo igual que al banner. Sus
+ * `<table>` traen `role` propio, el localizador más estable que hay.
+ *
+ * Se miden ANTES que los slots a propósito: envuelven a header/banner/bloques,
+ * así que sus overlays tienen que quedar DEBAJO (el orden del DOM decide,
+ * .slot-hit no usa z-index) — si no, se comerían los clicks de todo lo que
+ * contienen.
+ */
+const SECTION_LOCATORS: Record<GlobalBackgroundTarget, string> = {
+  HERO_BG: 'table[role="HERO-SECTION"]',
+  CONTENTS_BG: 'table[role="CONTENTS-SECTION"]',
 }
 
 export function Viewport({
@@ -472,9 +491,10 @@ function isTropicalized(tropicalizations: Tropicalizations, key: TropicalizeKey)
   return normalizeBranches(tropicalizations[key]?.branches ?? []).length > 0
 }
 
-/** Dónde cayó un slot dentro del documento del iframe. */
+/** Dónde cayó un slot —o una de las 2 secciones, ver SECTION_LOCATORS— dentro
+ *  del documento del iframe. */
 interface SlotRect {
-  slot: SlotName
+  slot: SlotName | GlobalBackgroundTarget
   top: number
   left: number
   width: number
@@ -491,6 +511,13 @@ interface MarkedBlockRect extends DropRect {
 /** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
 const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER'] as const
 
+/** Las 2 secciones, en el orden en que van en el mail. */
+const SECTION_TARGETS = ['HERO_BG', 'CONTENTS_BG'] as const
+
+/** Si ese overlay es una de las 2 secciones (no un slot del registry). */
+const isSectionTarget = (slot: SlotName | GlobalBackgroundTarget): slot is GlobalBackgroundTarget =>
+  slot === 'HERO_BG' || slot === 'CONTENTS_BG'
+
 /**
  * Mide dónde quedó cada slot implementado dentro del documento ya renderizado.
  * El iframe se estira a su alto completo (no scrollea por dentro), así que
@@ -500,6 +527,15 @@ const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER'] as const
 function measureSlots(root: Document): SlotRect[] {
   const rects: SlotRect[] = []
   const padded = root.querySelector(SLOT_LOCATORS.FOOTER)
+
+  // Primero las 2 secciones — ver la nota de SECTION_LOCATORS: van debajo de
+  // todo lo que envuelven.
+  for (const target of SECTION_TARGETS) {
+    const el = root.querySelector(SECTION_LOCATORS[target])
+    if (!el) continue
+    const r = el.getBoundingClientRect()
+    rects.push({ slot: target, top: r.top, left: r.left, width: r.width, height: r.height })
+  }
 
   for (const slot of SELECTABLE_SLOTS) {
     if (!registry[slot]) continue
@@ -959,34 +995,42 @@ function EmailFrame({
           del canvas (los handlers en sí viven en .email-frame, ver arriba).
         */}
         <div className="canvas-drop-layer" style={{ height }} />
-        {slotRects.map(({ slot, top, left, width, height: h }) => (
-          <div
-            key={slot}
-            className={`slot-hit${isSlotSelected(selected, slot) ? ' selected' : ''}${isTropicalized(tropicalizations, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER')) ? ' has-liquid' : ''}`}
-            style={{ top, left, width, height: h }}
-          >
-            <button
-              type="button"
-              className="slot-select"
-              aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${SLOT_LABELS[slot]}`}
-              aria-pressed={isSlotSelected(selected, slot)}
-              onClick={() => onSelect(selectSlot(slot))}
-            />
-            {mode === 'edit' && registry[slot]?.removable && (
+        {slotRects.map(({ slot, top, left, width, height: h }) => {
+          // Las 2 secciones no son slots del registry: no se tropicalizan, no
+          // se eliminan, y su selección es la de su fondo (ui/selection.ts).
+          const section = isSectionTarget(slot)
+          const label = section ? SECTION_LABELS[slot] : SLOT_LABELS[slot]
+          const isSelected = isSlotSelected(selected, slot)
+          const hasLiquid = !section && isTropicalized(tropicalizations, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER'))
+          return (
+            <div
+              key={slot}
+              className={`slot-hit${isSelected ? ' selected' : ''}${hasLiquid ? ' has-liquid' : ''}`}
+              style={{ top, left, width, height: h }}
+            >
               <button
                 type="button"
-                className="slot-delete"
-                aria-label={`Eliminar ${SLOT_LABELS[slot]}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRemove(slot)
-                }}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
+                className="slot-select"
+                aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${label}`}
+                aria-pressed={isSelected}
+                onClick={() => onSelect(section ? selectGlobalBackground(slot) : selectSlot(slot))}
+              />
+              {mode === 'edit' && !section && registry[slot]?.removable && (
+                <button
+                  type="button"
+                  className="slot-delete"
+                  aria-label={`Eliminar ${label}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemove(slot)
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          )
+        })}
         {blockRects.map(({ id, type, top, left, width, height: h }) => (
           <div
             key={id}
@@ -1318,7 +1362,9 @@ function EmailFrame({
             de eliminar: el banner (uno de los 2 tipos) siempre debe estar
             presente en el email, no es removable. */}
         {slotRects
-          .filter((r) => r.slot === 'BANNER')
+          // Predicado tipado (no un `===` suelto): desde que SlotRect también
+          // puede traer una sección, TS no angosta solo.
+          .filter((r): r is SlotRect & { slot: 'BANNER' } => r.slot === 'BANNER')
           .map(({ slot, top, left, width, height: h }) => (
             <div
               key={`${slot}-controls`}

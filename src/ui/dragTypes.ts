@@ -56,3 +56,14 @@ export const MODULE_ITEM_DRAG_TYPE = 'application/x-email-module-item'
  *  body. Payload = el id de la instancia (único en todo el documento, mismo
  *  criterio que BANNER_ITEM_REORDER_DRAG_TYPE). */
 export const MODULE_ITEM_REORDER_DRAG_TYPE = 'application/x-email-module-item-reorder'
+
+/**
+ * Reordenar una fila del árbol de estructura (ui/ComponentTree.tsx) — un solo
+ * tipo para las 5 listas que el árbol sabe reordenar (bloques, piezas de
+ * banner, tarjetas de deal, sus 7 líneas, moléculas de módulo). El payload es
+ * el `group` de la fila, pero NO se usa para decidir el drop: `getData` no se
+ * puede leer durante `dragover`, así que qué fila viaja lo guarda el propio
+ * componente en estado. El tipo existe para arrancar el arrastre y para que
+ * ningún destino del Viewport acepte una fila del árbol (y viceversa).
+ */
+export const TREE_REORDER_DRAG_TYPE = 'application/x-email-tree-reorder'

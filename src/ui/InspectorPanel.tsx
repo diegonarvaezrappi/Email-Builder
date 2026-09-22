@@ -29,7 +29,8 @@ import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
-import { selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
+import { GLOBAL_BACKGROUND_LABELS, selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
+import { HeroContentsBackgroundPanel } from './BackgroundFields'
 import { BannerImageTypeSelector } from '../components/banner/ImageTypeSelector'
 import { BannerItemCatalog } from '../components/banner/ItemCatalog'
 import { ModuleItemCatalog } from '../components/contentModules/ModuleItemCatalog'
@@ -88,6 +89,25 @@ export function InspectorPanel({
 }: InspectorPanelProps) {
   if (!selected) {
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
+  }
+
+  // Fondo de HERO-SECTION o CONTENTS-SECTION — pedido explícito del usuario
+  // (2026-09-21): antes eran popovers del toolbar (ToolbarGlobals.tsx), ahora
+  // se seleccionan acá como cualquier otro componente. No tienen pieza puntual
+  // ni bloque dueño (son singletons de doc.global, ver
+  // ui/selection.ts#GlobalBackgroundTarget), así que no hace falta
+  // TropicalizationNotice: no son tropicalizables (tropicalize/keys.ts).
+  if (selected.slot === 'HERO_BG' || selected.slot === 'CONTENTS_BG') {
+    return (
+      <aside className="panel-inspector">
+        <h2>{GLOBAL_BACKGROUND_LABELS[selected.slot]}</h2>
+        <HeroContentsBackgroundPanel
+          prefix={selected.slot === 'HERO_BG' ? 'hero' : 'contents'}
+          value={doc.global}
+          onChange={onChangeGlobal}
+        />
+      </aside>
+    )
   }
 
   // Una molécula puntual del área libre de un módulo de body (ej. TITLE) — se
