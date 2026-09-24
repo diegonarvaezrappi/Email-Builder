@@ -40,7 +40,7 @@ import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
 import type { ModuleItem } from '../../moduleItems/schemas'
-import { moduleBackgroundVars, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
+import { moduleBackgroundVars, paintModuleBackgroundWrapper, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
 import { COL2_MAIN_AREA, type Col2Fields, type Col2ImageFields } from './schema'
 
 const FILE_NAME = 'modulo-2-columnas.html'
@@ -184,6 +184,7 @@ export function renderCol2Snippet(fields: Col2Fields, doc: EmailDocument, ctx: C
   html = resolveModuleLink(html, LINK_TOKEN, fields.linkEnabled, fields.link, FILE_NAME)
   html = substituteModuleAlignVars(html, fields.align)
   html = stripImageBackgroundIfDisabled(html, fields.imageBackgroundEnabled)
+  html = paintModuleBackgroundWrapper(html, FILE_NAME)
 
   // Resolución LOCAL de las {{xxx_mail_general}} que puedan quedar — mismo
   // motivo que components/title/render.ts. `img_overlay_2_mail_general` no

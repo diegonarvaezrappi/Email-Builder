@@ -101,6 +101,7 @@ describe('renderBulletSnippet · fondo general', () => {
   it('backgroundEnabled=true: "on" theme values (the real color/radius)', () => {
     const html = render({ ...defaultBulletFields, backgroundEnabled: true }, { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
     expect(html).toContain('background:rgba(242,211,174,0.5)')
+    expect(html).toContain('display: block; background:rgba(242,211,174,0.5)')
     expect(html).toContain('border-radius:  16px')
   })
 })

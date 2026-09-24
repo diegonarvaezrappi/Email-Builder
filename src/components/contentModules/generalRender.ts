@@ -45,6 +45,22 @@ export function moduleBackgroundVars(tema: string, backgroundEnabled: boolean): 
   return backgroundEnabled ? on : off
 }
 
+const CONTENTS_BACKGROUND_WRAPPER = '<div style="display: contents; background:{{bg_contenedor1_mail_general}};'
+const BLOCK_BACKGROUND_WRAPPER = '<div style="display: block; background:{{bg_contenedor1_mail_general}};'
+
+/**
+ * El barrido del maestro del 2026-09-15 pasó el `<div>` de fondo de COL2,
+ * Bullet y Logos a `display: contents`, que no genera caja: su `background` y
+ * su `border-radius` nunca se pintan y "Fondo del módulo" no hacía nada.
+ * `block` pinta el fondo sin alterar el ancho (los hijos ya son 100%/480px).
+ */
+export function paintModuleBackgroundWrapper(html: string, fileName: string): string {
+  if (!html.includes(CONTENTS_BACKGROUND_WRAPPER)) {
+    throw new Error(`${fileName}: no se encontró el <div> de fondo con display: contents — revisar paintModuleBackgroundWrapper en components/contentModules/generalRender.ts`)
+  }
+  return html.replace(CONTENTS_BACKGROUND_WRAPPER, BLOCK_BACKGROUND_WRAPPER)
+}
+
 /**
  * "por defecto vienen desactivados, SOLO DEALS tienen link activo por
  * defecto" (_contenidos_wrapper.html, citado literal) — el maestro ya trae el

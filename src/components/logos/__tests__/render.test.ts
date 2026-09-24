@@ -210,6 +210,7 @@ describe('renderLogosSnippet · alineado y fondo generales', () => {
   it('backgroundEnabled=true: "on" theme values', () => {
     const html = render({ ...defaultLogosFields, backgroundEnabled: true }, { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
     expect(html).toContain('background:rgba(242,211,174,0.5)')
+    expect(html).toContain('display: block; background:rgba(242,211,174,0.5)')
   })
 })
 

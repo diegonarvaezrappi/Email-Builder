@@ -48,7 +48,7 @@ import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
 import type { ModuleItem } from '../../moduleItems/schemas'
-import { moduleBackgroundVars, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
+import { moduleBackgroundVars, paintModuleBackgroundWrapper, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
 import { LOGOS_MAIN_AREA, type LogoFields, type LogosFields, type LogosGridSize } from './schema'
 
 const FILE_NAME = 'modulo-logos.html'
@@ -227,6 +227,7 @@ export function renderLogosSnippet(fields: LogosFields, doc: EmailDocument, ctx:
   html = applyEdits(html, [...freeAreaEdits, ...gridEdits], FILE_NAME)
   html = resolveModuleLink(html, LINK_TOKEN, fields.linkEnabled, fields.link, FILE_NAME)
   html = substituteModuleAlignVars(html, fields.align)
+  html = paintModuleBackgroundWrapper(html, FILE_NAME)
 
   const vars = { ...resolveGlobalVars(doc.global), ...moduleBackgroundVars(doc.global.tema, fields.backgroundEnabled) }
   return resolveThemeVars(html, vars)

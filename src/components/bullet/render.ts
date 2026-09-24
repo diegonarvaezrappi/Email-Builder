@@ -20,7 +20,7 @@ import { moduleItemKey } from '../../tropicalize/keys'
 import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
-import { moduleBackgroundVars, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
+import { moduleBackgroundVars, paintModuleBackgroundWrapper, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
 import type { BulletFields } from './schema'
 
 const FILE_NAME = 'modulo_bullet.html'
@@ -68,6 +68,7 @@ export function renderBulletSnippet(fields: BulletFields, doc: EmailDocument, ct
   let html = raw.slice(0, areaBounds.start) + itemsHtml + raw.slice(areaBounds.end)
   html = resolveModuleLink(html, LINK_TOKEN, fields.linkEnabled, fields.link, FILE_NAME)
   html = substituteModuleAlignVars(html, fields.align)
+  html = paintModuleBackgroundWrapper(html, FILE_NAME)
 
   // Resolución LOCAL de las {{xxx_mail_general}} que puedan quedar (bg_contenedor1,
   // body_container_background_*, y cualquier {{xxx_mail_general}} que traigan

@@ -158,6 +158,7 @@ describe('renderCol2Snippet · fondo general del contenedor', () => {
   it('backgroundEnabled=true: "on" theme values', () => {
     const html = render({ ...defaultCol2Fields, backgroundEnabled: true }, { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
     expect(html).toContain('background:rgba(242,211,174,0.5)')
+    expect(html).toContain('display: block; background:rgba(242,211,174,0.5)')
     // "padding: 10px" también aparece como literal ESTÁTICO del <div> de la
     // variante "ancho modificable" de la imagen (sin relación al fondo
     // general, mismo tipo de coincidencia que "text-align: left" arriba) —
