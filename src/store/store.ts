@@ -195,6 +195,22 @@ function withTropicalizationBranches(document: EmailDocument, key: string, branc
   return { ...document, tropicalizations }
 }
 
+/** Cambios más cercanos que esto entre sí se deshacen juntos (ver handleSet). */
+export const HISTORY_BURST_MS = 500
+let lastChangeAt = 0
+
+/** El próximo cambio después de deshacer/rehacer siempre abre una entrada
+ *  nueva, aunque llegue enseguida. */
+export function undoOnce() {
+  lastChangeAt = 0
+  useBuilder.temporal.getState().undo()
+}
+
+export function redoOnce() {
+  lastChangeAt = 0
+  useBuilder.temporal.getState().redo()
+}
+
 export const useBuilder = create<BuilderState>()(
   temporal(
     (set) => ({
@@ -560,13 +576,18 @@ export const useBuilder = create<BuilderState>()(
       limit: 100,
       // Solo el documento entra al historial de undo/redo (no el saveStatus).
       partialize: (s) => ({ document: s.document }),
-      // Agrupa ráfagas de tipeo (ej. el textarea de "Legales adicionales") en menos entradas de historial.
-      handleSet: (handleSet) => {
-        let t: ReturnType<typeof setTimeout> | undefined
-        return (pastState, replace) => {
-          clearTimeout(t)
-          t = setTimeout(() => handleSet(pastState, replace), 400)
-        }
+      // Sin esto, los setState del autosave ('saving' → 'saved') dejaban
+      // entradas con el MISMO documento y Deshacer necesitaba varios clicks.
+      equality: (past, current) => past.document === current.document,
+      // Una ráfaga de cambios seguidos (tipear, o un cambio de tema más los
+      // ajustes que App.tsx aplica en el acto) es UNA sola entrada. Se guarda
+      // el estado de ANTES de la ráfaga y en el momento, sin temporizador: así
+      // un Deshacer justo después de editar no pisa un registro pendiente.
+      handleSet: (handleSet) => (pastState, replace) => {
+        const now = Date.now()
+        const inBurst = now - lastChangeAt < HISTORY_BURST_MS
+        lastChangeAt = now
+        if (!inBurst) handleSet(pastState, replace)
       },
     },
   ),
@@ -593,7 +614,7 @@ export function useTemporal() {
   return {
     canUndo: past > 0,
     canRedo: future > 0,
-    undo: () => useBuilder.temporal.getState().undo(),
-    redo: () => useBuilder.temporal.getState().redo(),
+    undo: undoOnce,
+    redo: redoOnce,
   }
 }

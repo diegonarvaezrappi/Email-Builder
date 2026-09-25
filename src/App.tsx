@@ -251,6 +251,10 @@ function App() {
     })
     if (contenidosChanged) setSlotFields('contenidos', nextContenidos)
 
+    // Los ajustes del primer render no los hizo el usuario: no deben aparecer
+    // como un paso para deshacer al abrir la app.
+    if (prevTema === null) useBuilder.temporal.getState().clear()
+
     prevTemaRef.current = doc.global.tema
     // Deliberadamente solo depende del tema: si el usuario edita header.brand
     // (o cualquier otro campo del header/global) no debe re-disparar esta lógica.
