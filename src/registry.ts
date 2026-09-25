@@ -20,9 +20,8 @@ import { z } from 'zod'
 /**
  * Definición de un slot registrable. `render` recibe el documento completo
  * (no solo sus propios campos) porque los slots pueden estar acoplados entre
- * sí — ej.: `resolveFontStyleLook` (components/footer/render.ts) fuerza
- * `font_style_look = 'negro'` cuando Footer.tipoFooter = 'RTS', sin importar
- * el tema.
+ * sí — ej.: el footer (components/footer/render.ts) elige su `font_style_look`
+ * según el tema global del documento.
  *
  * `schema` se tipa con Input=any a propósito: los schemas de cada slot usan
  * `.default(...)` en varios campos, por lo que su tipo de entrada (antes de

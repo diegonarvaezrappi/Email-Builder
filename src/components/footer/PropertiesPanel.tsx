@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, FOOTER_FIRMA_VALUES, FOOTER_FIRMA_LABELS } from './schema'
+import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, FOOTER_FIRMA_VALUES, FOOTER_FIRMA_LABELS, footerUsesFirmaAndLegals } from './schema'
 import type { FooterFields } from './schema'
 
 interface FooterPropertiesPanelProps {
@@ -40,7 +40,7 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
         />
       </label>
 
-      {value.tipoFooter !== 'RTS' && (
+      {footerUsesFirmaAndLegals(value.tipoFooter) && (
         <>
           <label className="field">
             <span>Firma</span>

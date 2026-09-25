@@ -39,18 +39,26 @@ describe('renderCtaAssignLines', () => {
 
 describe('renderCtaSnippet', () => {
   it('ends with the reference to the CTA-template content block', () => {
-    const snippet = renderCtaSnippet(defaultCtaFields, 'neon')
+    const snippet = renderCtaSnippet(defaultCtaFields, 'neon', 'General')
     expect(snippet).toContain(`{{content_blocks.\${${CTA_CONTENT_BLOCK_NAME}}}}`)
     expect(CTA_CONTENT_BLOCK_NAME).toBe('CTA-template')
   })
 
   it('reflects the global ctaStyle passed in, not a per-instance field', () => {
-    const snippet = renderCtaSnippet(defaultCtaFields, 'pro')
+    const snippet = renderCtaSnippet(defaultCtaFields, 'pro', 'General')
     expect(snippet).toContain("style_Look = 'pro'")
+  })
+
+  // 03_ctas/cta-llamado.html: el content block del CTA lo decide el footer.
+  it('uses the CTA content block that goes with the footer type', () => {
+    expect(renderCtaSnippet(defaultCtaFields, 'neon', 'General')).toContain('{{content_blocks.${CTA-template}}}')
+    expect(renderCtaSnippet(defaultCtaFields, 'neon', 'SinAmor')).toContain('{{content_blocks.${CTA-template}}}')
+    expect(renderCtaSnippet(defaultCtaFields, 'neon', 'RTS')).toContain('{{content_blocks.${CTA_Q4_2024}}}')
+    expect(renderCtaSnippet(defaultCtaFields, 'neon', 'B2B')).toContain('{{content_blocks.${cta_general}}}')
   })
 
   it('defaults size to "big" — reproduces the only visual that existed before cta_size existed', () => {
     expect(defaultCtaFields.size).toBe('big')
-    expect(renderCtaSnippet(defaultCtaFields, 'neon')).toContain("cta_size = 'big'")
+    expect(renderCtaSnippet(defaultCtaFields, 'neon', 'General')).toContain("cta_size = 'big'")
   })
 })

@@ -1,6 +1,9 @@
 import { z } from 'zod'
 
-export const TIPO_FOOTER_VALUES = ['General', 'SinAmor', 'RTS'] as const
+/** `SinAmor` conserva su id aunque se muestre como "Simple": es el valor que
+ *  ya viaja en los documentos guardados. `B2B` es el footer de comercios
+ *  aliados (footer_b2b.html), que en la app se llama "Restaurantes". */
+export const TIPO_FOOTER_VALUES = ['General', 'SinAmor', 'RTS', 'B2B'] as const
 
 export type TipoFooter = (typeof TIPO_FOOTER_VALUES)[number]
 
@@ -40,9 +43,9 @@ export type TipoFooter = (typeof TIPO_FOOTER_VALUES)[number]
  * - 'turbo': familia "RappiTurbo" — 6 sub-variantes por país (CO con
  *   Carulla, EC con MiComisariato, MX, AR/UY/CR, BR, resto del mundo).
  *
- * `footer_rts.html` NO tiene esta variable en absoluto — el select se oculta
- * en el panel cuando Tipo de Footer = RTS, mismo criterio que los 3
- * checkboxes de legales.
+ * `footer_rts.html` y `footer_b2b.html` NO tienen esta variable (su firma es
+ * fija) — el select se oculta en el panel con esos tipos, igual que los 3
+ * checkboxes de legales (ver footerUsesFirmaAndLegals).
  */
 export const FOOTER_FIRMA_VALUES = ['sinfirma', 'general', 'turbo'] as const
 
@@ -86,6 +89,11 @@ export const defaultFooterFields: FooterFields = footerSchema.parse({})
 
 export const TIPO_FOOTER_LABELS: Record<TipoFooter, string> = {
   General: 'General',
-  SinAmor: 'Sin amor',
+  SinAmor: 'Simple',
   RTS: 'RTS',
+  B2B: 'Restaurantes',
 }
+
+/** RTS y Restaurantes traen firma fija y sus propios legales: ni el select de
+ *  firma ni los 3 checkboxes de legales hacen nada con ellos. */
+export const footerUsesFirmaAndLegals = (tipo: TipoFooter): boolean => tipo === 'General' || tipo === 'SinAmor'

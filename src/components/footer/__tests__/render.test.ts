@@ -15,13 +15,13 @@ const TEMAS_PRO = ['pro', 'problack']
 describe('resolveFontStyleLook', () => {
   it('resolves to the tema\'s own slug for the 7 pastel themes', () => {
     for (const tema of TEMAS_PASTEL) {
-      expect(resolveFontStyleLook(tema, 'General')).toBe(tema)
+      expect(resolveFontStyleLook(tema)).toBe(tema)
     }
   })
 
   it('is negro for the 3 oscuros/invertidos — no matching footer branch for them', () => {
     for (const tema of TEMAS_NEGRO) {
-      expect(resolveFontStyleLook(tema, 'General')).toBe('negro')
+      expect(resolveFontStyleLook(tema)).toBe('negro')
     }
   })
 
@@ -29,18 +29,12 @@ describe('resolveFontStyleLook', () => {
   // le había dado rama propia a problack. Ese pull la agregó (negro puro) en
   // footer_general.html — ver themes.ts#FONT_STYLE_LOOK_FOR_THEME.
   it('resolves each premium theme to its own branch, now that problack has one', () => {
-    expect(resolveFontStyleLook('pro', 'General')).toBe('pro')
-    expect(resolveFontStyleLook('problack', 'General')).toBe('problack')
-  })
-
-  it('forces negro when Tipo de Footer is RTS, regardless of the theme', () => {
-    for (const tema of [...TEMAS_PASTEL, ...TEMAS_NEGRO, ...TEMAS_PRO]) {
-      expect(resolveFontStyleLook(tema, 'RTS')).toBe('negro')
-    }
+    expect(resolveFontStyleLook('pro')).toBe('pro')
+    expect(resolveFontStyleLook('problack')).toBe('problack')
   })
 
   it('falls back to negro for a theme that no longer exists in the repo', () => {
-    expect(resolveFontStyleLook('tema-que-david-borro', 'General')).toBe('negro')
+    expect(resolveFontStyleLook('tema-que-david-borro')).toBe('negro')
   })
 })
 
@@ -71,13 +65,26 @@ describe('renderFooterSnippet', () => {
     expect(snippet).toContain('{{content_blocks.${FOOTER_VERSION2}}}')
   })
 
-  it('renders the RTS content block reference and forces font_style_look to negro', () => {
+  // footer_rts.html trae las mismas ramas por tema que el General desde que
+  // se rehízo sobre su diseño (2026-09-17): ya no se fuerza 'negro'.
+  it("renders the RTS content block reference following the theme's font_style_look", () => {
     const snippet = renderFooterSnippet({ ...defaultFooterFields, tipoFooter: 'RTS' }, 'pro')
     expect(snippet).toContain('{{content_blocks.${FOOTER_RTS_q3_2024_legales}}}')
-    expect(snippet).toContain("font_style_look = 'negro'")
+    expect(snippet).toContain("font_style_look = 'pro'")
+    for (const tema of [...TEMAS_PASTEL, ...TEMAS_PRO]) {
+      expect(renderFooterSnippet({ ...defaultFooterFields, tipoFooter: 'RTS' }, tema)).toContain(`font_style_look = '${tema}'`)
+    }
   })
 
-  it('sets font_style_look to problack for the ProBlack theme outside RTS', () => {
+  it('renders the Restaurantes (B2B) content block reference following the theme', () => {
+    for (const tema of [...TEMAS_PASTEL, ...TEMAS_PRO]) {
+      const snippet = renderFooterSnippet({ ...defaultFooterFields, tipoFooter: 'B2B' }, tema)
+      expect(snippet).toContain('{{content_blocks.${FOOTER_ALIADOS}}}')
+      expect(snippet).toContain(`font_style_look = '${tema}'`)
+    }
+  })
+
+  it('sets font_style_look to problack for the ProBlack theme', () => {
     const snippet = renderFooterSnippet(defaultFooterFields, 'problack')
     expect(snippet).toContain("font_style_look = 'problack'")
   })

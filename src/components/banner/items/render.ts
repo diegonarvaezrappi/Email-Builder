@@ -631,5 +631,5 @@ export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocu
   // CTA_INTERNO — no pedido para este piece, y 'big' reproduce el único
   // tamaño que existía antes de esa variable (rama `{% else %}` de
   // cta-template.html, byte-idéntica a 'big').
-  return renderCtaSnippet({ ...fields, align, size: 'big' }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema))
+  return renderCtaSnippet({ ...fields, align, size: 'big' }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema), doc.footer.tipoFooter)
 }

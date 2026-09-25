@@ -125,7 +125,7 @@ const ctaBlockDef: ContentBlockDef<CtaFields> = {
   label: 'CTA',
   schema: ctaFieldsSchema,
   defaultFields: defaultCtaFields,
-  render: (fields, doc) => renderCtaSnippet(fields, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema)),
+  render: (fields, doc) => renderCtaSnippet(fields, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema), doc.footer.tipoFooter),
   PropertiesPanel: CtaPropertiesPanel,
 }
 

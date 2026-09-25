@@ -20,10 +20,11 @@ import footerRtsRaw from '../assets/templates/footer_rts.html?raw'
 // `SinAmor` en el dominio (schema.ts) y en Braze — cambió el ARCHIVO, no el
 // concepto.
 import footerSimpleRaw from '../assets/templates/footer_simple.html?raw'
+import footerB2bRaw from '../assets/templates/footer_b2b.html?raw'
 import ctaTemplateRaw from '../assets/templates/cta-template.html?raw'
 import { FOOTER_CONTENT_BLOCK_BY_TIPO } from '../components/footer/render'
 import { TIPO_FOOTER_VALUES, type TipoFooter } from '../components/footer/schema'
-import { CTA_CONTENT_BLOCK_NAME } from '../components/cta/render'
+import { CTA_CONTENT_BLOCK_BY_FOOTER } from '../components/cta/render'
 import type { EmailDocument } from '../model'
 import { assembleEmailHtml } from '../template/assemble'
 import type { PreviewCountry } from './countries'
@@ -37,6 +38,7 @@ const CONTENT_BLOCK_BODY_BY_TIPO: Record<TipoFooter, string> = {
   General: footerGeneralRaw,
   SinAmor: footerSimpleRaw,
   RTS: footerRtsRaw,
+  B2B: footerB2bRaw,
 }
 
 /**
@@ -121,8 +123,15 @@ export function inlineFooterContentBlock(html: string): string {
  * tendría el mismo riesgo de stub silencioso que Footer).
  */
 export function inlineCtaContentBlock(html: string): string {
-  const reference = `{{content_blocks.\${${CTA_CONTENT_BLOCK_NAME}}}}`
-  return inlineAllContentBlockOccurrences(html, reference, ctaTemplateRaw)
+  // CTA_Q4_2024 (RTS) y cta_general (Restaurantes) no tienen su cuerpo en el
+  // maestro: se previsualizan con el mismo botón de cta-template.html, que
+  // recibe las mismas 5 variables. Como sus nombres no llevan guion, este
+  // inlineado SÍ tiene que correr antes que preprocessBrazeShorthand.
+  let out = html
+  for (const name of new Set(Object.values(CTA_CONTENT_BLOCK_BY_FOOTER))) {
+    out = inlineAllContentBlockOccurrences(out, `{{content_blocks.\${${name}}}}`, ctaTemplateRaw)
+  }
+  return out
 }
 
 let engineSingleton: Liquid | null = null

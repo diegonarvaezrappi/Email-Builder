@@ -1,9 +1,24 @@
 import { toLiquidStringLiteral } from '../../template/liquidText'
 import { CTA_LINK_PLACEHOLDER, linkOrPlaceholder } from '../../template/linkPlaceholders'
 import type { CtaFields } from './schema'
+import type { TipoFooter } from '../footer/schema'
 
 /** Nombre del Content Block de Braze que trae el botón real — ver 02-components/03_ctas/cta-template.html. */
 export const CTA_CONTENT_BLOCK_NAME = 'CTA-template'
+
+/**
+ * El content block del CTA depende de para quién va el mail, y eso lo dice el
+ * footer (02-components/03_ctas/cta-llamado.html y 06_footer/footer.html):
+ * usuarios (General/Simple) → CTA-template, RTS → CTA_Q4_2024, B2B
+ * (Restaurantes) → cta_general. Se deriva al generar el HTML, así que cambiar
+ * el footer cambia todos los CTA del mail en el acto.
+ */
+export const CTA_CONTENT_BLOCK_BY_FOOTER: Record<TipoFooter, string> = {
+  General: CTA_CONTENT_BLOCK_NAME,
+  SinAmor: CTA_CONTENT_BLOCK_NAME,
+  RTS: 'CTA_Q4_2024',
+  B2B: 'cta_general',
+}
 
 /** Indentación usada por cta-llamado.html — se conserva por consistencia visual. */
 const CTA_SNIPPET_INDENT = ' '.repeat(36)
@@ -38,7 +53,8 @@ export function renderCtaAssignLines(fields: CtaFields, ctaStyle: string): strin
  * (`{{content_blocks.${CTA-template}}}`), la app solo emite los `{% assign %}`
  * + la referencia, nunca HTML expandido.
  */
-export function renderCtaSnippet(fields: CtaFields, ctaStyle: string): string {
-  const lines = [...renderCtaAssignLines(fields, ctaStyle), `{{content_blocks.\${${CTA_CONTENT_BLOCK_NAME}}}}`]
+export function renderCtaSnippet(fields: CtaFields, ctaStyle: string, tipoFooter: TipoFooter): string {
+  const contentBlock = CTA_CONTENT_BLOCK_BY_FOOTER[tipoFooter]
+  const lines = [...renderCtaAssignLines(fields, ctaStyle), `{{content_blocks.\${${contentBlock}}}}`]
   return lines.map((line) => CTA_SNIPPET_INDENT + line).join('\n')
 }

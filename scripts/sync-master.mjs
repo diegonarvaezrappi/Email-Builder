@@ -309,9 +309,8 @@ const TEMPLATE_BASE_FILE = 'template_base.html'
  * `SinAmor` (ver components/footer/schema.ts), que es lo que viaja en los
  * documentos guardados y en el nombre del content block de Braze.
  *
- * `footer_b2b.html` llegó en el mismo pull y todavía no lo consume nadie: se
- * sincroniza igual para que el día que se implemente el tipo de footer B2B el
- * archivo ya esté, y para que este script avise si el maestro lo borra.
+ * `footer_b2b.html` llegó en el mismo pull: es el tipo de footer `B2B`
+ * ("Restaurantes" en la app), content block `FOOTER_ALIADOS`.
  */
 const FOOTER_FILES = [
   'footer.html',

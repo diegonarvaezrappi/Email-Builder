@@ -7,6 +7,7 @@ export const FOOTER_CONTENT_BLOCK_BY_TIPO: Record<TipoFooter, string> = {
   General: 'FOOTER_q1_2024_legales',
   SinAmor: 'FOOTER_VERSION2',
   RTS: 'FOOTER_RTS_q3_2024_legales',
+  B2B: 'FOOTER_ALIADOS',
 }
 
 /** Indentación usada por Footer/footer.html — se conserva por consistencia visual. */
@@ -27,11 +28,12 @@ export const FOOTER_SNIPPET_INDENT = ' '.repeat(28)
  * variante estuvo en el repo (commits 4499862 y c88b818) y se revirtió en
  * bf7e9eb justamente por eso.
  *
- * Excepción: con Tipo de Footer = RTS se fuerza 'negro' sin importar el tema
- * (regla heredada de Referencias/instrucciones.md, sección B.5).
+ * Vale igual para los 4 tipos de footer: RTS se forzaba a 'negro' (regla del
+ * RTS antiguo), pero desde el 2026-09-17 footer_rts.html se rehízo sobre el
+ * diseño del General y trae las mismas ramas por tema — el footer.html del
+ * maestro también le pide "variantes por tema".
  */
-export function resolveFontStyleLook(tema: string, tipoFooter: TipoFooter): string {
-  if (tipoFooter === 'RTS') return 'negro'
+export function resolveFontStyleLook(tema: string): string {
   return colorFooterForTheme(tema)
 }
 
@@ -47,7 +49,7 @@ export function resolveFontStyleLook(tema: string, tipoFooter: TipoFooter): stri
  * inofensivo que footer_rts.html reciba un `firma` que no lee.
  */
 export function renderFooterAssignLines(fields: FooterFields, tema: string): string[] {
-  const fontStyleLook = resolveFontStyleLook(tema, fields.tipoFooter)
+  const fontStyleLook = resolveFontStyleLook(tema)
   const cond = wrapUrlsAsFooterLinks(fields.legalesAdicionales)
   return [
     `{% assign cond = ${toLiquidStringLiteral(cond)} %}`,

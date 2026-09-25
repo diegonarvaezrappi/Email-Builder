@@ -91,6 +91,12 @@ describe('inlineCtaContentBlock', () => {
     expect(out.split('Botón CTA').length - 1).toBeGreaterThanOrEqual(3)
   })
 
+  it('also inlines the RTS and Restaurantes CTA content blocks (previewed with the same button)', () => {
+    const out = inlineCtaContentBlock('{{content_blocks.${CTA_Q4_2024}}} | {{content_blocks.${cta_general}}}')
+    expect(out).not.toContain('content_blocks')
+    expect(out.split('Botón CTA').length - 1).toBeGreaterThanOrEqual(2)
+  })
+
   it('is immune to preprocessBrazeShorthand stubbing either way — unlike Footer, "CTA-template" has a hyphen', () => {
     // Las regexes de preprocessBrazeShorthand usan \w* (sin guion), así que
     // nunca matchean `${CTA-template}` — la referencia queda intacta la toque
@@ -102,6 +108,15 @@ describe('inlineCtaContentBlock', () => {
 })
 
 describe('renderEmailPreview', () => {
+  it('renders the CTA button (no Liquid left over) with the RTS and Restaurantes footers too', async () => {
+    for (const tipo of ['RTS', 'B2B'] as const) {
+      const result = await renderEmailPreview(withFooter(tipo), 'CO')
+      expect(result.error).toBeUndefined()
+      expect(result.html).toContain('Botón CTA')
+      expect(result.html).not.toMatch(/\{%|\{\{/)
+    }
+  })
+
   it('resolves real, visible legal copy for General/CO with no Liquid left over', async () => {
     const result = await renderEmailPreview(withFooter('General'), 'CO')
     expect(result.error).toBeUndefined()
