@@ -36,7 +36,7 @@ import type { BannerType } from '../components/banner/schema'
 import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
 import type { ModuleItemType } from '../moduleItems/schemas'
 import { registry, SLOT_LABELS } from '../registry'
-import { VIEWPORT_TAB_LABELS, VIEWPORT_TAB_ORDER, type ViewportTab } from './viewportTab'
+import type { ViewportTab } from './viewportTab'
 import { withoutTropicalizations } from '../tropicalize/doc'
 import { normalizeBranches, type Tropicalizations } from '../tropicalize/schema'
 import { bannerItemKey, blockKey, dealCardKey, moduleItemKey, slotKey, type TropicalizeKey } from '../tropicalize/keys'
@@ -93,12 +93,10 @@ import {
 } from './dragTypes'
 import { dropXInFrameSpace, dropYInFrameSpace, resolveDropIndex, resolveDropIndexReadingOrder, type DropRect } from './dropIndex'
 import {
-  PREVIEW_COUNTRIES,
-  PREVIEW_COUNTRY_LABELS,
   renderEmailPreview,
   type PreviewCountry,
 } from '../preview/liquidPreview'
-import { applyClientScheme, type EmailClientScheme } from './darkSim'
+import { BottomBar } from './BottomBar'
 
 interface ViewportProps {
   document: EmailDocument
@@ -147,9 +145,9 @@ interface ViewportProps {
  * los `@media (max-width:480px/620px)` que ya trae el maestro, así que la
  * vista Móvil es el mismo responsive real del mail, no una maqueta aparte.
  *
- * Es un ajuste de VISTA, igual que EmailClientScheme.
+ * Es un ajuste de VISTA, no del email.
  */
-type PreviewDevice = 'desktop' | 'mobile'
+export type PreviewDevice = 'desktop' | 'mobile'
 
 const MOBILE_WIDTH = 375
 
@@ -212,10 +210,6 @@ export function Viewport({
   onChangeCountry,
 }: ViewportProps) {
   const [device, setDevice] = useState<PreviewDevice>('desktop')
-  // Simula el color-scheme del CLIENTE de correo (Gmail/Outlook/Apple Mail con
-  // dark mode activado), no de la app. Es un ajuste de vista, no del email:
-  // arranca en 'light' cada carga y nunca toca el HTML exportado.
-  const [clientScheme, setClientScheme] = useState<EmailClientScheme>('light')
   const [previewHtml, setPreviewHtml] = useState('')
   const [previewError, setPreviewError] = useState<string | undefined>()
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle')
@@ -295,89 +289,6 @@ export function Viewport({
 
   return (
     <div className="panel-viewport">
-      <div className="viewport-bar">
-        {VIEWPORT_TAB_ORDER.map((t) => (
-          <button key={t} type="button" className={tab === t ? 'active' : ''} onClick={() => onChangeTab(t)}>
-            {VIEWPORT_TAB_LABELS[t]}
-          </button>
-        ))}
-        {(tab === 'preview' || tab === 'tropicalize') && (
-          <>
-            {tab === 'tropicalize' && (
-              <div className="tropicalize-view-mode" role="group" aria-label="Qué muestra el lienzo de Tropicalizar">
-                <button
-                  type="button"
-                  className={tropicalizeViewMode === 'base' ? 'active' : ''}
-                  aria-pressed={tropicalizeViewMode === 'base'}
-                  onClick={() => setTropicalizeViewMode('base')}
-                >
-                  Diseño base
-                </button>
-                <button
-                  type="button"
-                  className={tropicalizeViewMode === 'country' ? 'active' : ''}
-                  aria-pressed={tropicalizeViewMode === 'country'}
-                  onClick={() => setTropicalizeViewMode('country')}
-                >
-                  Vista país
-                </button>
-              </div>
-            )}
-
-            <label className="country-select">
-              <span>{tab === 'tropicalize' ? 'País (vista)' : 'País (solo preview)'}</span>
-              <select value={country} onChange={(e) => onChangeCountry(e.target.value as PreviewCountry)}>
-                {PREVIEW_COUNTRIES.map((c) => (
-                  <option key={c} value={c}>
-                    {PREVIEW_COUNTRY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="client-scheme" role="group" aria-label="Simular cliente de correo (solo preview)">
-              <span>Cliente (solo preview)</span>
-              <button
-                type="button"
-                className={clientScheme === 'light' ? 'active' : ''}
-                aria-pressed={clientScheme === 'light'}
-                onClick={() => setClientScheme('light')}
-              >
-                ☀️ Claro
-              </button>
-              <button
-                type="button"
-                className={clientScheme === 'dark' ? 'active' : ''}
-                aria-pressed={clientScheme === 'dark'}
-                onClick={() => setClientScheme('dark')}
-              >
-                🌙 Oscuro
-              </button>
-            </div>
-
-            <div className="device-scheme" role="group" aria-label="Tamaño de preview (solo vista)">
-              <span>Vista</span>
-              <button
-                type="button"
-                className={device === 'desktop' ? 'active' : ''}
-                aria-pressed={device === 'desktop'}
-                onClick={() => setDevice('desktop')}
-              >
-                🖥️ Escritorio
-              </button>
-              <button
-                type="button"
-                className={device === 'mobile' ? 'active' : ''}
-                aria-pressed={device === 'mobile'}
-                onClick={() => setDevice('mobile')}
-              >
-                📱 Móvil
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
       {tab === 'preview' || tab === 'tropicalize' ? (
         previewError ? (
           <div className="viewport-canvas">
@@ -389,7 +300,6 @@ export function Viewport({
             tropicalizations={doc.tropicalizations}
             html={previewHtml}
             device={device}
-            clientScheme={clientScheme}
             selected={selected}
             onSelect={onSelect}
             onRemove={handleRemove}
@@ -437,6 +347,17 @@ export function Viewport({
       ) : (
         <ImportPanel onImport={onImportDocument} />
       )}
+
+      <BottomBar
+        tab={tab}
+        onChangeTab={onChangeTab}
+        tropicalizeViewMode={tropicalizeViewMode}
+        onChangeTropicalizeViewMode={setTropicalizeViewMode}
+        country={country}
+        onChangeCountry={onChangeCountry}
+        device={device}
+        onChangeDevice={setDevice}
+      />
     </div>
   )
 }
@@ -444,7 +365,6 @@ export function Viewport({
 interface EmailFrameProps {
   html: string
   device: PreviewDevice
-  clientScheme: EmailClientScheme
   selected: Selection | null
   onSelect: (next: Selection) => void
   onRemove: (slot: SlotName) => void
@@ -672,7 +592,6 @@ const measureModuleItems = (root: Document): MarkedBlockRect[] => measureMarkedB
 function EmailFrame({
   html,
   device,
-  clientScheme,
   selected,
   onSelect,
   onRemove,
@@ -719,7 +638,6 @@ function EmailFrame({
   const syncFrame = useCallback(() => {
     const root = iframeRef.current?.contentDocument
     if (!root?.body) return
-    applyClientScheme(root, clientScheme)
     setHeight(Math.max(root.body.scrollHeight, 200))
     setSlotRects(measureSlots(root))
     setBlockRects(measureContentBlocks(root))
@@ -727,13 +645,11 @@ function EmailFrame({
     setDealCardRects(measureDealCards(root))
     setDealCardPieceRects(measureDealCardPieces(root))
     setModuleItemRects(measureModuleItems(root))
-  }, [clientScheme])
+  }, [])
 
-  // Re-sincronizar cuando cambia el HTML, el ancho o el esquema de cliente: el
-  // srcDoc puede terminar de cargar después de este efecto (de ahí el onLoad
-  // del iframe), y el alto definitivo llega recién cuando cargan las imágenes
-  // del mail. `syncFrame` cambia con clientScheme, así que el toggle
-  // Claro/Oscuro entra por acá sin recargar el iframe.
+  // Re-sincronizar cuando cambia el HTML o el ancho: el srcDoc puede terminar
+  // de cargar después de este efecto (de ahí el onLoad del iframe), y el alto
+  // definitivo llega recién cuando cargan las imágenes del mail.
   useEffect(() => {
     syncFrame()
     const id = setTimeout(syncFrame, 300)

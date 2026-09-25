@@ -16,6 +16,7 @@ import type { ComponentType, SVGProps } from 'react'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
 import type { ModuleItemType } from '../moduleItems/schemas'
+import type { ContentBlockType } from '../model'
 
 type IconProps = SVGProps<SVGSVGElement>
 
@@ -374,4 +375,151 @@ export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = 
   SEPARADOR: SeparadorIcon,
   FRANJA_LOGOS: FranjaLogosIcon,
   TEXTO_PASTILLA: TextoPastillaIcon,
+}
+
+// ----------------------------------------------------------------------------
+// Tarjetas del panel izquierdo (ui/LeftPanel.tsx): el header y los 10 módulos
+// de contenido. Mismo viewBox y criterio que el resto: esquemas, no miniaturas.
+// ----------------------------------------------------------------------------
+
+const frame = <rect x="4" y="4" width="56" height="32" rx="4" stroke="currentColor" strokeWidth="2" />
+
+/** Logo de marca + divisor + cobranding, centrados. */
+export function HeaderIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <rect x="14" y="15" width="14" height="10" rx="2" fill="currentColor" opacity="0.85" />
+      <line x1="32" y1="14" x2="32" y2="26" stroke="currentColor" strokeWidth="2" opacity="0.5" />
+      <rect x="36" y="15" width="14" height="10" rx="2" fill="currentColor" opacity="0.4" />
+    </svg>
+  )
+}
+
+function ModuloTituloIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <rect x="12" y="13" width="40" height="7" rx="3.5" fill="currentColor" opacity="0.85" />
+      <rect x="18" y="24" width="28" height="4" rx="2" fill="currentColor" opacity="0.45" />
+    </svg>
+  )
+}
+
+function ModuloBulletIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <circle cx="16" cy="20" r="6" fill="currentColor" opacity="0.7" />
+      <rect x="27" y="14" width="24" height="5" rx="2.5" fill="currentColor" opacity="0.85" />
+      <rect x="27" y="23" width="18" height="4" rx="2" fill="currentColor" opacity="0.45" />
+    </svg>
+  )
+}
+
+function ModuloCtaIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="8" y="12" width="48" height="16" rx="8" fill="currentColor" opacity="0.8" />
+      <rect x="22" y="18" width="20" height="4" rx="2" fill="#000" opacity="0.35" />
+    </svg>
+  )
+}
+
+function ModuloDealsIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="4" y="4" width="26" height="32" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="34" y="4" width="26" height="32" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="8" y="8" width="18" height="12" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="38" y="8" width="18" height="12" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="8" y="24" width="14" height="4" rx="2" fill="currentColor" opacity="0.85" />
+      <rect x="38" y="24" width="14" height="4" rx="2" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
+function ModuloLogosIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <rect x="9" y="14" width="12" height="12" rx="2" fill="currentColor" opacity="0.6" />
+      <rect x="26" y="14" width="12" height="12" rx="2" fill="currentColor" opacity="0.6" />
+      <rect x="43" y="14" width="12" height="12" rx="2" fill="currentColor" opacity="0.6" />
+    </svg>
+  )
+}
+
+function ModuloCuponesIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="4" y="8" width="26" height="24" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="34" y="8" width="26" height="24" rx="3" stroke="currentColor" strokeWidth="2" />
+      <line x1="8" y1="20" x2="26" y2="20" stroke="currentColor" strokeWidth="2" strokeDasharray="2 2" opacity="0.6" />
+      <line x1="38" y1="20" x2="56" y2="20" stroke="currentColor" strokeWidth="2" strokeDasharray="2 2" opacity="0.6" />
+      <rect x="10" y="12" width="14" height="5" rx="2.5" fill="currentColor" opacity="0.85" />
+      <rect x="40" y="12" width="14" height="5" rx="2.5" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
+function ModuloBeneficiosIcon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <path d="M17 13l2 4 4.5.6-3.3 3.1.8 4.4L17 23l-4 2.1.8-4.4-3.3-3.1L15 17z" fill="currentColor" opacity="0.75" />
+      <rect x="30" y="14" width="22" height="5" rx="2.5" fill="currentColor" opacity="0.85" />
+      <rect x="30" y="23" width="16" height="4" rx="2" fill="currentColor" opacity="0.45" />
+    </svg>
+  )
+}
+
+function ModuloCol1Icon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <rect x="10" y="9" width="44" height="12" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="10" y="25" width="30" height="4" rx="2" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
+function ModuloCol2Icon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      {frame}
+      <rect x="9" y="13" width="20" height="5" rx="2.5" fill="currentColor" opacity="0.85" />
+      <rect x="9" y="22" width="16" height="4" rx="2" fill="currentColor" opacity="0.45" />
+      <rect x="35" y="9" width="20" height="22" rx="2" fill="currentColor" opacity="0.35" />
+    </svg>
+  )
+}
+
+function ModuloCol3Icon(props: IconProps) {
+  return (
+    <svg {...svgProps(props)}>
+      <rect x="4" y="6" width="17" height="28" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="23.5" y="6" width="17" height="28" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="43" y="6" width="17" height="28" rx="3" stroke="currentColor" strokeWidth="2" />
+      <rect x="8" y="11" width="9" height="9" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="27.5" y="11" width="9" height="9" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="47" y="11" width="9" height="9" rx="2" fill="currentColor" opacity="0.35" />
+      <rect x="8" y="25" width="9" height="3" rx="1.5" fill="currentColor" opacity="0.85" />
+      <rect x="27.5" y="25" width="9" height="3" rx="1.5" fill="currentColor" opacity="0.85" />
+      <rect x="47" y="25" width="9" height="3" rx="1.5" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
+export const CONTENT_BLOCK_ICONS: Record<ContentBlockType, ComponentType<IconProps>> = {
+  TITLE: ModuloTituloIcon,
+  BULLET: ModuloBulletIcon,
+  CTA: ModuloCtaIcon,
+  DEALS: ModuloDealsIcon,
+  LOGOS: ModuloLogosIcon,
+  CUPONES: ModuloCuponesIcon,
+  BENEFICIOS: ModuloBeneficiosIcon,
+  COL1: ModuloCol1Icon,
+  COL2: ModuloCol2Icon,
+  COL3: ModuloCol3Icon,
 }

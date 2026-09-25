@@ -20,6 +20,7 @@ import {
 } from '../global/background'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import type { GlobalFields } from '../global/schema'
+import { Popover } from './Popover'
 
 interface BackgroundSizePositionRepeatFieldsProps {
   size: BackgroundSize
@@ -95,6 +96,77 @@ export function BackgroundSizePositionRepeatFields({
   )
 }
 
+export type BackgroundScope = 'general' | 'hero' | 'contents'
+
+const BACKGROUND_KEYS = {
+  general: { url: 'fondoUrl', alt: 'fondoAlt', size: 'fondoSize', position: 'fondoPosition', repeat: 'fondoRepeat' },
+  hero: { url: 'heroBgUrl', alt: 'heroBgAlt', size: 'heroBgSize', position: 'heroBgPosition', repeat: 'heroBgRepeat' },
+  contents: { url: 'contentsBgUrl', alt: 'contentsBgAlt', size: 'contentsBgSize', position: 'contentsBgPosition', repeat: 'contentsBgRepeat' },
+} as const satisfies Record<BackgroundScope, Record<'url' | 'alt' | 'size' | 'position' | 'repeat', keyof GlobalFields>>
+
+interface BackgroundCardProps {
+  scope: BackgroundScope
+  title: string
+  value: GlobalFields
+  onChange: (next: GlobalFields) => void
+}
+
+/**
+ * Tarjeta de fondo del panel izquierdo (ui/LeftPanel.tsx): URL, "Sugerencia
+ * para diseño" (el alt) y tamaño/posición/repeat detrás de un popover. La
+ * misma para el fondo general y los de HERO-SECTION / CONTENTS-SECTION.
+ */
+export function BackgroundCard({ scope, title, value, onChange }: BackgroundCardProps) {
+  const keys = BACKGROUND_KEYS[scope]
+  const url = value[keys.url]
+  const set = (key: keyof GlobalFields, next: unknown) => onChange({ ...value, [key]: next })
+
+  return (
+    <div className="left-card background-card">
+      <div className="background-card-head">
+        <span className="left-card-title">{title}</span>
+        <Popover label="Ajustes de fondo ⚙">
+          <BackgroundSizePositionRepeatFields
+            size={value[keys.size]}
+            position={value[keys.position]}
+            repeat={value[keys.repeat]}
+            onChangeSize={(next) => set(keys.size, next)}
+            onChangePosition={(next) => set(keys.position, next)}
+            onChangeRepeat={(next) => set(keys.repeat, next)}
+          />
+        </Popover>
+      </div>
+      {/* type="text" y no "url": el campo también admite Liquid, que la
+          validación nativa rechazaría. */}
+      <label className="field">
+        <span>URL de la imagen</span>
+        <div className="input-with-clear">
+          <input
+            type="text"
+            placeholder="URL de la imagen de fondo"
+            value={url}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.url, e.target.value)}
+          />
+          {url !== '' && (
+            <button type="button" className="input-clear" aria-label="Quitar la imagen de fondo" title="Quitar la imagen de fondo" onClick={() => set(keys.url, '')}>
+              ×
+            </button>
+          )}
+        </div>
+      </label>
+      <label className="field">
+        <span>Sugerencia para diseño</span>
+        <input
+          type="text"
+          placeholder="Describe la imagen (alt)"
+          value={value[keys.alt]}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.alt, e.target.value)}
+        />
+      </label>
+    </div>
+  )
+}
+
 interface HeroContentsBackgroundPanelProps {
   /** 'hero' → heroBgUrl/heroBgAlt/heroBgSize/…; 'contents' → contentsBg*. */
   prefix: 'hero' | 'contents'
@@ -103,11 +175,10 @@ interface HeroContentsBackgroundPanelProps {
 }
 
 /**
- * URL + Alt + tamaño/posición/repeat de HERO-SECTION o CONTENTS-SECTION —
- * pedido explícito del usuario (2026-09-21): antes vivía en un popover del
- * toolbar (ver ToolbarGlobals.tsx, que ahora solo conserva el de General),
- * ahora se selecciona desde el panel izquierdo como Header/Banner/Footer (ver
- * ui/selection.ts#GlobalBackgroundTarget) y este es su PropertiesPanel.
+ * URL + Alt + tamaño/posición/repeat de HERO-SECTION o CONTENTS-SECTION, en el
+ * panel derecho — lo que se abre al seleccionar la sección en el lienzo (ver
+ * ui/selection.ts#GlobalBackgroundTarget). Los mismos campos viven también en
+ * BackgroundCard, en su pestaña del panel izquierdo.
  */
 export function HeroContentsBackgroundPanel({ prefix, value, onChange }: HeroContentsBackgroundPanelProps) {
   const urlKey = `${prefix}BgUrl` as const
@@ -129,10 +200,9 @@ export function HeroContentsBackgroundPanel({ prefix, value, onChange }: HeroCon
       </label>
 
       <label className="field">
-        <span>Alt de la imagen</span>
+        <span>Sugerencia para diseño</span>
         <input
           type="text"
-          disabled={value[urlKey].trim() === ''}
           value={value[altKey]}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
         />

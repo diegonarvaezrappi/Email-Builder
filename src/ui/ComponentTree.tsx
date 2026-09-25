@@ -1,16 +1,20 @@
 // ============================================================================
-// Árbol de componentes del mail, debajo del catálogo en el panel izquierdo —
-// pedido explícito del usuario (2026-09-21).
+// Árbol de componentes de una sección (Hero o Contents), debajo del catálogo
+// de la pestaña correspondiente del panel izquierdo (ui/LeftPanel.tsx). Cada
+// fila se arrastra para reordenar y trae editar / duplicar / eliminar.
 //
-// Toda la lógica (qué filas, qué se puede abrir, a dónde vuelve el botón de
-// atrás, qué se puede arrastrar) vive en ui/componentTreeModel.ts, puro y
-// testeado; acá solo se pinta y se conectan los callbacks.
+// Los contenedores (un bloque de Deals, sus tarjetas, un módulo con moléculas)
+// son un acordeón: se despliegan en su sitio y pueden quedar varios abiertos.
+//
+// Toda la lógica (qué filas, qué se puede desplegar, qué se puede arrastrar)
+// vive en ui/componentTreeModel.ts, puro y testeado; acá solo se pinta y se
+// conectan los callbacks.
 //
 // El resaltado es bidireccional SIN mecanismo propio: cada fila carga la
 // `Selection` que ya usan Inspector y Viewport, así que clickear en el árbol
 // resalta en el lienzo (ambos leen el mismo `selected`), y al revés el árbol
-// baja solo al contenedor de lo que se clickeó en el lienzo — ver
-// focusForSelection, que App.tsx aplica en CADA cambio de selección.
+// despliega solo los contenedores de lo que se clickeó en el lienzo — ver
+// expandedKeysForSelection, que App.tsx aplica en CADA cambio de selección.
 //
 // DRAG & DROP: la fila arrastrada se guarda en estado local en vez de en el
 // `dataTransfer` porque `getData` no se puede leer durante `dragover` (solo
@@ -24,21 +28,26 @@ import type { Selection } from './selection'
 import {
   buildTreeViewModel,
   isSameSelection,
-  type TreeFocus,
+  type TreeActionTarget,
   type TreeReorder,
   type TreeRow,
+  type TreeSection,
 } from './componentTreeModel'
 import { TREE_REORDER_DRAG_TYPE } from './dragTypes'
 
 interface ComponentTreeProps {
   document: EmailDocument
+  section: TreeSection
+  heading: string
   selected: Selection | null
-  focus: TreeFocus | null
+  expanded: ReadonlySet<string>
   onSelect: (next: Selection) => void
-  onChangeFocus: (next: TreeFocus | null) => void
+  onToggleExpanded: (key: string) => void
   /** `toIndex` se interpreta ANTES de sacar la fila arrastrada — la misma
    *  convención que esperan las 5 acciones de reorden del store. */
   onReorder: (reorder: TreeReorder, toIndex: number) => void
+  onDuplicate: (target: TreeActionTarget) => void
+  onRemove: (target: TreeActionTarget) => void
 }
 
 /** Dónde caería el drop respecto de la fila que está debajo del cursor. */
@@ -46,13 +55,17 @@ type DropSide = 'before' | 'after'
 
 export function ComponentTree({
   document: doc,
+  section,
+  heading,
   selected,
-  focus,
+  expanded,
   onSelect,
-  onChangeFocus,
+  onToggleExpanded,
   onReorder,
+  onDuplicate,
+  onRemove,
 }: ComponentTreeProps) {
-  const { title, back, rows } = buildTreeViewModel(doc, focus)
+  const { rows } = buildTreeViewModel(doc, expanded, section)
   const [dragging, setDragging] = useState<TreeReorder | null>(null)
   const [dropAt, setDropAt] = useState<{ index: number; side: DropSide } | null>(null)
 
@@ -72,16 +85,9 @@ export function ComponentTree({
 
   return (
     <section className="lib-section tree-section">
-      <h2>Estructura</h2>
+      <h2 className="tree-heading">{heading}</h2>
 
-      {back && (
-        <button type="button" className="tree-back" onClick={() => onChangeFocus(back.to)}>
-          ← {back.label}
-        </button>
-      )}
-      {title && <span className="lib-group-label tree-title">{title}</span>}
-
-      <ul className="lib-list">
+      <ul className="lib-list tree-list">
         {rows.map((row, index) => (
           <TreeRowItem
             key={rowKey(row, index)}
@@ -90,11 +96,13 @@ export function ComponentTree({
             dragging={dragging}
             dropSide={dropAt?.index === index ? dropAt.side : null}
             onSelect={onSelect}
-            onChangeFocus={onChangeFocus}
+            onToggleExpanded={onToggleExpanded}
             onDragStartRow={setDragging}
             onDragOverRow={(side) => setDropAt({ index, side })}
             onDropRow={handleDrop}
             onDragEndRow={clearDrag}
+            onDuplicate={onDuplicate}
+            onRemove={onRemove}
           />
         ))}
       </ul>
@@ -116,35 +124,39 @@ function TreeRowItem({
   dragging,
   dropSide,
   onSelect,
-  onChangeFocus,
+  onToggleExpanded,
   onDragStartRow,
   onDragOverRow,
   onDropRow,
   onDragEndRow,
+  onDuplicate,
+  onRemove,
 }: {
   row: TreeRow
   selected: Selection | null
   dragging: TreeReorder | null
   dropSide: DropSide | null
   onSelect: (next: Selection) => void
-  onChangeFocus: (next: TreeFocus | null) => void
+  onToggleExpanded: (key: string) => void
   onDragStartRow: (reorder: TreeReorder) => void
   onDragOverRow: (side: DropSide) => void
   onDropRow: (target: TreeReorder, side: DropSide) => void
   onDragEndRow: () => void
+  onDuplicate: (target: TreeActionTarget) => void
+  onRemove: (target: TreeActionTarget) => void
 }) {
   if (row.kind === 'group') {
     return (
-      <li>
-        <span className={`lib-group-label tree-depth-${row.depth}`}>{row.label}</span>
+      <li className={`tree-depth-${row.depth}`}>
+        <span className="lib-group-label tree-group-label">{row.label}</span>
       </li>
     )
   }
 
   if (row.kind === 'hint') {
     return (
-      <li>
-        <span className={`tree-hint tree-depth-${row.depth}`}>{row.label}</span>
+      <li className={`tree-depth-${row.depth}`}>
+        <span className="tree-hint">{row.label}</span>
       </li>
     )
   }
@@ -158,13 +170,36 @@ function TreeRowItem({
     return e.clientY < box.top + box.height / 2 ? 'before' : 'after'
   }
 
+  const expandKey = row.expandKey
+  const select = () => {
+    onSelect(row.selection)
+    // En un contenedor, clickear el nombre lo abre (el usuario clickea
+    // "Deals" y espera ver sus deals); clickearlo de nuevo ya seleccionado lo
+    // pliega. El chevron pliega/despliega sin tocar la selección.
+    if (expandKey && (!row.expanded || active)) onToggleExpanded(expandKey)
+  }
+  const target = row.actionTarget
+
   return (
-    <li>
+    <li className={`tree-row tree-depth-${row.depth}`}>
+      {expandKey ? (
+        <button
+          type="button"
+          className={`tree-toggle${row.expanded ? ' expanded' : ''}`}
+          aria-expanded={row.expanded}
+          aria-label={`${row.expanded ? 'Plegar' : 'Desplegar'} ${row.label}`}
+          title={row.expanded ? 'Plegar' : 'Desplegar'}
+          onClick={() => onToggleExpanded(expandKey)}
+        >
+          <ChevronIcon />
+        </button>
+      ) : (
+        <span className="tree-toggle-spacer" aria-hidden="true" />
+      )}
       <button
         type="button"
         className={[
           'lib-item',
-          `tree-depth-${row.depth}`,
           active ? 'active' : '',
           reorder ? 'tree-draggable' : '',
           acceptsDrop && dropSide ? `tree-drop-${dropSide}` : '',
@@ -194,24 +229,64 @@ function TreeRowItem({
           onDropRow(reorder, sideFromEvent(e))
         }}
         onDragEnd={onDragEndRow}
-        onClick={() => {
-          // Seleccionar y abrir son el MISMO gesto en un contenedor: el
-          // usuario clickea "Deals" y espera ver sus deals. App.tsx recalcula
-          // el foco en cada selección (focusForSelection), así que el
-          // onChangeFocus de acá tiene que ir DESPUÉS para ganar.
-          onSelect(row.selection)
-          if (row.drillTo) onChangeFocus(row.drillTo)
-        }}
+        onClick={select}
       >
         <span className="lib-item-name">{row.label}</span>
         {row.tag && <span className="lib-item-tag">{row.tag}</span>}
         {row.childCount !== undefined && <span className="tree-count">{row.childCount}</span>}
-        {row.drillTo && (
-          <span className="tree-chevron" aria-hidden="true">
-            ›
-          </span>
-        )}
       </button>
+      <span className="tree-actions">
+        <button type="button" className="tree-action tree-action-edit" aria-label={`Editar ${row.label}`} title="Editar" onClick={() => onSelect(row.selection)}>
+          <PencilIcon />
+        </button>
+        {target && (
+          <>
+            <button
+              type="button"
+              className="tree-action tree-action-duplicate"
+              aria-label={`Duplicar ${row.label}`}
+              title={row.duplicateBlockedReason ?? 'Duplicar'}
+              disabled={row.duplicateBlockedReason !== undefined}
+              onClick={() => onDuplicate(target)}
+            >
+              <CopyIcon />
+            </button>
+            <button type="button" className="tree-action tree-action-remove" aria-label={`Eliminar ${row.label}`} title="Eliminar" onClick={() => onRemove(target)}>
+              <TrashIcon />
+            </button>
+          </>
+        )}
+      </span>
     </li>
   )
 }
+
+const svgProps = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const
+
+const ChevronIcon = () => (
+  <svg {...svgProps}>
+    <path d="m9 6 6 6-6 6" />
+  </svg>
+)
+
+const PencilIcon = () => (
+  <svg {...svgProps}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+)
+
+const CopyIcon = () => (
+  <svg {...svgProps}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+  </svg>
+)
+
+const TrashIcon = () => (
+  <svg {...svgProps}>
+    <path d="M3 6h18" />
+    <path d="M8 6V4h8v2" />
+    <path d="M19 6l-1 14H6L5 6" />
+  </svg>
+)

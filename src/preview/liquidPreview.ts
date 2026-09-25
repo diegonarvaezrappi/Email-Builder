@@ -154,11 +154,8 @@ export interface EmailPreviewResult {
  * El email entero, resuelto y listo para meter en un <iframe>: exactamente el
  * HTML que se exporta, con los content blocks pegados y el Liquid evaluado.
  * No se le agrega NADA de estilo propio de la app — el fondo, el ancho de
- * 600px y los márgenes salen del maestro, igual que en Gmail.
- *
- * NOTA: la simulación de cliente de correo (Claro/Oscuro) no vive acá — la
- * inyecta ui/Viewport.tsx como un <style> en el DOM del iframe. Este HTML es
- * el del mail y nada más, así que se puede comparar contra el exportado.
+ * 600px y los márgenes salen del maestro, igual que en Gmail. Este HTML es el
+ * del mail y nada más, así que se puede comparar contra el exportado.
  */
 export async function renderEmailPreview(
   doc: EmailDocument,

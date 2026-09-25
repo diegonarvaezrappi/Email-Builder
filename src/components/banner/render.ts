@@ -207,7 +207,7 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
   const groups: ItemGroup[] = []
   // Red de seguridad: store/store.ts ya deja doc.banner.items en el orden
   // válido para horizontal tras cualquier inserción/reordenamiento, pero
-  // cambiar bannerType de vertical a horizontal (ui/LibraryPanel.tsx) no pasa
+  // cambiar bannerType de vertical a horizontal (ui/LeftPanel.tsx) no pasa
   // por esas acciones — ver horizontalOrder.ts.
   const orderedItems = enforceHorizontalItemOrder(items, ctx.bannerType)
   for (const item of orderedItems) {

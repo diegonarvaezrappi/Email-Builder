@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { useBuilder, useTemporal } from './store/store'
+import { useBuilder } from './store/store'
 import { headerPatchForTheme, bannerBackgroundEnabledForTheme, moduleBackgroundEnabledForTheme, footerFirmaForTheme } from './themeDefaults'
 import { contentBlockRegistry } from './contentBlockRegistry'
 import type { Col3Fields } from './components/col3/schema'
-import type { ContentBlock } from './model'
-import { LibraryPanel } from './ui/LibraryPanel'
+import type { ContentBlock, ContentBlockType } from './model'
+import { LeftPanel } from './ui/LeftPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
-import { ToolbarGlobals } from './ui/ToolbarGlobals'
-import { normalizeTropicalizationTarget, type Selection } from './ui/selection'
-import { focusForSelection, type TreeFocus, type TreeReorder } from './ui/componentTreeModel'
+import { normalizeTropicalizationTarget, selectBlock, type Selection } from './ui/selection'
+import { expandedKeysForSelection, type TreeActionTarget, type TreeReorder } from './ui/componentTreeModel'
+import { leftTabForSelection, type LeftTab } from './ui/leftTab'
 import type { ViewportTab } from './ui/viewportTab'
 import type { PreviewCountry } from './preview/countries'
 import { TropicalizationPanel } from './ui/tropicalize/TropicalizationPanel'
@@ -18,8 +18,6 @@ import { TropicalizationIndexPanel } from './ui/tropicalize/TropicalizationIndex
 
 function App() {
   const doc = useBuilder((s) => s.document)
-  const saveStatus = useBuilder((s) => s.saveStatus)
-  const saveError = useBuilder((s) => s.saveError)
   const setSlotFields = useBuilder((s) => s.setSlotFields)
   const setGlobalFields = useBuilder((s) => s.setGlobalFields)
   const insertContentBlock = useBuilder((s) => s.insertContentBlock)
@@ -52,24 +50,34 @@ function App() {
   const removeTropicalizeBranch = useBuilder((s) => s.removeTropicalizeBranch)
   const reorderTropicalizeBranch = useBuilder((s) => s.reorderTropicalizeBranch)
   const clearTropicalization = useBuilder((s) => s.clearTropicalization)
-  const { canUndo, canRedo, undo, redo } = useTemporal()
 
   // Qué componente del email está abierto en el panel derecho. Es estado de UI,
   // no del documento: no entra al historial de undo/redo ni se persiste.
   const [selected, setSelected] = useState<Selection | null>(null)
 
-  // Qué contenedor está abierto en el árbol de estructura (ui/ComponentTree.tsx).
-  // Vive acá y no dentro del árbol porque una selección hecha en el LIENZO
-  // también lo mueve: es la mitad "lienzo → árbol" del resaltado bidireccional.
-  const [treeFocus, setTreeFocus] = useState<TreeFocus | null>(null)
+  // Qué contenedores están desplegados en el árbol de Contents (acordeón, ver
+  // ui/ComponentTree.tsx). Vive acá y no dentro del árbol porque una selección
+  // hecha en el LIENZO también abre los suyos: es la mitad "lienzo → árbol"
+  // del resaltado bidireccional.
+  const [treeExpanded, setTreeExpanded] = useState<ReadonlySet<string>>(() => new Set())
+
+  const toggleTreeExpanded = (key: string) =>
+    setTreeExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
+  // Pestaña del panel izquierdo (ui/LeftPanel.tsx). Una selección hecha en el
+  // lienzo también la mueve, a la sección donde vive lo clickeado.
+  const [leftTab, setLeftTab] = useState<LeftTab>('general')
 
   /**
    * Cada cambio de selección pasa por acá (lienzo, catálogo, árbol, inspector):
-   * además de guardarla, baja el árbol al contenedor donde esa selección vive,
-   * así lo seleccionado siempre se ve en el árbol. Un contenedor clickeado
-   * DESDE el árbol llama a onChangeFocus después de esto para abrirlo (ver
-   * ComponentTree.tsx) — el último setState gana, que es justo lo que se
-   * quiere: seleccionar "Deals" y ver sus deals es un solo gesto.
+   * además de guardarla, despliega en el árbol los contenedores donde esa
+   * selección vive (sin plegar los que ya estaban abiertos), así lo
+   * seleccionado siempre se ve, y lleva el panel izquierdo a su pestaña.
    *
    * Acepta `null` (más ancho que la prop `onSelect` de los paneles) para poder
    * reusarlo desde handleChangeTab, donde la normalización puede limpiar la
@@ -77,7 +85,57 @@ function App() {
    */
   const applySelection = (next: Selection | null) => {
     setSelected(next)
-    setTreeFocus(focusForSelection(doc, next))
+    const reveal = expandedKeysForSelection(doc, next)
+    if (reveal.length > 0) setTreeExpanded((prev) => new Set([...prev, ...reveal]))
+    const nextTab = leftTabForSelection(next)
+    if (nextTab) setLeftTab(nextTab)
+  }
+
+  /** Un click en el grid de módulos agrega el módulo al final y lo deja
+   *  seleccionado, listo para editar en el panel derecho. */
+  const handleAddBlock = (type: ContentBlockType) => {
+    insertContentBlock(type, doc.contenidos.length)
+    const added = useBuilder.getState().document.contenidos.at(-1)
+    if (added) applySelection(selectBlock(added.id))
+  }
+
+  const handleTreeDuplicate = (target: TreeActionTarget) => {
+    switch (target.kind) {
+      case 'block':
+        return duplicateContentBlock(target.id)
+      case 'bannerItem':
+        return duplicateBannerItem(target.id)
+      case 'dealCard':
+        return duplicateDealCard(target.id)
+      case 'moduleItem':
+        return duplicateModuleItem(target.id)
+    }
+  }
+
+  /** Si lo eliminado era lo seleccionado (o lo contenía), el panel derecho no
+   *  debe quedarse mostrando algo que ya no existe. */
+  const handleTreeRemove = (target: TreeActionTarget) => {
+    const holdsSelection =
+      selected !== null &&
+      ((target.kind === 'block' && selected.blockId === target.id) ||
+        (target.kind === 'bannerItem' && selected.bannerItemId === target.id) ||
+        (target.kind === 'dealCard' && selected.dealCardId === target.id) ||
+        (target.kind === 'moduleItem' && selected.moduleItemId === target.id))
+    switch (target.kind) {
+      case 'block':
+        removeContentBlock(target.id)
+        break
+      case 'bannerItem':
+        removeBannerItem(target.id)
+        break
+      case 'dealCard':
+        removeDealCard(target.id)
+        break
+      case 'moduleItem':
+        removeModuleItem(target.id)
+        break
+    }
+    if (holdsSelection) setSelected(null)
   }
 
   /**
@@ -198,44 +256,26 @@ function App() {
     // (o cualquier otro campo del header/global) no debe re-disparar esta lógica.
   }, [doc.global.tema])
 
-  const saveStatusLabel =
-    saveStatus === 'saving'
-      ? 'Guardando…'
-      : saveStatus === 'saved'
-        ? 'Guardado'
-        : saveStatus === 'error'
-          ? (saveError ?? 'Error al guardar')
-          : ''
-
   return (
     <div className="app-shell">
-      <header className="toolbar">
-        <div className="toolbar-brand">
-          <h1>Email Builder — Braze / Liquid</h1>
-          <span className="toolbar-divider" aria-hidden="true" />
-          <ToolbarGlobals value={doc.global} onChange={setGlobalFields} />
-        </div>
-        <span className={`save-status${saveStatus === 'error' ? ' error' : ''}`}>{saveStatusLabel}</span>
-        <button type="button" onClick={undo} disabled={!canUndo}>
-          Deshacer
-        </button>
-        <button type="button" onClick={redo} disabled={!canRedo}>
-          Rehacer
-        </button>
-      </header>
-
       <div className="app-body">
         {tab === 'tropicalize' ? (
           <TropicalizationIndexPanel document={doc} country={country} onSelect={applySelection} onChangeCountry={setCountry} />
         ) : (
-          <LibraryPanel
+          <LeftPanel
             document={doc}
+            tab={leftTab}
+            onChangeTab={setLeftTab}
             selected={selected}
             onSelect={applySelection}
             onChangeSlot={setSlotFields}
-            treeFocus={treeFocus}
-            onChangeTreeFocus={setTreeFocus}
+            onChangeGlobal={setGlobalFields}
+            onAddBlock={handleAddBlock}
+            treeExpanded={treeExpanded}
+            onToggleTreeExpanded={toggleTreeExpanded}
             onTreeReorder={handleTreeReorder}
+            onTreeDuplicate={handleTreeDuplicate}
+            onTreeRemove={handleTreeRemove}
           />
         )}
         <Viewport

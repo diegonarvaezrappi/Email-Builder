@@ -4,78 +4,171 @@
   height: 100%;
 }
 
-/* --- Toolbar --------------------------------------------------------- */
-.toolbar {
+/* --- Panel izquierdo en 3 pestañas (ui/LeftPanel.tsx) ------------------- */
+.panel-library.left-panel {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.left-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 14px 14px 12px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-panel);
   flex-shrink: 0;
 }
 
-.toolbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: auto;
-  min-width: 0;
-}
-
-.toolbar h1 {
-  font-size: 15px;
-  white-space: nowrap;
-}
-
-.toolbar-divider {
-  width: 1px;
-  height: 20px;
-  flex-shrink: 0;
-  background: var(--border);
-}
-
-.toolbar-field {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-}
-
-.toolbar-field select,
-.toolbar-field input {
+.left-tab {
   font: inherit;
-  font-size: 13px;
-  padding: 5px 8px;
-  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.25;
+  min-height: 48px;
+  padding: 6px 4px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+}
+
+.left-tab:hover {
+  color: var(--text-h);
+  border-color: var(--accent-border);
+}
+
+.left-tab.active {
+  color: var(--text-h);
+  border-color: var(--text-h);
+  font-weight: 600;
+}
+
+.left-tab-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.left-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.left-card.active {
+  border-color: var(--accent-border);
+}
+
+.left-card .field {
+  margin-bottom: 0;
+}
+
+.left-card-title {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-h);
 }
 
-/* El campo de fondo cede espacio antes que el resto de la barra. */
-.toolbar-field-fondo {
-  position: relative;
-  min-width: 0;
-  flex: 0 1 320px;
+/* Header / Footer: toda la tarjeta es el botón que los selecciona. */
+.left-card-button {
+  font: inherit;
+  flex-direction: row;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-h);
 }
 
-.toolbar-field-fondo input {
-  width: 100%;
+.left-card-button:hover {
+  border-color: var(--accent-border);
+}
+
+.left-card-button.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.left-card-button.active .left-card-title {
+  color: var(--accent);
+}
+
+.left-card-icon {
+  width: 56px;
+  height: 35px;
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+.left-card-title-button {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.left-card-title-button:hover {
+  color: var(--accent);
+}
+
+.left-card .field-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.left-card .field-inline select {
+  width: auto;
   min-width: 0;
-  /* Deja sitio a la × de limpiar. */
+  max-width: 60%;
+}
+
+.background-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.background-card-head .popover > button {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.input-with-clear {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-with-clear input {
+  width: 100%;
   padding-right: 26px;
   text-overflow: ellipsis;
 }
 
-.toolbar-field input:focus-visible,
-.toolbar-field select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-
-.toolbar-clear {
+.input-clear {
   position: absolute;
   right: 6px;
   display: flex;
@@ -93,73 +186,167 @@
   cursor: pointer;
 }
 
-.toolbar-clear:hover {
+.input-clear:hover {
   background: var(--border);
   color: var(--text-h);
 }
 
-.toolbar button {
-  font: inherit;
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
+/* Grid de módulos de contenido: 3 por fila, cada uno con su esquema. */
+.module-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.module-card {
+  padding: 8px 4px;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.module-card .option-card-icon {
+  width: 100%;
+  max-width: 56px;
+  height: auto;
+}
+
+/* --- Árbol de una sección (debajo de su catálogo) ---------------------- */
+.tree-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-heading {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 14px !important;
+  color: var(--accent) !important;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tree-row > .lib-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.tree-row .lib-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-actions {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.tree-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
   cursor: pointer;
+  opacity: 0.85;
 }
 
-.toolbar button:hover:not(:disabled) {
-  border-color: var(--accent-border);
+.tree-action:hover:not(:disabled) {
+  opacity: 1;
 }
 
-.toolbar button:disabled {
-  opacity: 0.4;
+.tree-action:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
-.toolbar button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+.tree-action svg {
+  width: 12px;
+  height: 12px;
 }
 
-/* --- Árbol de estructura (panel izquierdo, debajo del catálogo) --------- */
-.tree-section {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+.tree-action-duplicate {
+  background: var(--accent-border);
 }
 
-/* Botón de volver al contenedor de arriba — mismo gesto que el
-   "← Volver a ..." del panel derecho (.inspector-back). */
-.tree-back {
-  font: inherit;
-  font-size: 12px;
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
+.tree-action-remove {
+  background: var(--danger);
+}
+
+/* Sangría por nivel del acordeón: las filas son hermanas en una sola <ul>,
+   así que cada nivel se desplaza entero (chevron incluido) y una guía
+   vertical sutil marca de qué contenedor cuelga. */
+.tree-depth-1,
+.tree-depth-2,
+.tree-depth-3 {
+  border-left: 1px solid var(--border);
+}
+
+.tree-depth-1 {
+  margin-left: 11px;
+  padding-left: 6px;
+}
+
+.tree-depth-2 {
+  margin-left: 22px;
+  padding-left: 6px;
+}
+
+.tree-depth-3 {
+  margin-left: 33px;
+  padding-left: 6px;
+}
+
+.tree-group-label {
+  display: block;
+  padding: 6px 10px 2px 26px;
+}
+
+.tree-toggle,
+.tree-toggle-spacer {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.tree-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--text);
   cursor: pointer;
-  text-align: left;
 }
 
-.tree-back:hover {
+.tree-toggle:hover {
   background: var(--bg);
   color: var(--text-h);
 }
 
-.tree-title {
-  padding-bottom: 6px;
+.tree-toggle svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
 }
 
-/* Indentación por nivel — mismo idioma que .lib-list-nested, pero por fila:
-   las filas del árbol son hermanas en una sola <ul>, no listas anidadas. */
-.tree-depth-1 {
-  margin-left: 12px;
+.tree-toggle.expanded svg {
+  transform: rotate(90deg);
 }
 
 .tree-hint {
@@ -182,17 +369,8 @@
   color: var(--text);
 }
 
-.tree-chevron {
-  font-size: 14px;
-  line-height: 1;
-  color: var(--text);
-  opacity: 0.6;
-}
-
-.lib-item.active .tree-count,
-.lib-item.active .tree-chevron {
+.lib-item.active .tree-count {
   color: var(--accent);
-  opacity: 1;
 }
 
 /* Reordenar arrastrando una fila (piezas de banner, deals, moléculas…). */
@@ -214,7 +392,7 @@
   box-shadow: inset 0 -2px 0 0 var(--accent);
 }
 
-/* --- Popover de fondos (General/Hero/Contenidos) ----------------------- */
+/* --- Popover (ajustes de fondo, menú de vista) -------------------------- */
 .popover {
   position: relative;
   flex-shrink: 0;
@@ -239,20 +417,12 @@
   margin-bottom: 0;
 }
 
-.save-status {
-  font-size: 12px;
-  color: var(--text);
-  min-width: 90px;
-}
-
-.save-status.error {
-  color: var(--danger);
-}
-
 /* --- Layout de 3 paneles: librería | viewport | inspector --------------- */
 .app-body {
   display: grid;
-  grid-template-columns: 330px minmax(0, 1fr) 380px;
+  /* Los paneles laterales ceden en pantallas chicas para que el preview y
+     su menú inferior sigan teniendo sitio. */
+  grid-template-columns: clamp(260px, 24vw, 330px) minmax(0, 1fr) clamp(280px, 27vw, 380px);
   /* La fila debe poder encogerse por debajo de su contenido; con el `auto`
      por defecto el grid crece con el código/preview y nada scrollea. */
   grid-template-rows: minmax(0, 1fr);
@@ -281,6 +451,9 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  /* El menú inferior se adapta al ancho de ESTA columna, no al de la ventana. */
+  container-type: inline-size;
+  container-name: viewport;
 }
 
 /* --- Panel izquierdo: librería + globales ------------------------------- */
@@ -703,71 +876,127 @@
   cursor: not-allowed;
 }
 
-/* --- Barra de Preview/Código -------------------------------------------- */
-.viewport-bar {
+/* --- Menú inferior (ui/BottomBar.tsx) ------------------------------------
+   Siempre UNA sola línea: nada envuelve (nowrap) y lo que sobra se recorta
+   dentro de su propio grupo en vez de empujar o pisar al vecino. Por debajo de
+   860px de columna central las etiquetas de los botones de la derecha se esconden y
+   quedan solo los iconos. */
+.bottom-bar {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  row-gap: 6px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.bottom-bar-tabs,
+.bottom-bar-actions {
+  display: flex;
+  align-items: center;
   gap: 4px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.bottom-bar-tabs {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+/* Una pestaña se encoge con puntos suspensivos antes que desaparecer. */
+.bottom-bar .bottom-bar-tabs > button {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom-bar-actions {
+  margin-left: auto;
   flex-shrink: 0;
 }
 
-.viewport-bar button {
+.bottom-bar button {
   font: inherit;
   font-size: 13px;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-.viewport-bar button.active {
+.bottom-bar button:hover:not(:disabled) {
+  color: var(--text-h);
+}
+
+.bottom-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.bottom-bar button.active {
   background: var(--accent-bg);
   color: var(--accent);
   border-color: var(--accent-border);
 }
 
-.viewport-bar .country-select {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-/* Simulador de cliente de correo (☀️ Claro / 🌙 Oscuro) — junto al selector de
-   país, ambos son ajustes de vista que nunca tocan el HTML exportado. */
-.viewport-bar .client-scheme {
-  margin-left: 16px;
-  display: flex;
+.bottom-bar .icon-button {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  padding: 6px 10px;
 }
 
-.viewport-bar .client-scheme button {
-  padding: 5px 10px;
+.bottom-bar .icon-button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
-/* Toggle Escritorio / Móvil — angosta el canvas a un ancho de celular real. */
-.viewport-bar .device-scheme {
-  margin-left: 16px;
+.bottom-bar .save-status {
+  font-size: 12px;
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.bottom-bar .save-status.error {
+  color: var(--danger);
+}
+
+/* El menú hamburguesa abre HACIA ARRIBA: la barra vive en el borde inferior. */
+.bottom-bar .popover-panel {
+  top: auto;
+  bottom: calc(100% + 6px);
+  right: 0;
+  left: auto;
+}
+
+.view-menu {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 220px;
 }
 
-.viewport-bar .device-scheme button {
-  padding: 5px 10px;
+.view-menu .segmented {
+  display: flex;
+  gap: 4px;
 }
 
-.viewport-bar select {
+.view-menu .segmented button {
+  flex: 1;
+}
+
+.bottom-bar select {
   font: inherit;
   font-size: 13px;
   padding: 6px 8px;
@@ -775,6 +1004,27 @@
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text-h);
+}
+
+@container viewport (max-width: 860px) {
+  .bottom-bar .icon-button .label {
+    display: none;
+  }
+}
+
+@container viewport (max-width: 520px) {
+  .bottom-bar {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .bottom-bar button {
+    padding: 6px 8px;
+  }
+
+  .bottom-bar .save-status {
+    display: none;
+  }
 }
 
 /* --- Canvas del email --------------------------------------------------- */
@@ -805,14 +1055,10 @@
   background: #fff;
 }
 
-/* La simulación de "cliente con dark mode" NO vive acá: se inyecta como un
-   <style> dentro del documento del iframe (ver DARK_SIM_CSS en ui/Viewport.tsx),
-   que es la única forma de invertir el mail pero dejar las imágenes a color. */
-
 /* Capa siempre presente entre el iframe y los overlays de slot: un <iframe>
    es un documento aparte y puede "tragarse" los eventos nativos de drag
    cuando el cursor pasa directo sobre él sin nada delante — con esta capa el
-   drop para restaurar un slot arrastrado desde LibraryPanel llega de forma
+   drop de lo arrastrado desde el panel izquierdo llega de forma
    confiable en cualquier punto del canvas. Transparente y sin alto propio
    (se le fija el mismo alto que al iframe desde Viewport.tsx). */
 .canvas-drop-layer {
@@ -1159,15 +1405,15 @@
    ============================================================================ */
 
 /* --- Barra de pestañas: toggle Diseño base / Vista país ------------------ */
-.viewport-bar .tropicalize-view-mode {
-  margin-left: 16px;
+.bottom-bar .tropicalize-view-mode {
+  margin-left: 8px;
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
 }
 
-.viewport-bar .tropicalize-view-mode button {
+.bottom-bar .tropicalize-view-mode button {
   padding: 5px 10px;
 }
 

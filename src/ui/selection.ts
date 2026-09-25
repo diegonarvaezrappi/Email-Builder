@@ -5,7 +5,7 @@ import type { DealCardPieceType } from '../components/deals/schema'
  * Los 2 fondos de sección (HERO/CONTENTS, ver global/schema.ts) — pedido
  * explícito del usuario (2026-09-21) para que se seleccionen desde el panel
  * izquierdo igual que Header/Banner/Footer, en vez de vivir como popovers del
- * toolbar (ver ui/ToolbarGlobals.tsx, que se quedó solo con el de General).
+ * toolbar.
  * A PROPÓSITO no son `SlotName`: no son slots reales (no tienen `registry`
  * entry, no producen HTML propio — solo tocan tamaño/posición/repeat/alt de
  * un `<td>` que YA existe, ver template/assemble.ts) y no son tropicalizables
@@ -115,7 +115,7 @@ export function isModuleItemSelected(selected: Selection | null, moduleItemId: s
  * (`isDealCardSelected` exige `dealCardPieceType === undefined`).
  *
  * Un fondo de sección (HERO_BG/CONTENTS_BG) tampoco es tropicalizable (ver
- * targetKeyFromSelection) — LibraryPanel solo los ofrece en la pestaña
+ * targetKeyFromSelection) — LeftPanel solo los ofrece en la pestaña
  * Preview, así que la única forma de llegar a Tropicalizar con uno
  * seleccionado es cambiar de pestaña, que es justo lo que se resuelve acá: se
  * limpia a `null` (a diferencia del deal, no hay un "dueño" al cual subir la

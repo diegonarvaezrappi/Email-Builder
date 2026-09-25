@@ -1,5 +1,5 @@
 // ============================================================================
-// Panel izquierdo de la pestaña "Tropicalizar" — reemplaza a LibraryPanel (el
+// Panel izquierdo de la pestaña "Tropicalizar" — reemplaza a LeftPanel (el
 // arrastre para insertar no tiene sentido en esta pestaña). Lista TODO lo que
 // ya tiene condicionales, agrupado por slot, para 2 casos que el lienzo solo
 // no resuelve:

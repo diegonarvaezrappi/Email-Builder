@@ -17,7 +17,7 @@
 // un botón extra para volver a la vista general del banner. Si no viene, es el
 // banner "general": su PropertiesPanel normal del registry (link + limpieza de
 // piezas ocultas — el tipo de banner ahora se elige en el panel izquierdo, ver
-// ui/LibraryPanel.tsx) + el selector de tipo de imagen (solo horizontal) +
+// ui/LeftPanel.tsx) + el selector de tipo de imagen (solo horizontal) +
 // el catálogo completo de piezas para arrastrar.
 // ============================================================================
 import type { EmailDocument } from '../model'
@@ -92,7 +92,7 @@ export function InspectorPanel({
   }
 
   // Fondo de HERO-SECTION o CONTENTS-SECTION — pedido explícito del usuario
-  // (2026-09-21): antes eran popovers del toolbar (ToolbarGlobals.tsx), ahora
+  // (2026-09-21): antes eran popovers de la barra superior, ahora
   // se seleccionan acá como cualquier otro componente. No tienen pieza puntual
   // ni bloque dueño (son singletons de doc.global, ver
   // ui/selection.ts#GlobalBackgroundTarget), así que no hace falta

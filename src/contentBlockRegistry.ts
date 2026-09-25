@@ -313,7 +313,7 @@ export function getModuleAreas(def: ContentBlockDef<any>): { key: string; label:
 
 /**
  * Búsqueda por `string` suelto (no `ContentBlockType`) — hace falta en dos
- * lugares que no conocen el tipo exacto de antemano: LibraryPanel.tsx lista
+ * lugares que no conocen el tipo exacto de antemano: LeftPanel.tsx lista
  * también los 8 tipos de contenido aún no implementados (TITLE, DEALS, etc.,
  * documentados en el maestro pero fuera de la unión `ContentBlockType`
  * mientras no se construyan), y Viewport.tsx lee `type` de un comentario HTML

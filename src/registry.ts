@@ -43,7 +43,7 @@ export interface SlotDef<TFields> {
   PropertiesPanel?: ComponentType<{ value: TFields; onChange: (next: TFields) => void }>
   /**
    * Si es true, el Viewport muestra un botón para eliminar el slot del email
-   * y el LibraryPanel permite arrastrarlo de vuelta cuando quedó fuera. El
+   * y el panel izquierdo permitía arrastrarlo de vuelta cuando quedó fuera. El
    * schema de TFields debe incluir un campo `removed: boolean`. Ningún slot
    * lo usa hoy (Cierre, el único caso, se retiró — su rol de firma/imagen de
    * cierre pasó a vivir en Footer, ver components/footer/schema.ts#firma) —

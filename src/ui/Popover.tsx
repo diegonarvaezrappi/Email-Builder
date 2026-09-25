@@ -1,18 +1,19 @@
 // ============================================================================
-// Botón + panel flotante que se cierra al hacer click afuera — primer uso:
-// BackgroundSettingsPanel (los 3 fondos del mail, General/Hero/Contenidos),
-// que no tienen ningún componente de canvas al cual anclar su propio panel de
-// propiedades (a diferencia de Header/Banner/Footer/Contenidos, seleccionables
-// en el lienzo).
+// Botón + panel flotante que se cierra al hacer click afuera. Lo usan los
+// ajustes de los 3 fondos del mail (panel izquierdo) y el menú de vista del
+// menú inferior (ui/BottomBar.tsx).
 // ============================================================================
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 interface PopoverProps {
-  label: string
+  label: ReactNode
   children: ReactNode
+  /** Obligatorio cuando `label` es solo un icono. */
+  ariaLabel?: string
+  buttonClassName?: string
 }
 
-export function Popover({ label, children }: PopoverProps) {
+export function Popover({ label, children, ariaLabel, buttonClassName }: PopoverProps) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -27,7 +28,14 @@ export function Popover({ label, children }: PopoverProps) {
 
   return (
     <div className="popover" ref={ref}>
-      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+      <button
+        type="button"
+        className={buttonClassName}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        title={ariaLabel}
+      >
         {label}
       </button>
       {open && <div className="popover-panel">{children}</div>}

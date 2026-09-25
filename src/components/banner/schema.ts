@@ -19,7 +19,7 @@ export const BANNER_TYPE_LABELS: Record<BannerType, string> = {
 }
 
 /** Título corto para las cards de tipo de banner del panel izquierdo
- *  (ui/LibraryPanel.tsx) — BANNER_TYPE_LABELS es la versión larga usada en la
+ *  (ui/LeftPanel.tsx) — BANNER_TYPE_LABELS es la versión larga usada en la
  *  lista de "piezas ocultas" del panel derecho, acá va solo el nombre. */
 export const BANNER_TYPE_TITLES: Record<BannerType, string> = {
   vertical: 'Vertical',
@@ -49,7 +49,7 @@ export const BANNER_MOLECULE_ALIGN_LABELS: Record<BannerMoleculeAlign, string> =
  * default y 'center' es lo que hay que construir (ver alignMoleculeCenter en
  * render.ts). CAMPO DISTINTO de `moleculeAlign` a propósito — no un solo
  * campo compartido con default condicional por bannerType — porque
- * bannerType puede cambiar sin tocar este campo (LibraryPanel.tsx) y un
+ * bannerType puede cambiar sin tocar este campo (LeftPanel.tsx) y un
  * default compartido "se filtraría" de una orientación a la otra al cambiar
  * de tipo de banner sin que el usuario lo haya pedido.
  */

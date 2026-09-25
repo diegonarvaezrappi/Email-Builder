@@ -1,6 +1,6 @@
 // ============================================================================
 // Catálogo de piezas del banner — reemplaza a la vieja sublista "Piezas" del
-// panel izquierdo (ui/LibraryPanel.tsx): ahora vive en el panel derecho,
+// panel izquierdo (ui/LeftPanel.tsx): ahora vive en el panel derecho,
 // visible al seleccionar el banner "general" (ui/InspectorPanel.tsx), junto al
 // resto de sus opciones. Cada card es origen de arrastre — mismo protocolo
 // BANNER_ITEM_DRAG_TYPE de siempre, el drop en el Viewport no cambia — y

@@ -1,9 +1,6 @@
 /*
  * La interfaz de la app (el "chrome" del builder) es SIEMPRE oscura — no hay
- * modo claro para ella y no sigue la preferencia del sistema operativo. El
- * switch Claro/Oscuro de la barra de Preview (ui/Viewport.tsx) es un asunto
- * completamente distinto: simula el color-scheme del CLIENTE de correo sobre
- * el EMAIL, no cambia nada de esto.
+ * modo claro para ella y no sigue la preferencia del sistema operativo.
  */
 :root {
   --text: #9ca3af;

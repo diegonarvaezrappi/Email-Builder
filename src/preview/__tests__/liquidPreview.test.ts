@@ -213,10 +213,7 @@ describe('renderEmailPreview', () => {
     expect(result.html).not.toMatch(/\{%|\{\{/)
   })
 
-  it('never carries the client dark-mode simulation — that is injected into the iframe DOM at runtime', async () => {
-    // La simulación de cliente Claro/Oscuro la agrega ui/Viewport.tsx como un
-    // <style> en el DOM del iframe, no este módulo: lo que sale de acá es el
-    // HTML del mail y nada más.
+  it('adds no app-side styling on top of the email (no color filters)', async () => {
     const result = await renderEmailPreview(d(), 'CO')
     expect(result.html).not.toContain('filter:')
     expect(result.html).not.toContain('invert(')

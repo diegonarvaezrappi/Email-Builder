@@ -31,7 +31,7 @@
 //    seguridad: cubre el caso en que el usuario cambia bannerType de
 //    vertical a horizontal con un orden que era válido en vertical pero no
 //    en horizontal (ese cambio no pasa por ninguna de las 4 acciones de
-//    arriba, ver ui/LibraryPanel.tsx), y cualquier otro camino futuro que
+//    arriba, ver ui/LeftPanel.tsx), y cualquier otro camino futuro que
 //    toque doc.banner.items sin pasar por el store.
 // ============================================================================
 import { getBannerItemDef } from '../../bannerItemRegistry'
