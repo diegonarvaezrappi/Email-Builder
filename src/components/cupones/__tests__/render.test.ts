@@ -169,7 +169,10 @@ describe('renderCuponesSnippet · legales (fila compartida, toggle per-celda)', 
 describe('renderCuponesSnippet · fondo/alineado FIJOS (no togglables)', () => {
   it('background is always ON (the "Sinfondo" off-value never appears)', () => {
     const html = render(defaultCuponesFields, { global: { ...defaultEmailDocument.global, tema: 'beige100' } })
-    expect(html.match(/background:\s*rgba\(242,211,174,0\.5\)/g)?.length).toBe(2)
+    // Desde el pull ed11dcc la celda usa el hex de 8 dígitos (#RRGGBBAA), no rgba():
+    // un rgba() en un <td> no llega en Braze.
+    expect(html.match(/background:\s*#F2D3AE80/g)?.length).toBe(2)
+    expect(html).not.toMatch(/background:\s*#00000000/)
     expect(html).not.toMatch(/background:\s*rgba\(0,0,0,0\.0\)/)
   })
 

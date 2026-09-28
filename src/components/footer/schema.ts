@@ -43,9 +43,8 @@ export type TipoFooter = (typeof TIPO_FOOTER_VALUES)[number]
  * - 'turbo': familia "RappiTurbo" — 6 sub-variantes por país (CO con
  *   Carulla, EC con MiComisariato, MX, AR/UY/CR, BR, resto del mundo).
  *
- * `footer_rts.html` y `footer_b2b.html` NO tienen esta variable (su firma es
- * fija) — el select se oculta en el panel con esos tipos, igual que los 3
- * checkboxes de legales (ver footerUsesFirmaAndLegals).
+ * Solo la lee `footer_general.html`: Simple va sin firma, y RTS/B2B la traen
+ * fija — el select se oculta con esos tipos (ver footerUsesFirma).
  */
 export const FOOTER_FIRMA_VALUES = ['sinfirma', 'general', 'turbo'] as const
 
@@ -94,6 +93,10 @@ export const TIPO_FOOTER_LABELS: Record<TipoFooter, string> = {
   B2B: 'Restaurantes',
 }
 
-/** RTS y Restaurantes traen firma fija y sus propios legales: ni el select de
- *  firma ni los 3 checkboxes de legales hacen nada con ellos. */
-export const footerUsesFirmaAndLegals = (tipo: TipoFooter): boolean => tipo === 'General' || tipo === 'SinAmor'
+/** Solo el General tiene firma elegible (06_footer/footer.html). */
+export const footerUsesFirma = (tipo: TipoFooter): boolean => tipo === 'General'
+
+/** General y Simple leen los 3 `show_legal_*` (el footer.html del maestro los
+ *  documenta en las dos secciones desde el pull 9af71b3); RTS y Restaurantes
+ *  traen sus propios legales fijos. */
+export const footerUsesLegalToggles = (tipo: TipoFooter): boolean => tipo === 'General' || tipo === 'SinAmor'

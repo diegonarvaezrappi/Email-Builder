@@ -175,6 +175,10 @@ export const THEMES: ThemeDef[] = parseThemes(headMetaTagsRaw)
  */
 export const MODULE_BACKGROUND_VAR_NAMES = [
   'bg_contenedor1_mail_general',
+  // Gemela en hex de 8 dígitos (#RRGGBBAA), pull ed11dcc 2026-09-27: la usan
+  // las celdas de cupón, donde un rgba() en el <td> no llega en Braze. Mismo
+  // doble assign "con fondo" / Sinfondo.
+  'bg_contenedor1_hex_mail_general',
   'body_container_background_radius',
   'body_container_background_padding',
   'body_container_background_border',

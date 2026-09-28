@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, FOOTER_FIRMA_VALUES, FOOTER_FIRMA_LABELS, footerUsesFirmaAndLegals } from './schema'
+import { TIPO_FOOTER_VALUES, TIPO_FOOTER_LABELS, FOOTER_FIRMA_VALUES, FOOTER_FIRMA_LABELS, footerUsesFirma, footerUsesLegalToggles } from './schema'
 import type { FooterFields } from './schema'
 
 interface FooterPropertiesPanelProps {
@@ -40,8 +40,7 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
         />
       </label>
 
-      {footerUsesFirmaAndLegals(value.tipoFooter) && (
-        <>
+      {footerUsesFirma(value.tipoFooter) && (
           <label className="field">
             <span>Firma</span>
             <select
@@ -55,7 +54,10 @@ export function FooterPropertiesPanel({ value, onChange }: FooterPropertiesPanel
               ))}
             </select>
           </label>
+      )}
 
+      {footerUsesLegalToggles(value.tipoFooter) && (
+        <>
           <label className="field field-checkbox">
             <input
               type="checkbox"

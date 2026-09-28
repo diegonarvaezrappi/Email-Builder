@@ -140,6 +140,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const APP_DIR = path.resolve(SCRIPT_DIR, '..')
@@ -302,6 +303,8 @@ const TEMPLATE_BASE_NAME = 'estructura_general.html'
 /** Ruta relativa al repo, solo para los mensajes. */
 const TEMPLATE_BASE_SOURCE = path.join(EXAMPLES_DIR_NAME ?? 'NN-examples', TEMPLATE_BASE_NAME)
 const TEMPLATE_BASE_FILE = 'template_base.html'
+/** Último commit del maestro con estructura_general.html como esqueleto — ver el respaldo al leerlo. */
+const TEMPLATE_BASE_LAST_GOOD_COMMIT = '3968fb3'
 /**
  * `footer_sinamor.html` se renombró a `footer_simple.html` en el maestro
  * (pull 7f349d9) — es el MISMO content block, solo cambió el nombre del
@@ -962,6 +965,26 @@ if (!templateBasePath) {
   fail(`No se encontró ${TEMPLATE_BASE_SOURCE} en ${MASTER_DIR}`)
 } else {
   templateBaseHtml = fs.readFileSync(templateBasePath, 'utf8')
+  // El commit e298412 del maestro (2026-09-27) reemplazó el esqueleto por un
+  // mail EXPORTADO desde esta app: sin los marcadores que la app rellena y con
+  // los suyos propios (BITEM/BLOCK). Mientras el maestro traiga esa forma se
+  // usa la última versión buena del historial, en vez de romper predev/prebuild.
+  const looksLikeAppExport =
+    !templateBaseHtml.includes('AQUÍ VA EL HEADER') && /<!-- (BITEM|BLOCK):/.test(templateBaseHtml)
+  if (looksLikeAppExport) {
+    const relative = `${EXAMPLES_DIR_NAME}/${TEMPLATE_BASE_NAME}`
+    try {
+      templateBaseHtml = execFileSync('git', ['show', `${TEMPLATE_BASE_LAST_GOOD_COMMIT}:${relative}`], {
+        cwd: MASTER_DIR,
+        encoding: 'utf8',
+      })
+      console.warn(
+        `${RED}⚠ ${TEMPLATE_BASE_SOURCE} llegó como un mail exportado (sin "AQUÍ VA EL HEADER", con marcadores BITEM/BLOCK de la app). Se usa su versión de ${TEMPLATE_BASE_LAST_GOOD_COMMIT} hasta que el maestro lo restaure.${RESET}`,
+      )
+    } catch {
+      fail(`${TEMPLATE_BASE_SOURCE} llegó como un mail exportado y no se pudo leer su versión de ${TEMPLATE_BASE_LAST_GOOD_COMMIT} con git`)
+    }
+  }
 
   const footerExampleMatches = templateBaseHtml.split(FOOTER_EXAMPLE_START).length - 1
   if (footerExampleMatches !== 1) {
