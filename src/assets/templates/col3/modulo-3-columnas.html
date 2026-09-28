@@ -1,0 +1,86 @@
+<!-- MODULO 3 COLUMNAS: se inserta la tabla completa, se puede quitar el fondo afectando las clase relacionadas con el estilo "Sinfondo" celda por celda, no se quita el fondo de las 3 celdas al tiempo
+
+Se puede cambiar el alineado de los contenidos afectando las variables alineado_molecular_mail_body y body_alineado_molecular
+
+Cada celda se puede hacer clickeable con la etiqueta <a>, si no se hace clickeable se debe eliminar la eiqueya.
+
+-->
+<table role="module" data-type="text" border="0" cellpadding="0" cellspacing="5" width="100%" style="table-layout: fixed; margin: 0px auto; max-width: 480px; " >
+  <tbody>
+    <tr> 
+      
+      <!-- CELDA 1 -->
+      
+      <td style="padding:0px 0px 0px 0px; line-height:23px; text-align:inherit; " height="100%" valign="top" bgcolor="" role=""><!-- CONTENIDO CELDA 1 --> 
+        <a href="LINKCELDA1">
+        <div role="contenedorgeneral" style="background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;"> 
+          
+          <!-- Las moleculas se insertan en este contenedor, Siempre separadas por un    <div class="separador-S"></div> -->
+          
+          <div role="divcomponentes" style="display: table; padding: {{body_container_background_padding-peq}}; width: 100%; "> 
+            <!-- aqui las moleculas--> 
+            
+            <!-- ICONO M: por defecto no tiene border-radius, se puede agregar uno de border-radius: 7px;  --> 
+            <img role="molecula-iconoM"  src="https://lh3.googleusercontent.com/d/13Wpazp2ezX37GZylmssneVLoF0fxq2yi" width="25" style="display: block; line-height: 15px; margin: {{alineado_molecular_mail_body}};" alt="img">
+            <div class="separador-S"></div>
+            <!-- este texto e puede modificar o quitar, se recomienda usar textos cortos y tamaños pequeños  -->
+            
+            <h4 role="molecula-texto" style="color:{{color_texto_mail_general}}; text-align: {{body_alineado_molecular}}; ">Texto corto </h4>
+          </div>
+          
+          <!-- Esta imagen full se puede cambiar la url o eliminar, si se eliminar la iamgen se debe quitar la etiqueta completa --> 
+          
+          <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; " alt="-" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1GvgYi4hdEYq1b71GrXp-UVfidhkEVeE1?v1"> </div>
+        </a></td>
+      
+      <!-- CELDA 2 -->
+      
+      <td style="padding:0px 0px 0px 0px; line-height:23px; text-align:inherit; " height="100%" valign="top" bgcolor="" role=""><!-- CONTENIDO CELDA 2 --> 
+        <a href="LINKCELDA1">
+        <div role="contenedorgeneral" style="background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;"> 
+          
+          <!-- Las moleculas se insertan en este contenedor, Siempre separadas por un    <div class="separador-S"></div> -->
+          
+          <div role="divcomponentes" style="display: table; padding: {{body_container_background_padding-peq}};  width: 100%;"> 
+            <!-- aqui las moleculas--> 
+            
+            <!-- ICONO M: por defecto no tiene border-radius, se puede agregar uno de border-radius: 7px;  --> 
+            <img role="molecula-iconoM"  src="https://lh3.googleusercontent.com/d/13Wpazp2ezX37GZylmssneVLoF0fxq2yi" width="25" style="display: block; line-height: 15px; margin: {{alineado_molecular_mail_body}};" alt="img">
+            <div class="separador-S"></div>
+            <!-- este texto e puede modificar o quitar, se recomienda usar textos cortos y tamaños pequeños  -->
+            
+            <h4 role="molecula-texto" style="color:{{color_texto_mail_general}};  text-align: {{body_alineado_molecular}}; ">Texto corto </h4>
+          </div>
+          
+          <!-- Esta imagen full se puede cambiar la url o eliminar, si se eliminar la iamgen se debe quitar la etiqueta completa --> 
+          
+          <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; " alt="-" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1c5vhJ8Hvr-weWRB5n3xKICSbou2mrcxd?v1"> </div>
+        </a></td>
+      
+      <!-- CELDA 3 -->
+      
+      <td style="padding:0px 0px 0px 0px; line-height:23px; text-align:inherit; " height="100%" valign="top" bgcolor="" role=""><!-- CONTENIDO CELDA 3 --> 
+        
+        <a href="LINKCELDA3">
+        <div role="contenedorgeneral" style="background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;"> 
+          
+          <!-- Las moleculas se insertan en este contenedor, Siempre separadas por un    <div class="separador-S"></div> -->
+          
+          <div role="divcomponentes" style="display: table; padding: {{body_container_background_padding-peq}};  width: 100%;"> 
+            <!-- aqui las moleculas--> 
+            
+            <!-- ICONO M: por defecto no tiene border-radius, se puede agregar uno de border-radius: 7px;  --> 
+            <img role="molecula-iconoM"  src="https://lh3.googleusercontent.com/d/13Wpazp2ezX37GZylmssneVLoF0fxq2yi" width="25" style="display: block; line-height: 15px; margin: {{alineado_molecular_mail_body}};" alt="img">
+            <div class="separador-S"></div>
+            <!-- este texto e puede modificar o quitar, se recomienda usar textos cortos y tamaños pequeños  -->
+            
+            <h4 role="molecula-texto" style="color:{{color_texto_mail_general}};  text-align: {{body_alineado_molecular}}; ">Texto corto </h4>
+          </div>
+          
+          <!-- Esta imagen full se puede cambiar la url o eliminar, si se eliminar la iamgen se debe quitar la etiqueta completa --> 
+          
+          <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; " alt="-" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1Ff8AXjzhjsXyBrUwk4S4A02gjOpAg3a0?v1"> </div>
+        </a></td>
+    </tr>
+  </tbody>
+</table>

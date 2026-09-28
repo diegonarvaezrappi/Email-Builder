@@ -1,0 +1,164 @@
+<!-- MODULO CUPONES: los módulos de cupón siempre deben venir en la fuente por pares
+de modo que por cada 2 cupones se inserta la siguiente tabla completa, y en cada td el cupón correspondiente 
+
+HAY DOS TIPOS DE CUPON
+TITULO
+Y CUPON
+
+siempre debe haber 2
+
+
+Para este módulo debe venir por defecto el fondo activado, aplicando las variables para "Fondo" del liquid
+En este modulo el fondo NO se puede desactivar
+En este modulo el alineado NO se puede cambiar
+
+Se pueden moficar pesos de texto
+
+
+-->
+<table role="module" border="0" cellpadding="0" cellspacing="5" width="100%" style="table-layout: fixed; margin: 0px auto; max-width: 480px; " >
+  <tr> 
+    
+    <!-- CELDA DE CUPÓN: En esta celda se puede cambiar el orden de las moléculas, elminar molecular o agregar moleculas nuevas, SE PUEDE CAMBIAR POR UNA CELDA DE TITULO -->
+    
+    <td role="cupon" width="50%" style="width: 50%; vertical-align: top; border-radius: {{body_container_background_radius}}; background: {{bg_contenedor1_hex_mail_general}};  " ><!-- si la celda de cupon se activa par hacer clickeable, se agrega la etiqueta <a>  --> 
+      
+      <a href="LINKCUPON" style="display: inline-block; text-decoration: none; color: {{color_texto_mail_general}}; ">
+      <div> 
+        
+        <!-- el src de la siguiente imagen se reemplaza por el usuario --> 
+        
+        <img role="imagenfull" border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; border-radius: 0px 0px 0px 0px;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/17zBTLASXQzFtt9NtEP3h0qudKBhcZRMA"> 
+        
+        <!-- esta imagen no se puede quitar del cupón --> 
+        <img  border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; line-height: 0px;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="{{body_container_img_dots}}">
+        <div  style="float: left; text-align:left; padding: 6px; word-break: break-all; width: 100%;"> 
+          
+          <!-- MOLECULA TEXTO + PASTILLA: se puede cambiar el orden de las celdas "th" o se puede usar una sola, texto o pastilla, es decir que se debe poder apagar el th que no se quiere usar -->
+          
+          <table style="margin: 0px;">
+            <thead>
+              <tr> 
+                <!-- Celda pastilla -->
+                <th> <div style="background: {{bg_tag_contenedor_mail_general}}; padding: 4px 7px; border-radius: 30px;">
+                    <h5 role="molecula-texto" style="color:{{color_tag_tipografia_mail_general}}; ">Solo en</h5>
+                  </div>
+                </th>
+                
+                <!-- Celda texto -->
+                <th style=" "> <div>
+                    <h5 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">Restaurantes</h5>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+          </table>
+          <div> 
+            
+            <!-- en el siguiente span se inserta el texto, permite usar modificadores de texto
+-->
+            
+            <h1 role="molecula-texto" style="color:{{color_acento2_mail_general}}; margin:0; text-align: left;">Aca un<br>
+              markdown</h1>
+          </div>
+          <div class="separador-S"></div>
+          
+          <!-- en el siguient bullet permite modificar el icono y el texto,se puede quitar el ícono quitando todo el <td> -->
+          
+          <div role="componente">
+            <table border="0" cellpadding="0" cellspacing="0" style="margin: {{alineado_molecular_mail_body}}; width: 90%;">
+              <tr>
+                <td width="15px" valign="top" style="text-align: left;"><img role="molecula-iconoS"  src="https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-" width="15" style="display: block; line-height: 15px;" alt="img"></td>
+                
+                <!-- celda 2 -->
+                
+                <td valign="top" style="padding-left: 7px; text-align: left;"><h4 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">Cupón xxxxxxxxxxx </h4></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      </a></td>
+    
+    <!-- CELDA DE CUPÓN: En esta celda se puede cambiar el orden de las moléculas, elminar molecular o agregar moleculas nuevas  -->
+    
+    <td role="cupon" width="50%" style="width: 50%; vertical-align: top; border-radius: {{body_container_background_radius}}; background: {{bg_contenedor1_hex_mail_general}};  " ><!-- si la celda de cupon se activa par hacer clickeable, se agrega la etiqueta <a>  --> 
+      
+      <a href="LINKCUPON" style="display: inline-block; text-decoration: none; color: {{color_texto_mail_general}}; ">
+      <div> 
+        
+        <!-- el src de la siguiente imagen se reemplaza por el usuario --> 
+        
+        <img role="imagenfull" border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; border-radius: 0px 0px 0px 0px;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/17zBTLASXQzFtt9NtEP3h0qudKBhcZRMA"> 
+        
+        <!-- esta imagen no se puede quitar del cupón --> 
+        <img  border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; line-height: 0px;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="{{body_container_img_dots}}">
+        <div  style="float: left; text-align:left; padding: 6px; word-break: break-all; width: 100%;"> 
+          
+          <!-- MOLECULA TEXTO + PASTILLA: se puede cambiar el orden de las celdas "th" o se puede usar una sola, texto o pastilla, es decir que se debe poder apagar el th que no se quiere usar -->
+          
+          <table style="margin: 0px;">
+            <thead>
+              <tr> 
+                <!-- Celda pastilla -->
+                <th> <div style="background: {{bg_tag_contenedor_mail_general}}; padding: 4px 7px; border-radius: 30px;">
+                    <h5 role="molecula-texto" style="color:{{color_tag_tipografia_mail_general}}; ">Solo en</h5>
+                  </div>
+                </th>
+                
+                <!-- Celda texto -->
+                <th style=" "> <div>
+                    <h5 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">Restaurantes</h5>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+          </table>
+          <div> 
+            
+            <!-- en el siguiente span se inserta el texto, permite usar modificadores de texto
+-->
+            
+            <h1 role="molecula-texto" style="color:{{color_acento2_mail_general}}; margin:0; text-align: left;">Aca un<br>
+              markdown</h1>
+          </div>
+          <div class="separador-S"></div>
+          
+          <!-- en el siguient bullet permite modificar el icono y el texto,se puede quitar el ícono quitando todo el <td> -->
+          
+          <div role="componente">
+            <table border="0" cellpadding="0" cellspacing="0" style="margin: {{alineado_molecular_mail_body}}; width: 90%;">
+              <tr>
+                <td width="15px" valign="top" style="text-align: left;"><img role="molecula-iconoS"  src="https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-" width="15" style="display: block; line-height: 15px;" alt="img"></td>
+                
+                <!-- celda 2 -->
+                
+                <td valign="top" style="padding-left: 7px; text-align: left;"><h4 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">Cupón xxxxxxxxxxx </h4></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      </a></td>
+  </tr>
+  
+  <!-- SECCION LEGALES: La sección de legales viene desactivada por defecto, si se activa se activan las dos celdas, igual que las celdas superiores se puede quitar el contenido pero no la celda  -->
+  
+  <tr> 
+    
+    <!-- CELDA DE LEGALES 1 -->
+    
+    <td width="50%" style="width: 50%;" ><div style="padding: 6px 0px; vertical-align: top;   "> 
+        <!-- Texto Legales:  se debo poder cambiar el texto, si se quita, se elimina la etiqueta completa --> 
+        <span role="molecula-texto" class="legal" style="color:{{color_textos_legales_mail_general}}; margin:0; display: block;">Aplican términos y condiciones | </span> </div></td>
+    
+    <!-- CELDA DE LEGALES 2 -->
+    
+    <td width="50%" style="width: 50%;" ><div style="padding: 6px 0px; vertical-align: top;   "> 
+        <!-- Texto Legales:  se debo poder cambiar el texto, si se quita, se elimina la etiqueta completa --> 
+        <span role="molecula-texto" class="legal" style="color:{{color_textos_legales_mail_general}}; margin:0; display: block;">Aplican términos y condiciones | </span> </div></td>
+  </tr>
+</table>
+
+<!-- FIN CUPONES este es el fin de la tabla para 2 cupones, si hay otro par se repite la tabla --> 
+

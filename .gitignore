@@ -12,9 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Generado por scripts/sync-master.mjs a partir de los archivos maestro de la raíz
-src/assets/templates
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

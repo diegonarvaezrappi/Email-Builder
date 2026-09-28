@@ -1,0 +1,41 @@
+<!-- 
+MODULO 1-COLUMNA:
+
+
+VARIACIONES:
+
+El usuario puede desactivar el fondo del contenedor,
+si el usuario desactiva el fondo del contenedor se afectan las vairables "Fondo" y "SinFondo" del liquid
+
+CONTENIDO: dentro se pueden insertar varios "divcomponentes",dentro de divcomponentes se insertan las moléculas 
+
+entre una molécula y otra siempre debe haber un  <div class="separador-M"> </div>
+
+Si el usuario activa la opción de hacer el modulo clickeable se debe agregar la etiqueta <a> cubriendo todlo el contenedor, si no se debe eliminar 
+
+-->
+<a href="LINKMODULO">
+<div style="display: contents;">
+  <table role="module" border="0" cellpadding="0" cellspacing="0" width="100%" style="table-layout: fixed; margin: 0px auto; max-width: 480px; " >
+    <tbody>
+      <tr>
+        <td style="padding:0px 0px 0px 0px; line-height:23px; text-align:inherit; " height="100%" valign="top" bgcolor="" role=""><div role="contenedorgeneral" style="background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;">
+            <div role="divcomponentes" style="display: inline-block; padding: {{body_container_background_padding}};"> 
+              <!-- aqui las moleculas--> 
+              
+            </div>
+            
+            <!-- Si en este módulo no hay imagen, debe eliminarse la etiqueta completa
+- la imagen siempre va a aparte de la div role="divcomponentes" 
+- si hay moleculas debajo de la iamgen se repite una  role="divcomponentes" 
+--> 
+            <img role="imagen-auto" border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; max-width: 480px; margin: 0 auto; border-radius: 0px 0px 0px 0px;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1OEXxNDtUklgU4W8sta2zOzdZ4rZYq7PO"> 
+            <!-- Este border radius se debe poder modificar por el usuario--> 
+            <!-- Este src se debe poder modificar por el usuario--> 
+            
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</a> 

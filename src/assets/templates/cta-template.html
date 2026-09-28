@@ -1,0 +1,311 @@
+<!--
+-----------------------
+Copy-related variables:
+-----------------------
+{% assign text_cta = text_cta | truncate: 35 %}
+
+----------------------------
+-------- STYLE LOOK --------
+----------------------------
+{% assign style_Look = style_Look | default: 'neon' %}
+
+
+{% if style_Look == 'neon' %}
+  {% assign color_letra = '#FFFFFF' %}
+	{% assign background_color = '#fe3f23' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1nr8bEAHLTRZUgJ5_L5ferBN00pKHbN8z' %}
+	{% assign estilomobile = 'none' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'blanconeon' %}
+ 	{% assign color_letra = '#000000' %}
+	{% assign background_color = '#FFFFFF' %}
+	{% assign cta_bg_frame = '' %}
+	{% assign estilomobile = 'borde_mobile' %}
+
+{% elsif style_Look == 'blanco' %}
+ 	{% assign color_letra = '#000000' %}
+	{% assign background_color = '#FFFFFF' %}
+	{% assign cta_bg_frame = '' %}
+	{% assign estilomobile = 'borde_mobile' %}
+
+
+{% elsif style_Look == 'negroneon' %}
+ 	{% assign color_letra = '#FFFFFF' %}
+	{% assign background_color = '#000000' %}
+	{% assign cta_bg_frame = '' %}
+	{% assign estilomobile = 'borde_mobile' %}
+
+{% elsif style_Look == 'verde' %}
+ 	{% assign color_letra = '#FFFFFF' %}
+	{% assign background_color = '#34C85A' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1NgcU1KTy39QByBOGIxXB9Z8RQaM16NM6' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'problack' %}
+ 	{% assign color_letra = '#FFFFFF' %}
+	{% assign background_color = '#000000' %}
+	{% assign estilomobile = 'borde_mobile' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+
+{% elsif style_Look == 'pro' %}
+ 	{% assign color_letra = '#000000' %}
+	{% assign background_color = '#FFFFFF' %}
+	{% assign estilomobile = 'borde_mobile' %}
+{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+
+{% elsif style_Look == 'blancogris' %}
+ 	{% assign color_letra = '#000000' %}
+	{% assign background_color = '#FFFFFF' %}
+	{% assign cta_bg_frame = '' %}
+	{% assign estilomobile = 'borde_mobile' %}
+{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+
+{% elsif style_Look == 'negrogris' %}
+ 	{% assign color_letra = '#FFFFFF' %}
+	{% assign background_color = '#000000' %}
+	{% assign cta_bg_frame = '' %}
+	{% assign estilomobile = 'borde_mobile' %}
+{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+
+{% elsif style_Look == 'gris100' %}
+ 	{% assign color_letra = '#000000' %}
+	{% assign background_color = '#C9CDD2' %}
+	{% assign estilomobile = 'borde_mobile' %}
+{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+
+{% elsif style_Look == 'beige100' %}
+ 	{% assign color_letra = '#633D11' %}
+	{% assign background_color = '#E5B67F' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'beige150' %}
+ 	{% assign color_letra = '#633D11' %}
+	{% assign background_color = '#E5B67F' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'rosa100' %}
+ 	{% assign color_letra = '#4F145E' %}
+	{% assign background_color = '#CA80D2' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'purpura100' %}
+ 	{% assign color_letra = '#4C2B8C' %}
+	{% assign background_color = '#9F80E5' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+	{% assign estilomobiletxt = 'none' %}
+
+{% elsif style_Look == 'celeste100' %}
+ 	{% assign color_letra = '#0F3749' %}
+	{% assign background_color = '#7DBFDC' %}
+	{% assign cta_bg_frame = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+	{% assign estilomobiletxt = 'none' %}
+
+
+{% endif %}
+-->
+
+<head>
+	
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- BLOQUEO de dark mode: los templates traen sus colores de marca y el
+     auto-dark de Apple Mail (iOS/macOS) los reinterpretaba (fondo oscuro →
+     gris claro). "light only" declara que el correo SOLO soporta su esquema
+     tal cual — Apple Mail lo respeta y no toca nada. Gmail ignora estas
+     metas, pero su transformación sí respeta fondos de color. -->
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<!--[if !mso]><!-->
+	
+<style type="text/css">
+body a {
+    text-decoration: none !important;
+}
+a {
+    text-decoration: none !important;
+}
+.ii a[href] {
+    color: inherit!important;
+    text-decoration: none!important;
+}
+
+@media (max-width:480px) {
+.borde_mobile {
+    border: 1px solid rgba(125, 129, 136, 0.5) !important;
+    border-radius: 100px !important;
+}
+	
+.cta-mobiletxt {
+	font-size: 14px !important;
+	line-height: 15px!important; 
+}
+	
+.cta-mobiletxts {
+	font-size: 12px !important;
+	line-height: 13px!important; 
+}
+}
+
+@media (max-width:620px) {
+.borde_mobile {
+    border: 1px solid rgba(125, 129, 136, 0.5) !important;
+    border-radius: 100px !important;
+}
+.cta-mobiletxt {
+	font-size: 14px !important;
+	line-height: 15px!important; 
+}
+}
+</style>
+</head>
+<body style="width: 100%; height:auto;font-family:Helvetica,Tahoma,Verdana,Sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; padding: 0; Margin: 0;">
+
+<!-- Botón CTA --> 
+<a originalsrc="{{deeplink_cta}}" data-auth="NotApplicable" rel="noopener noreferrer" target="_blank" href="{{deeplink_cta}}" data-linkindex="0" style="text-decoration: none; color: {{color_letra}};">
+	
+	  <!--{% if cta_size == 'small'  %}-->
+	
+	<div style="margin-top: 7px;"> 
+  <!--{% if cta_alineado == 'left'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="width: auto;  border-radius: 60px; overflow: hidden; margin-bottom: 5px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 7px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 4px; text-decoration: none;"><div class="cta-mobiletxts" style="font-size: 14px; line-height: 15px; text-align: left; color: {{color_letra}}; padding: 3px 6px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% elsif cta_alineado == 'center'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: auto; border-radius: 60px; overflow: hidden; margin-bottom: 5px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 7px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;   padding: 4px; text-decoration: none;"><div class="cta-mobiletxts" style="font-size: 14px; line-height: 15px; text-align: center; color: {{color_letra}}; padding: 3px 6px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% else %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: auto;  border-radius: 60px; overflow: hidden; margin-bottom: 5px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 7px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 4px; text-decoration: none;"><div class="cta-mobiletxts" style="font-size: 14px; line-height: 15px; text-align: center; color: {{color_letra}}; padding: 3px 6px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  <!--{% endif %}--> 
+  
+</div>
+
+	
+	  <!--{% elsif cta_size == 'big'  %}-->
+	
+	
+	<div style=" margin-top: 10px"> 
+  <!--{% if cta_alineado == 'left'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="width: 100%; max-width: 480px;  border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: left; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="padding-right: 30px; font-weight: bold;">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% elsif cta_alineado == 'center'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: 100%; max-width: 480px; border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;   padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: center; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="font-weight: bold; ">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% else %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: 100%; max-width: 480px; border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: center; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="font-weight: bold;">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  <!--{% endif %}--> 
+  
+</div>
+		
+	<!--{% else %}-->
+  
+	<div style=" margin-top: 10px"> 
+  <!--{% if cta_alineado == 'left'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="width: 100%; max-width: 480px;  border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: left; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="padding-right: 30px; font-weight: bold;">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% elsif cta_alineado == 'center'  %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: 100%; max-width: 480px; border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;   padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: center; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="font-weight: bold; ">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  
+  <!--{% else %}-->
+  
+  <table class="{{estilomobile}}" bgcolor="{{background_color}}" cellpadding="0" cellspacing="0"  style="margin: 0 auto; width: 100%; max-width: 480px; border-radius: 60px; overflow: hidden; margin-bottom: 10px; " valign="middle" >
+    <tbody>
+      <tr style="border-radius: 55px; overflow: hidden; text-decoration: none; padding: 0px 10px; background-image: url({{cta_bg_frame}}); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+        <td height="100%" style="border-radius: 55px;  padding: 8px; text-decoration: none;"><div class="cta-mobiletxt" style="font-size: 16px; line-height: 18px; text-align: center; color: {{color_letra}}; padding: 5px 10px; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif; margin: 0 auto;"> <span style="font-weight: bold;">{{text_cta}}</span> <!-- TEXTO CTA --> 
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+  <!--{% endif %}--> 
+  
+</div>
+	
+
+	
+	  <!--{% endif %}--> 
+	
+	
+</a>
+</body>
+
+<!-- /Botón CTA End -->
+<!--
+---------------------
+/* CLEAN VARIABLES */
+---------------------
+Style related variables:
+{% assign cta_alineado = '' %}
+{% assign cta_size = '' %}
+{% assign text_cta = '' %}
+{% assign deeplink_cta = '' %}
+{% assign style_Look = '' %}
+
+-->
+

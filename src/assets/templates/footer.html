@@ -1,0 +1,160 @@
+<!-- FOOTER: la siguiente tabla se conserva siempre completa nunca se omite
+
+IMPORTANTE: debe estar en esta ubicación, por fuera del contenedor CONTENTS
+
+SIEMPRE QUE SE CAMBIE EL FOOTER POR RTS O REST B2B SE DEBE CAMBIAR EL CTA TAMBIEN, POR EL DEFINIDO PARA CADA UNO 
+RTS: {{content_blocks.${CTA_Q4_2024}}}
+REST B2B: {{content_blocks.${cta_general}}}
+
+
+
+Existen 4 tipos de footer a selección del usuario
+Cada uno maneja algunas variables distintas
+
+
+ -->
+
+
+<!-- FOOTER USERS GENERAL:
+
+ -->
+
+
+
+{% assign cond = '' %} 
+<!--DENTRO DE LAS COMILLAS SE AGREGA EL TEXTO PROPORCIONADO COMO "Legales adicionales" 
+                           
+
+si hay un link dentro del texto se debe insertar dentro de la etiqueta: <a href="linkaqui" style="text-decoration: none; color: color_texto_mail_general">linkaqui</a>
+                                          
+ --> 
+
+{% assign firma = '' %}
+<!--DENTRO DE LAS COMILLAS SE CAMBIA LA OPCIÓN DE FIRMA variantes
+
+'sinfirma' para los mails que debe ir sin firma, y para temas pro y problack
+'turbo' para los mail de turbo        
+'general' para los mails full users        
+
+OJO: esta variable SOLO la lee la variante GENERAL. El footer SIMPLE va sin
+firma y sin botón de WhatsApp: si el mail usa FOOTER_VERSION2, esta línea no
+tiene efecto.
+
+ --> 
+
+
+{% assign show_legal_tyc = true %} 
+<!-- siempre que Legal promos = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+{% assign show_legal_turbo = true %} 
+<!-- siempre que Legal turbo  = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+{% assign show_legal_liquor = true %} 
+
+<!-- siempre que Legal licores = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+
+
+
+{% assign font_style_look = 'negro' %} 
+
+<!--DENTRO DE LAS COMILLAS SE CAMBIA EL ESTILO
+variantes por tema  --> 
+
+{{content_blocks.${FOOTER_q1_2024_legales}}}  <!-- esta linea no se mueve es la que llama el content block --> 
+
+
+
+<!-- --------------------------------------------------------------------> 
+
+
+
+<!-- FOOTER USERS SIMPLE:
+
+ -->
+
+
+
+{% assign cond = '' %} 
+<!--DENTRO DE LAS COMILLAS SE AGREGA EL TEXTO PROPORCIONADO COMO "Legales adicionales" 
+                           
+
+si hay un link dentro del texto se debe insertar dentro de la etiqueta: <a href="linkaqui" style="text-decoration: none; color: color_texto_mail_general">linkaqui</a>
+                                          
+ --> 
+
+{% assign show_legal_tyc = true %} 
+<!-- siempre que Legal promos = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+{% assign show_legal_turbo = true %} 
+<!-- siempre que Legal turbo  = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+{% assign show_legal_liquor = true %} 
+
+<!-- siempre que Legal licores = TRUE esta variable debe setearse en true, de lo contrario como false  --> 
+
+
+{% assign font_style_look = 'negro' %} 
+
+<!--DENTRO DE LAS COMILLAS SE CAMBIA EL ESTILO
+variantes por tema  --> 
+
+
+{{content_blocks.${FOOTER_VERSION2}}}  <!-- esta linea no se mueve es la que llama el content block --> 
+
+
+<!-- --------------------------------------------------------------------> 
+
+
+
+
+<!-- FOOTER RTS:
+
+ -->
+
+
+
+{% assign cond = '' %} 
+<!--DENTRO DE LAS COMILLAS SE AGREGA EL TEXTO PROPORCIONADO COMO "Legales adicionales" 
+                           
+
+si hay un link dentro del texto se debe insertar dentro de la etiqueta: <a href="linkaqui" style="text-decoration: none; color: color_texto_mail_general">linkaqui</a>
+                                          
+ --> 
+
+{% assign font_style_look = 'negro' %} 
+
+<!--DENTRO DE LAS COMILLAS SE CAMBIA EL ESTILO
+variantes por tema  --> 
+
+
+{{content_blocks.${FOOTER_RTS_q3_2024_legales}}}  <!-- esta linea no se mueve es la que llama el content block --> 
+
+<!-- --------------------------------------------------------------------> 
+
+
+
+
+<!-- FOOTER REST B2B:
+
+ -->
+
+{% assign font_style_look = 'negro' %} 
+
+<!--DENTRO DE LAS COMILLAS SE CAMBIA EL ESTILO
+variantes por tema  --> 
+
+
+
+{% assign cond = '' %} 
+<!--DENTRO DE LAS COMILLAS SE AGREGA EL TEXTO PROPORCIONADO COMO "Legales adicionales" 
+                           
+
+si hay un link dentro del texto se debe insertar dentro de la etiqueta: <a href="linkaqui" style="text-decoration: none; color: color_texto_mail_general">linkaqui</a>
+                                          
+ --> 
+
+{{content_blocks.${FOOTER_ALIADOS}}}  <!-- esta linea no se mueve es la que llama el content block --> 
+
+
+<!-- --------------------------------------------------------------------> 
+
+
+<!--FIN FOOTER -->
+
+

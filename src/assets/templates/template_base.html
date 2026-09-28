@@ -1,0 +1,852 @@
+<!doctype html>
+<html>
+
+<!-- ============================================================================
+     ESTRUCTURA GENERAL DEL MAIL — esqueleto
+
+     Este archivo es el ANDAMIO, no un mail armado. Contiene:
+       · los contenedores que siempre existen y nunca se editan
+       · un comentario en cada hueco diciendo QUÉ componente se inserta allí
+
+     Todo lo que vive como archivo aparte en 02-components/ se ha quitado y
+     reemplazado por su comentario. Para armar un mail real: copia este
+     esqueleto y pega dentro de cada hueco el archivo que corresponda.
+
+     El mail tiene TRES SECCIONES, en este orden:
+       1 · HERO      header + banner + imagen full width      (dentro de un solo <a>)
+       2 · CONTENTS  el CTA reglamentario + los módulos de contenido
+       3 · FOOTER    fuera de las dos anteriores
+
+     Referencia viva: 06-examples/template_maestro_original.html
+     ============================================================================ -->
+
+<head>
+<script type="application/ld+json">
+[
+  {
+    "@context": "http://schema.org/",
+    "@type": "Organization",
+    "logo": "https://braze-images.com/appboy/communication/assets/image_assets/images/5bc61374a12f74108a3dea94/original.png"
+  }
+]
+</script>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- BLOQUEO de dark mode: los templates traen sus colores de marca y el
+     auto-dark de Apple Mail (iOS/macOS) los reinterpretaba (fondo oscuro →
+     gris claro). "light only" declara que el correo SOLO soporta su esquema
+     tal cual — Apple Mail lo respeta y no toca nada. Gmail ignora estas
+     metas, pero su transformación sí respeta fondos de color. -->
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<!--[if !mso]><!-->
+<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+<!--<![endif]-->
+<!--[if (gte mso 9)|(IE)]>
+          <xml>
+            <o:OfficeDocumentSettings>
+              <o:AllowPNG/>
+              <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+          </xml>
+          <![endif]-->
+<!--[if (gte mso 9)|(IE)]>
+      <style type="text/css">
+        body {width: 600px;margin: 0 auto;}
+        table {border-collapse: collapse;}
+        table, td {mso-table-lspace: 0pt;mso-table-rspace: 0pt;}
+        img {-ms-interpolation-mode: bicubic;}
+      </style>
+    <![endif]-->
+<style type="text/css">
+
+:root {
+    color-scheme: light only;
+    supported-color-schemes: light only;
+}
+
+body, p, div {
+    font-family: arial, helvetica, sans-serif;
+    font-size: 14px;
+}
+body {
+    padding: 0px;
+    margin: 0px;
+}
+h1 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 26px;
+    line-height: 29px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+h2 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 21px;
+    line-height: 23px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+h3 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 16px;
+    line-height: 18px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+h4 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 16px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+h5 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 12px;
+    line-height: 14px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+h6 {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 10px;
+    line-height: 12px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+.legal {
+    margin: 0;
+    padding: 0;
+    font-weight: normal;
+    font-size: 8px;
+    line-height: 10px;
+    word-break: break-word;
+    font-family: arial, helvetica, sans-serif;
+}
+/* ===== BANNER "texto vivo" (bnr-*) - Escritorio =====
+   .bnr-xl, .bnr-lg, .bnr-md, .bnr-hasta-xl, .bnr-hasta-lg y .bnr-sm (horizontal y vertical)
+   se quitaron de aquí: todas ya tienen su tamaño de escritorio aplicado inline en los
+   módulos de banner_atoms/ (créditos, promo, texto XL, texto M, "Ahora", "DE REINTEGRO").
+   Las clases se conservan solo para el override de mobile (@media). */
+table.wrapper {
+    width: 100% !important;
+    table-layout: fixed;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+img.max-width {
+    max-width: 100% !important;
+}
+.separador {
+    height: 16px;
+}
+.separador-M {
+    height: 10px;
+}
+.separador-S {
+    height: 4px;
+}
+.desktop_hide, .desktop_hide table {
+    mso-hide: all;
+    display: none;
+    max-height: 0;
+    overflow: hidden
+}
+
+@media (max-width:480px) {
+.preheader .rightColumnContent, .footer .rightColumnContent {
+    text-align: left !important;
+}
+.preheader .rightColumnContent div, .preheader .rightColumnContent span, .footer .rightColumnContent div, .footer .rightColumnContent span {
+    text-align: left !important;
+}
+.preheader .rightColumnContent, .preheader .leftColumnContent {
+    font-size: 80% !important;
+    padding: 5px 0;
+}
+table.wrapper-mobile {
+    width: 100% !important;
+    table-layout: fixed;
+}
+img.max-width {
+    height: auto !important;
+    max-width: 100% !important;
+}
+a.bulletproof-button {
+    display: block !important;
+    width: auto !important;
+    font-size: 80%;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+.fondomobile {
+    background-size: 150% auto !important;
+}
+/* estilos del header
+*/	
+	
+.bg-headermobile {
+    background-size: cover !important;
+}
+#HEADER1 .logo-base1 {
+    height: 28px !important;
+    max-height: 28px !important;
+    min-height: 28px !important;
+}
+#HEADER1 .cobranding-s {
+    height: auto !important;
+    max-height: 31px !important;
+}
+#HEADER1 .cobranding-m {
+    height: auto !important;
+    max-height: 34px !important;
+}
+#HEADER1 .cobranding-l {
+    height: auto !important;
+    max-height: 38px !important;
+}
+#HEADER1 .cobranding-xl {
+    height: auto !important;
+    max-height: 43px !important;
+}
+/* TAMAÑO 2 - Turbo, Pro, ProBlack, Defensoría */
+#HEADER2 .logo-base2 {
+    height: 24px !important;
+    max-height: 24px !important;
+    min-height: 24px !important;
+}
+#HEADER2 .cobranding-s {
+    height: auto !important;
+    max-height: 26px !important;
+}
+#HEADER2 .cobranding-m {
+    height: auto !important;
+    max-height: 29px !important;
+}
+#HEADER2 .cobranding-l {
+    height: auto !important;
+    max-height: 33px !important;
+}
+#HEADER2 .cobranding-xl {
+    height: auto !important;
+    max-height: 38px !important;
+}
+/* TAMAÑO 3 - Turbo Rest */
+#HEADER3 .logo-base3 {
+    height: 32px !important;
+    max-height: 32px !important;
+    min-height: 32px !important;
+}
+#HEADER3 .cobranding-s {
+    height: auto !important;
+    max-height: 35px !important;
+}
+#HEADER3 .cobranding-m {
+    height: auto !important;
+    max-height: 38px !important;
+}
+#HEADER3 .cobranding-l {
+    height: auto !important;
+    max-height: 44px !important;
+}
+#HEADER3 .cobranding-xl {
+    height: auto !important;
+    max-height: 51px !important;
+}
+/* TAMAÑO 4 - RappiEntregador y Contenido aliado */
+#HEADER4 .logo-base4 {
+    height: 20px !important;
+    max-height: 20px !important;
+    min-height: 20px !important;
+}
+#HEADER4 .cobranding-s {
+    height: auto !important;
+    max-height: 22px !important;
+}
+#HEADER4 .cobranding-m {
+    height: auto !important;
+    max-height: 24px !important;
+}
+#HEADER4 .cobranding-l {
+    height: auto !important;
+    max-height: 27px !important;
+}
+#HEADER4 .cobranding-xl {
+    height: auto !important;
+    max-height: 30px !important;
+}
+.altobanner1 {
+    height: 85vw !important;
+}
+.altodeal1 {
+    height: 30vw !important;
+}
+.alto-auto {
+    height: auto !important;
+}
+.alineado-center {
+    text-align: center !important;
+    margin: 0 auto !important;
+}
+h1 {
+    font-size: 24px!important;
+    line-height: 27px!important;
+}
+h2 {
+    font-size: 19px!important;
+    line-height: 21px!important;
+}
+h3 {
+    font-size: 14px!important;
+    line-height: 16px!important;
+}
+h4 {
+    font-size: 12px!important;
+    line-height: 14px!important;
+}
+h5 {
+    font-size: 10px!important;
+    line-height: 12px!important;
+}
+h6 {
+    font-size: 8px!important;
+    line-height: 10px!important;
+}
+.legal {
+    font-size: 6px!important;
+    line-height: 8px!important;
+}
+/* ===== BANNER "texto vivo" (bnr-*) - Mobile: ambas orientaciones convergen ===== */
+#BANNER_HORIZONTAL .bnr-xl, #BANNER_VERTICAL .bnr-xl {
+    font-size: 110px!important;
+    line-height: 111px!important;
+}
+#BANNER_HORIZONTAL .bnr-lg, #BANNER_VERTICAL .bnr-lg {
+    font-size: 63px!important;
+    line-height: 64px!important;
+}
+#BANNER_HORIZONTAL .bnr-md, #BANNER_VERTICAL .bnr-md {
+    font-size: 45px!important;
+    line-height: 46px!important;
+}
+#BANNER_HORIZONTAL .bnr-hasta-xl, #BANNER_VERTICAL .bnr-hasta-xl {
+    font-size: 27px!important;
+    line-height: 28px!important;
+}
+#BANNER_HORIZONTAL .bnr-hasta-lg, #BANNER_VERTICAL .bnr-hasta-lg {
+    font-size: 16px!important;
+    line-height: 17px!important;
+}
+#BANNER_HORIZONTAL .bnr-sm, #BANNER_VERTICAL .bnr-sm {
+    font-size: 17px!important;
+    line-height: 20px!important;
+}
+.mobile_hide {
+    min-height: 0;
+    max-height: 0;
+    max-width: 0;
+    display: none;
+    overflow: hidden;
+    font-size: 0
+}
+.desktop_hide, .desktop_hide table {
+    display: table!important;
+    max-height: none!important
+}
+.beneficios-mob {
+    width: 50%!important;
+}
+	
+.mobile_paading {
+	padding-left: 15px!important;
+	padding-right: 15px!important;
+}
+}
+
+@media (max-width:620px) {
+.preheader .rightColumnContent, .footer .rightColumnContent {
+    text-align: left !important;
+}
+.preheader .rightColumnContent div, .preheader .rightColumnContent span, .footer .rightColumnContent div, .footer .rightColumnContent span {
+    text-align: left !important;
+}
+.preheader .rightColumnContent, .preheader .leftColumnContent {
+    font-size: 80% !important;
+    padding: 5px 0;
+}
+table.wrapper-mobile {
+    width: 100% !important;
+    table-layout: fixed;
+}
+img.max-width {
+    height: auto !important;
+    max-width: 100% !important;
+}
+a.bulletproof-button {
+    display: block !important;
+    width: auto !important;
+    font-size: 80%;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+.fondomobile {
+    background-size: 150% auto !important;
+}
+/* estilos del header
+*/	
+	
+	
+.bg-headermobile {
+    background-size: cover !important;
+}
+#HEADER1 .logo-base1 {
+    height: 28px !important;
+    max-height: 28px !important;
+    min-height: 28px !important;
+}
+#HEADER1 .cobranding-s {
+    height: auto !important;
+    max-height: 31px !important;
+}
+#HEADER1 .cobranding-m {
+    height: auto !important;
+    max-height: 34px !important;
+}
+#HEADER1 .cobranding-l {
+    height: auto !important;
+    max-height: 38px !important;
+}
+#HEADER1 .cobranding-xl {
+    height: auto !important;
+    max-height: 43px !important;
+}
+/* TAMAÑO 2 - Turbo, Pro, ProBlack, Defensoría */
+#HEADER2 .logo-base2 {
+    height: 24px !important;
+    max-height: 24px !important;
+    min-height: 24px !important;
+}
+#HEADER2 .cobranding-s {
+    height: auto !important;
+    max-height: 26px !important;
+}
+#HEADER2 .cobranding-m {
+    height: auto !important;
+    max-height: 29px !important;
+}
+#HEADER2 .cobranding-l {
+    height: auto !important;
+    max-height: 33px !important;
+}
+#HEADER2 .cobranding-xl {
+    height: auto !important;
+    max-height: 38px !important;
+}
+/* TAMAÑO 3 - Turbo Rest */
+#HEADER3 .logo-base3 {
+    height: 32px !important;
+    max-height: 32px !important;
+    min-height: 32px !important;
+}
+#HEADER3 .cobranding-s {
+    height: auto !important;
+    max-height: 35px !important;
+}
+#HEADER3 .cobranding-m {
+    height: auto !important;
+    max-height: 38px !important;
+}
+#HEADER3 .cobranding-l {
+    height: auto !important;
+    max-height: 44px !important;
+}
+#HEADER3 .cobranding-xl {
+    height: auto !important;
+    max-height: 51px !important;
+}
+/* TAMAÑO 4 - RappiEntregador y Contenido aliado */
+#HEADER4 .logo-base4 {
+    height: 20px !important;
+    max-height: 20px !important;
+    min-height: 20px !important;
+}
+#HEADER4 .cobranding-s {
+    height: auto !important;
+    max-height: 22px !important;
+}
+#HEADER4 .cobranding-m {
+    height: auto !important;
+    max-height: 24px !important;
+}
+#HEADER4 .cobranding-l {
+    height: auto !important;
+    max-height: 27px !important;
+}
+#HEADER4 .cobranding-xl {
+    height: auto !important;
+    max-height: 30px !important;
+}
+.altobanner1 {
+    height: 85vw !important;
+}
+.altodeal1 {
+    height: 30vw !important;
+}
+.alto-auto {
+    height: auto !important;
+}
+.alineado-center {
+    text-align: center !important;
+    margin: 0 auto !important;
+}
+h1 {
+    font-size: 24px!important;
+    line-height: 27px!important;
+}
+h2 {
+    font-size: 19px!important;
+    line-height: 21px!important;
+}
+h3 {
+    font-size: 14px!important;
+    line-height: 16px!important;
+}
+h4 {
+    font-size: 12px!important;
+    line-height: 14px!important;
+}
+h5 {
+    font-size: 10px!important;
+    line-height: 12px!important;
+}
+h6 {
+    font-size: 8px!important;
+    line-height: 10px!important;
+}
+.legal {
+    font-size: 6px!important;
+    line-height: 8px!important;
+}
+/* ===== BANNER "texto vivo" (bnr-*) - Mobile: ambas orientaciones convergen ===== */
+#BANNER_HORIZONTAL .bnr-xl, #BANNER_VERTICAL .bnr-xl {
+    font-size: 110px!important;
+    line-height: 111px!important;
+}
+#BANNER_HORIZONTAL .bnr-lg, #BANNER_VERTICAL .bnr-lg {
+    font-size: 63px!important;
+    line-height: 64px!important;
+}
+#BANNER_HORIZONTAL .bnr-md, #BANNER_VERTICAL .bnr-md {
+    font-size: 45px!important;
+    line-height: 46px!important;
+}
+#BANNER_HORIZONTAL .bnr-hasta-xl, #BANNER_VERTICAL .bnr-hasta-xl {
+    font-size: 27px!important;
+    line-height: 28px!important;
+}
+#BANNER_HORIZONTAL .bnr-hasta-lg, #BANNER_VERTICAL .bnr-hasta-lg {
+    font-size: 16px!important;
+    line-height: 17px!important;
+}
+#BANNER_HORIZONTAL .bnr-sm, #BANNER_VERTICAL .bnr-sm {
+    font-size: 17px!important;
+    line-height: 20px!important;
+}
+.mobile_hide {
+    min-height: 0;
+    max-height: 0;
+    max-width: 0;
+    display: none;
+    overflow: hidden;
+    font-size: 0
+}
+.desktop_hide, .desktop_hide table {
+    display: table!important;
+    max-height: none!important
+}
+.beneficios-mob {
+    width: 50%!important;
+}
+	
+.mobile_paading {
+	padding-left: 15px!important;
+	padding-right: 15px!important;
+}
+}
+</style>
+</head>
+
+<body>
+
+<center class="wrapper" data-link-color="#fe3f23" data-body-style="font-size:14px; font-family:arial,helvetica,sans-serif; background-color:{{bg_solid_mail_general}};">
+  <div class="webkit">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" class="wrapper" bgcolor="{{bg_solid_mail_general}}">
+      <tr>
+
+        <!-- fondo general del mail: color sólido + imagen de tema -->
+        <td valign="top" bgcolor="{{bg_solid_mail_general}}" width="100%" style="background-image: url({{bg_img_mail_general}}); background-size: {{bg_img_size_mail_general}}; background-position: center top; background-repeat: repeat-x;">
+          <table width="100%" role="content-container" class="outer" align="center" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+
+              <!-- capa opcional de imagen de evento, por encima del fondo de tema -->
+              <td class="fondomobile" width="100%" style="background-image: url({{bg_imgevento_mail_general}}); background-size: 100% auto; background-position: center top; background-repeat: no-repeat">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td>
+
+                      <!-- IMPORTANTE: en el html final siempre debe estar el siguiente comentario -->
+                      <!--[if mso]>
+                      <center>
+                      <table><tr><td width="600">
+                      <![endif]-->
+
+                      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; " align="center" bgcolor="">
+                        <tr>
+
+                          <!-- CONTENEDOR GENERAL -->
+                          <td style="padding:0px 0px 0px 0px; text-align:left;" bgcolor="" width="100%" align="left">
+
+                            <table role="paddedcontainer" border="0" cellpadding="0" cellspacing="0" align="center" width="100%" data-type="columns" style="padding:0px 0px 0px 0px;" bgcolor="">
+                              <tbody>
+                                <tr>
+                                  <td height="100%" valign="top">
+
+
+                                    <!-- ═══════════════════════════════════════════════
+                                         1 · HERO SECTION
+                                         ═══════════════════════════════════════════════
+                                         La parte superior del mail. Contiene, en este orden:
+                                         header · banner · imagen full width.
+
+                                         · El <a> envuelve TODO el HERO: ninguno de sus
+                                           componentes lleva link propio (dos <a> anidados
+                                           no son válidos).
+                                         · El <div> usa display:contents para no romper el
+                                           layout de tablas.
+                                         · Los banners van dentro de un <div class="mobile_paading">,
+                                           que les da el padding lateral en mobile. La imagen
+                                           full width NO lo lleva: ocupa los 600px completos. -->
+
+                                    <a role="horizontal" originalsrc="AQUIELLINKDELBANNER" data-auth="NotApplicable" rel="noopener noreferrer" target="_blank" href="AQUIELLINKDELBANNER" data-linkindex="0" style="text-decoration: none; display: block; ">
+                                    <div style="display:contents;">
+
+                                      <table role="HERO-SECTION" width="600" style="width:600px; border-spacing:0; margin:0px;  border-collapse: collapse; word-break: break-all; " cellpadding="0" cellspacing="0" align="left" border="0" bgcolor="" class="column column-1">
+                                        <tbody>
+                                          <tr>
+
+                                            <!-- el background-image es reemplazable: es el fondo del bloque superior -->
+                                            <td style="padding:14px 0px 0px 0px;margin:0px;border-spacing:0; vertical-align: middle; background-image: url(https://lh3.googleusercontent.com/d/1neHPofSevbcNLyO2pymbZk6QHZSrJO5-); background-size: 100% auto; background-position: center top;overflow: hidden;">
+
+                                              <!-- 1.1 · CONTENEDOR HEADER
+                                                   Esta tabla se conserva siempre; dentro va UNA
+                                                   celda de header. -->
+                                              <table width="600" style="width:600px; border-spacing:0; margin:14px 0px 0px 0px; " cellpadding="0" cellspacing="0" align="center" border="0" bgcolor="" class="column column-1">
+                                                <tbody>
+
+                                                  <!-- ▸ AQUÍ VA EL HEADER
+                                                       Uno solo de los 40 archivos de 02-components/01_headers/
+                                                       Ruta: 01_headers/<marca>/<centrado|columnas>-<claro|oscuro>.html
+                                                       La marca fija el tamaño; no se elige. -->
+
+                                                </tbody>
+                                              </table>
+
+                                              <!-- ▸ AQUÍ VA EL BANNER
+                                                   UNO de los dos, nunca ambos:
+                                                   · 02-components/02_banners/big-banner-horizontal.html  (tabla de 480px)
+                                                   · 02-components/02_banners/big-banner-vertical.html    (tabla de 600px)
+                                                   Cada archivo ya trae su propio <div class="mobile_paading">. -->
+
+                                              <!-- ▸ AQUÍ VA LA IMAGEN FULL WIDTH
+                                                   02-components/02_banners/imagen-full-width.html
+                                                   Opcional. Sin mobile_paading: ocupa los 600px completos. -->
+
+                                            </td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+
+                                    </div>
+                                    </a>
+                                    <!-- ═══════ FIN HERO SECTION ═══════ -->
+
+
+                                    <!-- ═══════════════════════════════════════════════
+                                         2 · CONTENTS SECTION
+                                         ═══════════════════════════════════════════════
+                                         El interior del mail. A diferencia del HERO, NO va
+                                         envuelta en un <a>: aquí cada módulo decide si es
+                                         clickeable y lleva su propio <a href="LINKMODULO">. -->
+
+                                    <div style="display:contents;">
+
+                                      <table role="CONTENTS-SECTION" width="600" style="width:600px; border-spacing:0; margin:0px;  border-collapse: collapse; word-break: break-all; " cellpadding="0" cellspacing="0" align="left" border="0" bgcolor="" class="column column-1">
+                                        <tbody>
+                                          <tr>
+
+                                            <!-- mismo fondo que el HERO, para que la pieza se lea continua -->
+                                            <td style="padding:14px 0px 0px 0px;margin:0px;border-spacing:0; vertical-align: middle; background-image: url(https://lh3.googleusercontent.com/d/1neHPofSevbcNLyO2pymbZk6QHZSrJO5-); background-size: 100% auto; background-position: center top; overflow: hidden;">
+
+                                              <!-- 2.1 · WRAPPER DE CONTENIDOS
+                                                   02-components/04_content-modules/_contenidos_wrapper.html
+                                                   Tabla de 480px centrada. Su <td> lleva mobile_paading:
+                                                   de ahí sale el margen lateral en mobile. No se edita:
+                                                   solo se le insertan cosas dentro. -->
+                                              <table width="480" style="width:480px; border-spacing:0; margin:10px auto; word-break: break-all; margin: 0 auto; " cellpadding="0" cellspacing="0" align="center" border="0" bgcolor="" class="column column-0">
+                                                <tbody>
+                                                  <tr>
+                                                    <td class="mobile_paading" style="padding:0px;margin:0px;border-spacing:0;">
+
+                                                      <!-- ▸ AQUÍ VA EL CTA REGLAMENTARIO
+                                                           02-components/03_ctas/cta-llamado.html
+                                                           Obligatorio y SIEMPRE el primer elemento de CONTENTS.
+                                                           Ya no va pegado debajo del banner: el banner vive
+                                                           dentro del HERO. -->
+
+                                                      <!-- ▸ AQUÍ VAN LOS MÓDULOS DE CONTENIDO
+                                                           Se apilan uno debajo de otro, en el orden que pida
+                                                           la fuente, SIEMPRE con un separador de por medio.
+
+                                                           Módulos disponibles (02-components/04_content-modules/):
+                                                             · title/modulo-titulo.html
+                                                             · bullet/modulo_bullet.html
+                                                             · 1columna/modulo-1columna.html
+                                                             · 2columnas/modulo-2-columnas.html
+                                                             · 3columnas/modulo-3-columnas.html
+                                                             · benefits/modulo-beneficios.html
+                                                             · deals/deal_columnas.html
+                                                             · coupons/cupones-modulo.html
+                                                             · logos/modulo-logos.html
+                                                           Y CTAs adicionales con 03_ctas/cta-llamado.html.
+
+                                                           ───────────────────────────────────────────────
+                                                           REGLA DE SEPARADORES — los tres niveles
+                                                           ───────────────────────────────────────────────
+                                                           <div class="separador"></div>    16px
+                                                               Entre dos MÓDULOS de contenido.
+                                                               OBLIGATORIO: siempre que insertes un módulo
+                                                               debajo de otro.
+
+                                                           <div class="separador-M"></div>  10px
+                                                               Entre dos MOLÉCULAS dentro de un módulo.
+
+                                                           <div class="separador-S"></div>   4px
+                                                               Entre dos ELEMENTOS dentro de una molécula.
+
+                                                           Los tres son divs vacíos que solo aportan altura;
+                                                           las clases están en global-styles.html. Si quitas
+                                                           una pieza, quita también su separador.
+
+                                                           No confundir con molecula_separador_s.html, que es
+                                                           una línea decorativa (role="molecula-separador"),
+                                                           no un espaciador.
+                                                           ───────────────────────────────────────────────
+
+                                                           Ejemplo del patrón:
+
+                                                             [ módulo título ]
+                                                             <div class="separador"></div>
+                                                             [ módulo deals ]
+                                                             <div class="separador"></div>
+                                                             [ módulo cupones ]
+                                                      -->
+
+                                                    </td>
+                                                  </tr>
+                                                </tbody>
+                                              </table>
+
+                                            </td>
+                                          </tr>
+                                        </tbody>
+                                      </table>
+
+                                    </div>
+                                    <!-- ═══════ FIN CONTENTS SECTION ═══════ -->
+
+
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <!-- ═══════════════════════════════════════════════
+                                 3 · FOOTER
+                                 ═══════════════════════════════════════════════
+                                 Va FUERA del role="paddedcontainer" y fuera de HERO
+                                 y CONTENTS, pero dentro de la tabla de 600px. Esa
+                                 ubicación es obligatoria, no es casual.
+
+                                 Se conserva siempre completo: si la fuente no dice
+                                 nada, se deja tal cual está en la base.
+
+                                 Las variables de abajo lo gobiernan:
+                                   font_style_look   color del footer, por tema
+                                   firma             general | turbo | pro | (vacío = sin firma)
+                                   show_legal_*      qué bloques legales se muestran -->
+
+                            {% assign cond = '' %}
+                            {% assign font_style_look = 'beige100' %}
+                            {% assign show_legal_tyc = true %}
+                            {% assign firma = 'general' %}
+                            {% assign show_legal_turbo = true %}
+                            {% assign show_legal_liquor = true %}
+
+                            {{content_blocks.${FOOTER_q1_2024_legales}}}
+
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!--[if mso]>
+                      </td>
+                      </tr>
+                      </table>
+                      </center>
+                      <![endif]-->
+
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+</center>
+</body>
+</html>

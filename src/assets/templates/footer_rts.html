@@ -1,0 +1,513 @@
+<!-- ============================================================================
+     FOOTER RTS (Repartidores)
+     ============================================================================
+     Reescrito el 2026-09-17 sobre la ESTRUCTURA DEL FOOTER GENERAL: misma
+     franja superior (firma + botones), misma fila de links y mismo bloque de
+     legales. Lo que cambia es el contenido, que es el de repartidores.
+
+     Diferencias de fondo con el General:
+       · NO lleva legales de Turbo, de licores ni de membresía Pro.
+       · Los links de la fila son los de RTS (T&C de repartidores, blog propio).
+       · Los canales no son solo WhatsApp: según el país son WhatsApp, Telegram
+         o Facebook, y en MX y CO son DOS.
+       · La firma es el bigote en los 11 temas — RTS no cambia de firma por país.
+
+     Los 11 temas del STYLE LOOK son los mismos del General, para que el footer
+     de repartidores responda al tema del mail igual que el de usuarios.
+     ============================================================================ -->
+
+<!--
+----------------------------
+-------- STYLE LOOK --------
+----------------------------
+Replicado del footer general. En RTS los tres canales (WhatsApp, Telegram y
+Facebook) comparten color de texto y de borde: es el tema el que manda, no la
+marca del canal. Lo único propio de cada canal es su logo.
+
+{% assign font_style_look = font_style_look | default: 'negro' %}
+
+	{% if font_style_look == 'negro' %}
+		{% assign color_letra = '#7D8188' %}
+		{% assign color_borde_footer = ' 1px solid #7D8188' %}
+		{% assign color_textwa = '#7D8188' %}
+		{% assign color_bordewa = '2px solid #7D8188' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'beige100' %}
+		{% assign color_letra = '#633D11' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#633D11' %}
+		{% assign color_bordewa = '2px solid #633D11' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'beige150' %}
+		{% assign color_letra = '#633D11' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'rosa100' %}
+		{% assign color_letra = '#4F145E' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'purpura100' %}
+		{% assign color_letra = '#4C2B8C' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'celeste100' %}
+		{% assign color_letra = '#0F3749' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'verde100' %}
+		{% assign color_letra = '#102E14' %}
+		{% assign color_borde_footer = '1px solid #102E14' %}
+		{% assign color_textwa = '#102E14' %}
+		{% assign color_bordewa = '2px solid #102E14' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'gris100' %}
+		{% assign color_letra = '#000000' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#000000' %}
+		{% assign color_bordewa = '2px solid #000000' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'pro' %}
+		{% assign color_letra = '#9EA1A2' %}
+		{% assign color_borde_footer = '1px solid #9EA1A2' %}
+		{% assign color_textwa = '#9EA1A2' %}
+		{% assign color_bordewa = '2px solid #9EA1A2' %}
+		{% assign color_fondowa = 'rgba(244,149,2,0.0)' %}
+		{% assign show_hr = true %}
+
+	{% elsif font_style_look == 'problack' %}
+		{% assign color_letra = '#000000' %}
+		{% assign color_borde_footer = '1px solid #000000' %}
+		{% assign color_textwa = '#000000' %}
+		{% assign color_bordewa = '2px solid #000000' %}
+		{% assign color_fondowa = 'rgba(244,149,2,0.0)' %}
+		{% assign show_hr = true %}
+
+	{% else %}
+		{% assign color_letra = '#7D8188' %}
+		{% assign color_borde_footer = '1px solid #7D8188' %}
+		{% assign color_textwa = '#7D8188' %}
+		{% assign color_bordewa = '2px solid #7D8188' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign show_hr = false %}
+
+{% endif %}
+
+
+----------------------------------
+------ LOGOS DE LOS CANALES ------
+----------------------------------
+Uno por canal, igual en los 11 temas — como el walogo del footer general.
+
+{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+{% assign tglogo = 'https://lh3.googleusercontent.com/d/1P1Wd1eZMixGEKaRNR1nqSEXx5djz-nDH' %}
+{% assign fblogo = 'https://lh3.googleusercontent.com/d/1GF91p8HSGfq7Wf_mP6T6yZl4OiJE541C' %}
+
+
+----------------------------------
+--------------- FIRMA -------------
+----------------------------------
+RTS no cambia de firma por país ni por tema: siempre el bigote.
+
+{% assign img-firma = 'https://lh3.googleusercontent.com/d/1PnaP1k0YqwVbr3oMvLIHnWdGopEH23lR' %}
+
+
+----------------------------------
+--------- LEGALES · RTS ----------
+----------------------------------
+Los textos de repartidores. Ocupan el lugar que en el footer general tienen
+aplican_tyc / bottom_line_1 / bottom_line_2, y se arman en dos piezas:
+
+  Legal_blog + blog_url  ->  "Por favor no responder este mail, en caso de
+                              dudas consultar nuestro blog."
+  razon_social           ->  las tres líneas siguientes: por qué recibe el
+                              mail, el copyright y la firma "Soy Rappi - XX".
+
+RTS no tiene legales de Turbo, de licores ni de membresía Pro.
+
+{% if ${user_id} contains 'AR' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.com.ar" %}
+	{% assign razon_social = "Recibiste este mail porque sos nuestro usuario. | Copyright © Rappi ARG S.A.S. Todos los derechos reservados. <b>Soy Rappi - AR</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/argentina/politica-de-privacidad-de-rappi/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com/argentina/terminos-y-condiciones-rappitenderos-3/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/argentina/terminos-y-condiciones-de-rappi/" %}
+
+{% elsif ${user_id} contains 'BR' %}
+	{% assign Legal_blog = "Por favor não responder este e-mail, em caso de dúvidas, pode consultar nosso" %}
+	{% assign blog_url = "https://rappientregador.com.br/" %}
+	{% assign razon_social = "Você recebeu este e-mail porque está cadastrado na nossa base de dados. | Copyright © Rappi Brasil Intermediação de Negócios LTDA. Todos os direitos reservados. <b>Rappi Entregador - BR</b>" %}
+	{% assign centro_ayuda = "Central de ajuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidade" %}
+	{% assign terminos_y_condiciones = "Termos e Condições" %}
+	{% assign cancelar_suscription = "Cancelar inscrição" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/brazil/aviso-de-privacidade-e-politicas-de-uso-das-informacao-utilizadas-pela-rappi/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com/brazil/termos-e-condicoes-de-uso-de-plataforma-virtual-entregador-rappi/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/brasil/termos-e-condicoes/" %}
+
+{% elsif ${user_id} contains 'CO' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.com.co" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © RAPPI S.A.S. Todos los derechos reservados. <b>Soy Rappi - CO</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/colombia/politica-de-proteccion-y-tratamiento-de-datos-personales-rappi-s-a-s/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/colombia/terminos-y-condiciones-de-uso-de-plataforma-rappi-2/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/colombia/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'CL' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.cl" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © Rappi Chile SpA. Todos los derechos reservados. <b>Soy Rappi - CL</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/chile/politica-de-privacidad/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/chile/terminos-y-condiciones-consumidores-rappi/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/chile/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'CR' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.co.cr" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © Rappi Pura Vida S.A. Todos los derechos reservados. <b>Soy Rappi - CR</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/costa-rica/politica-de-privacidad-de-rappi-2/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/costa-rica/terminos-y-condiciones-app-soy-rappi/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/costarica/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'EC' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soy-rappi.com.ec" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © Rappiec S.A. Todos los derechos reservados. <b>Soy Rappi - EC</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/ecuador/politica-de-privacidad-de-rappi-y-tratamiento-de-datos-persolanes/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/ecuador/terminos-y-condiciones-rappitenderos-5/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/ecuador/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'MX' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.com.mx" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © Tecnologías Rappi S.A.P.I. de C.V. Todos los derechos reservados. <b>Soy Rappi - MX</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/mexico/aviso-de-privacidad-usuarios/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/mexico/terminos-condiciones-de-uso-de-plataforma-virtual-rappitendero/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/mexico/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'PE' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.com.pe" %}
+	{% assign razon_social = "Recibiste este mail porque eres nuestro usuario. | Copyright © Rappi S.A.C. Todos los derechos reservados. <b>Soy Rappi - PE</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/peru/politica-de-privacidad-de-rappi-y-tratamiento-de-datos-personales/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/peru/terminos-y-condiciones-rappitenderos-2/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/peru/terminos-y-condiciones/" %}
+
+{% elsif ${user_id} contains 'UY' %}
+	{% assign Legal_blog = "Por favor no responder este mail, en caso de dudas consultar nuestro" %}
+	{% assign blog_url = "https://soyrappi.com.uy" %}
+	{% assign razon_social = "Recibiste este mail porque sos nuestro usuario. | Copyright © Brisanier SA - Rappi Uruguay Todos los derechos reservados. <b>Soy Rappi - UY</b>" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/uruguay/aviso-de-privacidad/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com/uruguay/terminos-y-condiciones-rappitenderos/" %}
+	{% assign cancelar_suscription_url = "https://legal.rappi.com.co/uruguay/terminos-y-condiciones/" %}
+
+{% else %}
+	{% abort_message('No country in user_id') %}
+{% endif %}
+
+El centro de ayuda de repartidores es el mismo en los 9 países.
+{% assign centro_ayuda_url = "https://rt.onelink.me/NnNe/2ua4h902" %}
+
+
+----------------------------------
+------------ CANALES -------------
+----------------------------------
+El equivalente a la franja de WhatsApp del footer general, pero RTS no usa
+siempre WhatsApp: según el país el canal es WhatsApp, Telegram o Facebook, y
+en MX y CO son DOS. Se resuelve con el mismo modelo de dos botones de ProBlack.
+
+  MX  WhatsApp + Telegram        CO  Telegram + Facebook
+  BR  WhatsApp                   AR · CL · CR · EC · PE · UY  Facebook
+
+{% assign show_canal2 = false %}
+
+-- el copy de la franja solo cambia por el voseo --
+{% if ${user_id} contains 'AR' or ${user_id} contains 'UY' or ${user_id} contains 'CR' %}
+	{% assign canales_copy = "Encontrá en nuestros canales<br><strong>información exclusiva</strong>" %}
+{% else %}
+	{% assign canales_copy = "Encuentra en nuestros canales<br><strong>información exclusiva</strong>" %}
+{% endif %}
+
+-- alto de la celda de la firma: solo escritorio. Las dos media queries del
+   <head> lo pisan con height:auto!important, así que en mobile no aplica.
+   Con dos botones la franja crece y hay que equilibrarla. --
+{% assign alto_firma = '90px' %}
+
+{% if ${user_id} contains 'MX' %}
+	{% assign canal1_logo = walogo %}
+	{% assign canal1_copy = "Canal de whatsapp" %}
+	{% assign canal1_link = "https://www.whatsapp.com/channel/0029Vb5nAyD59PwJfNTiCR2j" %}
+	{% assign canal2_logo = tglogo %}
+	{% assign canal2_copy = "Canal de telegram" %}
+	{% assign canal2_link = "http://t.me/comunicacionsoyrappimx" %}
+	{% assign show_canal2 = true %}
+	{% assign alto_firma = '130px' %}
+
+{% elsif ${user_id} contains 'CO' %}
+	{% assign canal1_logo = tglogo %}
+	{% assign canal1_copy = "Canal de telegram" %}
+	{% assign canal1_link = "https://t.me/ComunicacionesSoyRappi" %}
+	{% assign canal2_logo = fblogo %}
+	{% assign canal2_copy = "Canal de facebook" %}
+	{% assign canal2_link = "https://www.facebook.com/soyrappicolombia/?locale=es_LA" %}
+	{% assign show_canal2 = true %}
+	{% assign alto_firma = '130px' %}
+
+{% elsif ${user_id} contains 'BR' %}
+	{% assign canal1_logo = walogo %}
+	{% assign canal1_copy = "Canal de whatsapp" %}
+	{% assign canal1_link = "https://chat.whatsapp.com/KkLsgjNcpGX2W8vuWQMiQ7?s=cl&p=i&ilr=0" %}
+
+{% elsif ${user_id} contains 'AR' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	{% assign canal1_link = "https://www.facebook.com/SoyRappiAR/" %}
+
+{% elsif ${user_id} contains 'CL' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	{% assign canal1_link = "https://www.facebook.com/soyrappichile/" %}
+
+{% elsif ${user_id} contains 'CR' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	{% assign canal1_link = "https://www.facebook.com/SoyRappiCR/" %}
+
+{% elsif ${user_id} contains 'EC' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	{% assign canal1_link = "https://www.facebook.com/SoyRappiEC/" %}
+
+{% elsif ${user_id} contains 'PE' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	OJO: este link venía apuntando a whatsapp.com en el archivo anterior. Se
+	conserva tal cual hasta que se confirme el canal real de Facebook de PE.
+	{% assign canal1_link = "https://www.whatsapp.com/channel/0029Vb5nAyD59PwJfNTiCR2j" %}
+
+{% elsif ${user_id} contains 'UY' %}
+	{% assign canal1_logo = fblogo %}
+	{% assign canal1_copy = "Canal de facebook" %}
+	Mismo caso que PE: el link apunta a whatsapp.com en el archivo anterior.
+	{% assign canal1_link = "https://www.whatsapp.com/channel/0029Vb5nAyD59PwJfNTiCR2j" %}
+
+{% endif %}
+
+-->
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- BLOQUEO de dark mode: los templates traen sus colores de marca y el
+     auto-dark de Apple Mail (iOS/macOS) los reinterpretaba (fondo oscuro →
+     gris claro). "light only" declara que el correo SOLO soporta su esquema
+     tal cual — Apple Mail lo respeta y no toca nada. Gmail ignora estas
+     metas, pero su transformación sí respeta fondos de color. -->
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<!--[if !mso]><!-->
+
+<style type="text/css">
+body a {
+    text-decoration: none !important;
+}
+a {
+    text-decoration: none !important;
+}
+.ii a[href] {
+    color: inherit!important;
+    text-decoration: none!important;
+}
+
+@media (max-width:480px) {
+.txtfooter {
+    font-size: 8px!important;
+    line-height: 8px !important;
+}
+.txtfooterwas {
+    font-size: 14px!important;
+    line-height: 13px !important;
+}
+.altofooter1 {
+    height: auto!important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+}
+
+@media (max-width:620px) {
+.txtfooter {
+    font-size: 8px!important;
+    line-height: 8px !important;
+}
+.txtfooterwas {
+    font-size: 14px!important;
+    line-height: 13px !important;
+}
+.altofooter1 {
+    height: auto!important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+}
+</style>
+</head>
+<body style="width: 100%; height:auto;font-family:Helvetica,Tahoma,Verdana,Sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; padding: 0px; Margin: 0; border-spacing: 0;">
+<div style="padding: 0px 15px">
+  <table width="480" style="width:480px; border-spacing:0; border-collapse: separate; margin:30px auto;" cellpadding="0" cellspacing="0" align="center" border="0" bgcolor="" class="column column-0">
+    <tbody>
+      <tr valign="middle">
+        <td style="padding:0px 0px;margin:0px;border-spacing:0; vertical-align: middle; "><div>
+            <table width="240" style="width:240px;" cellpadding="0" cellspacing="0" align="left" border="0" class="column column-0">
+              <tbody>
+                <tr>
+                  <td class="altofooter1" style="margin:0px;border-spacing:0; overflow: hidden; vertical-align: bottom; height: {{alto_firma}};"><img border="0" height="25" style="display:block; color:#000000; text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px; height: auto; max-height: 25px;  width: auto; max-width: 200px; margin-bottom: 10px;" alt="-" data-proportionally-constrained="true" data-responsive="false" src="{{img-firma}}"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table width="240" style="width:240px; padding: 0px 0px 0px 0px" cellpadding="0" cellspacing="0" align="left" border="0"  class="column column-1">
+              <tbody>
+                <tr style="" >
+                  <td class="altofooter1" style="padding:0px 0px 7px 0px;margin:0px;border-spacing:0;vertical-align: top;  text-align: left; "><div style=""> 
+                      <!-- COPY DE LA FRANJA
+                           Fuera de los <a>: lo comparten los dos botones. -->
+                      <span class="txtfooterwas" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 16px; line-height: 15px;  color: {{color_letra}}; "> {{canales_copy}} </span>
+
+                      <!-- BOTÓN 1 · CANAL PRINCIPAL — SIEMPRE
+                           WhatsApp, Telegram o Facebook según el país. -->
+                      <a href="{{canal1_link}}" target="_blank" style="text-decoration: none; ">
+                      <div>
+                        <table class="btn_wa" style="border-radius: 55px; padding: 0px 2px; text-decoration: none; vertical-align: middle; border:{{color_bordewa}}; width: auto; text-decoration: none; margin-top: 7px;" valign="middle">
+                          <tbody>
+                            <tr>
+                              <td style=" vertical-align: middle;">
+                                <div style="text-align: left; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;  "> <span style="font-size: 12px; "><img border="0" alt="" style="height: 21px;max-height: 21px; min-height: 21px; width: auto; padding-top: 1px; line-height: 2px;" src="{{canal1_logo}}"></span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td> <td style=" vertical-align: middle;">
+                                <div style="text-align: left; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;padding: 0px 5px; "> <span style="font-size: 14px; ">{{canal1_copy}}</span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      </a>
+
+                      <!-- BOTÓN 2 · SEGUNDO CANAL — SOLO MX Y CO -->
+                      {% if show_canal2 %}
+                      <a href="{{canal2_link}}" target="_blank" style="text-decoration: none; ">
+                      <div>
+                        <table class="btn_wa" style="border-radius: 55px; padding: 0px 2px; text-decoration: none; vertical-align: middle; border:{{color_bordewa}}; width: auto; text-decoration: none; margin-top: 7px;" valign="middle">
+                          <tbody>
+                            <tr>
+                              <td style=" vertical-align: middle;">
+                                <div style="text-align: left; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;  "> <span style="font-size: 12px; "><img border="0" alt="" style="height: 21px;max-height: 21px; min-height: 21px; width: auto; padding-top: 1px; line-height: 2px;" src="{{canal2_logo}}"></span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td> <td style=" vertical-align: middle;">
+                                <div style="text-align: left; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;padding: 0px 5px; "> <span style="font-size: 14px; ">{{canal2_copy}}</span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      </a>
+                      {% endif %}
+                      </div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div></td>
+      </tr>
+      <tr style="">
+        <td style="padding:0px 0px;margin:0px; vertical-align: middle; border-top: {{color_borde_footer}}; padding-top: 7px; text-align: left; "><div> <a href="{{centro_ayuda_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{centro_ayuda}} </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <a href="{{aviso_privacidad_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{aviso_privacidad}} </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <a href="{{terminos_y_condiciones_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{terminos_y_condiciones}} </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <a href="{{${set_user_to_unsubscribed_url}}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{cancelar_suscription}} </span></a> </div>
+          <div>
+            <!-- LEGALES RTS — sin Turbo, sin licores, sin membresía Pro -->
+            <p style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none; font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 12px;  padding: 0px; margin: 0 auto; max-width: 480px; color: {{color_letra}}; text-align: left;">
+              {{Legal_blog}} <a href="{{blog_url}}" style="text-decoration: none; color: {{color_letra}} ">blog</a> | 
+              {{razon_social}} |  <!--{% if cond != nil %}--> {{cond}} <!--{% endif %}--> 
+            </p>
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+<!--
+---------------------
+/* CLEAN VARIABLES */
+---------------------
+Style related variables:
+{% assign font_style_look = '' %}
+{% assign color_letra = '' %}
+{% assign cond = '' %}
+-->

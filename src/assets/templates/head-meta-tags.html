@@ -1,0 +1,663 @@
+<!-- EJEMPLO DE DEFINICION DE TEMA  -->
+{% assign tema_general_mail_general = 'beige100' %}
+{% assign body_container_background = 'Fondo' %}
+
+<!-- EJEMPLO DE DEFINICION DE CAMPOS PARA BANNER  -->
+{% assign banner_copy_modulo_promo = '$200' %}
+{% assign banner_copy_modulo_creditos = '120' %}
+{% assign banner_copy_modulo_textoxl = '120' %}
+{% assign banner_copy_modulo_textom = 'de regalo para tu proxima compra' %}
+{% assign banner_img_modulo_auto_ancho = '100' %}
+
+<!-- EJEMPLO DE DEFINICION DE CAMPOS PARA BANNER  -->
+{% assign deals_copy_1_promo = 'promo promo' %}
+{% assign deals_copy_2_promo = 'promo promo promo promo promo promo promo promo promo promo promo promo promo promo promo ' %}
+
+<!-- LÍMITE DE 2 LÍNEAS: cada celda de deal mide ~50% de 480px (≈230px), con el título ahora en h4 (14px/15px, bold).
+     A ese ancho entran ~27-28 caracteres por línea, así que se trunca a 55 para no pasar de 2 líneas. -->
+{% assign deals_copy_1_promo = deals_copy_1_promo | truncate: 50 %}
+{% assign deals_copy_2_promo = deals_copy_2_promo | truncate: 50 %}
+
+<!-- EJEMPLO DE DEFINICION DE CAMPOS PARA BODY  -->
+{% assign body_alineado_molecular = 'left' %}
+{% assign body_img_modulo_auto_ancho = '90' %}
+
+<!--
+-----------------------
+Variables de largo de texto:
+-----------------------
+{% assign banner_copy_modulo_promo_length = banner_copy_modulo_promo.size %}
+
+{% if banner_copy_modulo_promo_length > 4 %}
+  {% assign banner_copy_modulo_prom_class = 'bnr-lg' %}
+  {% assign banner_copy_modulo_promo_fontsize = '35px' %}
+  {% assign banner_copy_modulo_promo_lineheight = '35px' %}
+  {% assign banner_copy_modulo_ahora_class = 'bnr-hasta-lg' %}
+  {% assign banner_copy_modulo_ahora_fontsize = '10px' %}
+  {% assign banner_copy_modulo_ahora_lineheight = '10px' %}
+  {% assign banner_copy_modulo_promo_fontsize_vertical = '62px' %}
+  {% assign banner_copy_modulo_promo_lineheight_vertical = '62px' %}
+  {% assign banner_copy_modulo_ahora_fontsize_vertical = '15px' %}
+  {% assign banner_copy_modulo_ahora_lineheight_vertical = '15px' %}
+
+
+{% else %}
+  {% assign banner_copy_modulo_prom_class = 'bnr-xl' %}
+  {% assign banner_copy_modulo_promo_fontsize = '80px' %}
+  {% assign banner_copy_modulo_promo_lineheight = '80px' %}
+  {% assign banner_copy_modulo_ahora_class = 'bnr-hasta-xl' %}
+  {% assign banner_copy_modulo_ahora_fontsize = '19px' %}
+  {% assign banner_copy_modulo_ahora_lineheight = '19px' %}
+  {% assign banner_copy_modulo_promo_fontsize_vertical = '125px' %}
+  {% assign banner_copy_modulo_promo_lineheight_vertical = '125px' %}
+  {% assign banner_copy_modulo_ahora_fontsize_vertical = '25px' %}
+  {% assign banner_copy_modulo_ahora_lineheight_vertical = '25px' %}
+{% endif %}
+
+{% assign banner_copy_modulo_creditos_length = banner_copy_modulo_creditos.size %}
+
+{% if banner_copy_modulo_creditos_length > 4 %}
+  {% assign banner_copy_modulo_creditos_class = 'bnr-lg' %}
+  {% assign banner_copy_modulo_creditos_fontsize = '35px' %}
+  {% assign banner_copy_modulo_creditos_lineheight = '35px' %}
+  {% assign banner_copy_modulo_creditos_fontsize_vertical = '62px' %}
+  {% assign banner_copy_modulo_creditos_lineheight_vertical = '62px' %}
+{% else %}
+  {% assign banner_copy_modulo_creditos_class = 'bnr-xl' %}
+  {% assign banner_copy_modulo_creditos_fontsize = '80px' %}
+  {% assign banner_copy_modulo_creditos_lineheight = '80px' %}
+  {% assign banner_copy_modulo_creditos_fontsize_vertical = '125px' %}
+  {% assign banner_copy_modulo_creditos_lineheight_vertical = '125px' %}
+{% endif %}
+
+{% assign banner_copy_modulo_textoxl_length = banner_copy_modulo_textoxl.size %}
+
+{% if banner_copy_modulo_textoxl_length > 4 %}
+  {% assign banner_copy_modulo_textoxl_class = 'bnr-lg' %}
+  {% assign banner_copy_modulo_textoxl_fontsize = '35px' %}
+  {% assign banner_copy_modulo_textoxl_lineheight = '35px' %}
+  {% assign banner_copy_modulo_textoxl_fontsize_vertical = '62px' %}
+  {% assign banner_copy_modulo_textoxl_lineheight_vertical = '62px' %}
+{% else %}
+  {% assign banner_copy_modulo_textoxl_class = 'bnr-xl' %}
+  {% assign banner_copy_modulo_textoxl_fontsize = '80px' %}
+  {% assign banner_copy_modulo_textoxl_lineheight = '80px' %}
+  {% assign banner_copy_modulo_textoxl_fontsize_vertical = '125px' %}
+  {% assign banner_copy_modulo_textoxl_lineheight_vertical = '125px' %}
+{% endif %}
+
+
+
+----------------------------
+-------- ALINEADO --------
+----------------------------
+
+{% if body_alineado_molecular == 'center' %}
+		
+	{% assign alineado_molecular_mail_body = '0 auto' %}
+
+	{% elsif body_alineado_molecular == 'left' %}
+		
+		{% assign alineado_molecular_mail_body = '0px' %}
+
+	{% endif %}
+
+
+
+----------------------------
+-------- TEMAS --------
+----------------------------
+-- Light mode únicamente. Ver CLAUDE.md sección 5 para los valores dark y las particularidades
+-- de temas invertidos (Dark neon/Turbo/Neutro) y premium (Pro/ProBlack).
+-- Nota: imagen1, imagen2 e imagenFondoEspecial usan la URL de referencia en lugar del tono
+-- del tema (placeholder para el asset final).
+
+
+	{% if tema_general_mail_general == 'beige100' %}
+		{% assign bg_solid_mail_general = '#FFF0DD' %}
+		{% assign bg_rgb_mail_general = 'rgba(255,240,221,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1aarZz2u-9HhLcCbUIMzhw4OKEqXOfOtn' %}
+		{% assign color_texto_mail_general = '#633D11' %}
+		{% assign color_textos_legales_mail_general = '#633D11' %}
+		{% assign color_acento1_mail_general = '#D89950' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(242,211,174,0.5)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#F2D3AE80' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+   		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+  		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(229,182,127,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(255,252,247,0.5)' %}
+  		{% assign color_tag_tipografia_mail_general = '#633D11' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1yRWK_Y4D29yxmHvesm9S4jB-TZcextF1' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1VvTU2Kb1tl-y3406qnQ1XwPkQ1nCaOw3' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1yFkdcBRKN2L4yUzqoxkcnR7uQvSJAT_u'%}
+		{% assign bg_descuento_mail_general = '#E5B67F' %}
+		{% assign color_descuento_mail_general = '#633D11' %}
+		{% assign bg_creditos_mail_general = '#E5B67F' %}
+		{% assign color_creditos_mail_general = '#633D11' %}
+   		 {% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(229,182,127,0.5)' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1pP3ezbCx5fQggjm1qgal8hoFzsMkmgZV' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'beige150' %}
+		{% assign bg_solid_mail_general = '#F9DFC6' %}
+		{% assign bg_rgb_mail_general = 'rgba(249,223,198,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1X4ki8WGVWgfCKQitORRpIC41IVsYJiGI' %}
+		{% assign color_texto_mail_general = '#633D11' %}
+		{% assign color_textos_legales_mail_general = '#633D11' %}
+   		{% assign color_tag_tipografia_mail_general = '#633D11' %}
+		{% assign color_acento1_mail_general = '#D89950' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(229,182,127,0.5)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#E5B67F80' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+    	{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+   		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(229,182,127,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(255,252,247,0.5)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1UBlu8zGS8YcXraFVstE7YVKxl1xzt47-' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1PtyEVzQjRbaBLhZAQJI04TNg_cIiw_fd' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1BI4wkXzdHBBLGd8WrueUm3LW91QjjRuH' %}
+		{% assign bg_descuento_mail_general = '#E5B67F' %}
+		{% assign color_descuento_mail_general = '#633D11' %}
+		{% assign bg_creditos_mail_general = '#E5B67F' %}
+		{% assign color_creditos_mail_general = '#633D11' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1aJ7WijQJt7iXbfXwwaiqFeLhfPzxoVMy' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'rosa100' %}
+		{% assign bg_solid_mail_general = '#FBE8FD' %}
+		{% assign bg_rgb_mail_general = 'rgba(251,232,253,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1L5YQm_wsEH5zEP58uR3vCRA6m0nVomm4' %}
+		{% assign color_texto_mail_general = '#4F145E' %}
+		{% assign color_textos_legales_mail_general = '#4F145E' %}
+   		{% assign color_tag_tipografia_mail_general = '#4F145E' %}
+		{% assign color_acento1_mail_general = '#B451C0' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(223,176,228,0.4)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#DFB0E466' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+  		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+  		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(202,128,210,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(255,252,255,0.5)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1MnvCxbAR8vvbVsTkfidUuUOfCdsaD-5H' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1EQFt7CZghdHjlCSkPPCaEF76hxwX5AEK' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1ED8xr5Umijx_P1UBm_GINvgYFX2mOd7I' %}
+		{% assign bg_descuento_mail_general = '#CA80D2' %}
+		{% assign color_descuento_mail_general = '#4F145E' %}
+		{% assign bg_creditos_mail_general = '#CA80D2' %}
+		{% assign color_creditos_mail_general = '#4F145E' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1w3ESdcKXn6YVQ71Z3yf_s9anX89Cd3vR' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+	
+	{% elsif tema_general_mail_general == 'purpura100' %}
+		{% assign bg_solid_mail_general = '#E8E2FB' %}
+		{% assign bg_rgb_mail_general = 'rgba(232,226,251,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1Seh52ptACWdUuPLKFW840SleeFk6rdjx' %}
+		{% assign color_texto_mail_general = '#0B1066' %}
+		{% assign color_textos_legales_mail_general = '#0B1066' %}
+  		{% assign color_tag_tipografia_mail_general = '#0B1066' %}
+		{% assign color_acento1_mail_general = '#7C52D8' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(194,174,242,0.4)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#C2AEF266' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+  		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+  		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(159,128,229,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(253,251,255,0.5)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1x15-m7PD47SZlxiT2HPD-wBLJoQnBc0I' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1OxBJDs-w8ZHhhLFi96zOspUdcv4Q0GBh' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1BccnQA85F_zsuyXHSqAOQkp95r-pSs-r' %}
+		{% assign bg_descuento_mail_general = '#9F80E5' %}
+		{% assign color_descuento_mail_general = '#0B1066' %}
+		{% assign bg_creditos_mail_general = '#9F80E5' %}
+		{% assign color_creditos_mail_general = '#0B1066' %}
+   		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1JNydUUqRaP2cNi23qt1TIuGbh_WdPh5N' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'celeste100' %}
+		{% assign bg_solid_mail_general = '#C8E9FE' %}
+		{% assign bg_rgb_mail_general = 'rgba(200,233,254,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1HYYs0e40tM9SUfp3UTIEHyEOJizpjH7w' %}
+		{% assign color_texto_mail_general = '#0F3749' %}
+		{% assign color_textos_legales_mail_general = '#0F3749' %}
+  		{% assign color_tag_tipografia_mail_general = '#0F3749' %}
+		{% assign color_acento1_mail_general = '#4DA5CB' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(125,191,220,0.4)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#7DBFDC66' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+   		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+   		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(125,191,220,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(253,255,255,0.5)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1YW0pc7_CBWnFC03qyYVH2TlfTTrRn_Ba' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1RfexpF58cGyac3reNL_hv2UgdWnsD-Mn' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/13tMkNrag4xCHpQh3HwLiTLnzHp6XEGAY' %}
+		{% assign bg_descuento_mail_general = '#7DBFDC' %}
+		{% assign color_descuento_mail_general = '#0F3749' %}
+		{% assign bg_creditos_mail_general = '#7DBFDC' %}
+		{% assign color_creditos_mail_general = '#0F3749' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1_McHe2rt53DPA3ViDfW0BFfMLJ2KtN63' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'verde100' %}
+		{% assign bg_solid_mail_general = '#CBFCD9' %}
+		{% assign bg_rgb_mail_general = 'rgba(203,252,217,0.7)' %}
+		{% assign bg_header_mail_general = 'https://lh3.googleusercontent.com/d/1QliQI_Qq79xbdO8LaX7vS4vBD7Ie_iov' %}
+		{% assign color_texto_mail_general = '#00453E' %}
+		{% assign color_textos_legales_mail_general = '#00453E' %}
+  		{% assign color_tag_tipografia_mail_general = '#CDFAD6' %}
+		{% assign color_acento1_mail_general = '#248F63' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(155,234,201,0.5)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#9BEAC980' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+ 		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+   		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(155,234,201,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(0,56,50,1.0)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1dRAz-A3H_qr-0Uk4ZK5RWEDAqlRbQ0dY' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1fzXKnHWld1LsZUZT9gmHjw2cKOq29fSV' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1e7KBvsgdwYU3Qls0QItHA7PqDNGe9Svv' %}
+		{% assign bg_descuento_mail_general = 'rgba(52,200,90,0.4)' %}
+		{% assign color_descuento_mail_general = '#003832' %}
+		{% assign bg_creditos_mail_general = 'rgba(52,200,90,0.4)' %}
+		{% assign color_creditos_mail_general = '#003832' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/1jNX4dfkyMV50m3dDiqn6BpMzdg1EgMc_' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'gris100' %}
+		{% assign color_texto_mail_general = '#191919' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+   		{% assign color_tag_tipografia_mail_general = '#191919' %}
+		{% assign color_acento1_mail_general = '#7D8188' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_solid_mail_general = '#ECEFF3' %}
+		{% assign bg_rgb_mail_general = 'rgba(236,239,243,0.7)' %}
+		{% assign bg_contenedor1_mail_general = '#FFFFFF' %}
+		{% assign bg_contenedor1_hex_mail_general = '#FFFFFFFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(255,255,255,0.5)' %}
+  		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.0)' %}
+  		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '0px 0px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(201,205,210,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(246,247,249,0.5)' %}
+		{% comment %} Imágenes: mismas que el tema 'problack', todavía no hay asset propio para Gris 100 {% endcomment %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1Wv02SvjwIjWU0Lf2GbDyGhoQCQhYoCOu' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1_F8tVia9lbp9aOmD24CqTSWzOebR5Wvr' %}
+		{% assign bg_descuento_mail_general = '#C9CDD2' %}
+		{% assign color_descuento_mail_general = '#191919' %}
+		{% assign bg_creditos_mail_general = '#C9CDD2' %}
+		{% assign color_creditos_mail_general = '#191919' %}
+   		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(255, 255, 255, 0.4)' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'darkneon' %}
+		{% assign bg_img_mail_general = 'https://lh3.googleusercontent.com/d/19KdV3950aiUjZLKiWGguOfkv3S18e0ME' %}
+		{% assign bg_img_size_mail_general = '100% auto' %}
+		{% assign bg_solid_mail_general = '#040404' %}
+		{% assign bg_rgb_mail_general = 'rgba(4,4,4,0.7)' %}
+		{% assign color_texto_mail_general = '#E2E2E2' %}
+		{% assign color_tag_tipografia_mail_general = '#E2E2E2' %}
+		{% assign color_acento1_mail_general = '#FFEBC2' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(29,29,29,1.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#1D1D1DFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(42,43,43,1.0)' %}
+   		{% assign bg_bannertono_mail_general = 'rgba(254,63,35,0.5)' %}
+  		{% assign bg_bannerimg_mail_general = 'https://lh3.googleusercontent.com/d/1qztlsmSfPI2eNsQ_ej-Y6oE7U94MGLSn' %}
+		{% assign padd_banner_mail_general = '15px 10px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd' %}
+		{% assign bg_banner_tono_mail_general = '#FE3F23' %}
+		{% assign bg_banner_tono_opacity_mail_general = '50%' %}
+		{% assign banner_gradiente_stop1_mail_general = '#FF7A4D' %}
+		{% assign banner_gradiente_stop2_mail_general = '#FF2526' %}
+		{% assign banner_gradiente_stop3_mail_general = '#FF4583' %}
+		{% assign banner_gradiente_opacity_mail_general = '50%' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+		{% assign bg_descuento_mail_general = '#2A2B2B' %}
+		{% assign color_descuento_mail_general = '#E2E2E2' %}
+		{% assign bg_creditos_mail_general = '#2A2B2B' %}
+		{% assign color_creditos_mail_general = '#E2E2E2' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(0,0,0,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(145, 154, 176, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'darkturbo' %}
+		{% assign bg_img_mail_general = 'https://lh3.googleusercontent.com/d/15kxD8-2ldRbzLtuC8c8CLpO1gFoyclKr' %}
+		{% assign bg_img_size_mail_general = '100% auto' %}
+		{% assign bg_solid_mail_general = '#040404' %}
+		{% assign bg_rgb_mail_general = 'rgba(4,4,4,0.7)' %}
+		{% assign color_texto_mail_general = '#E2E2E2' %}
+  		  {% assign color_tag_tipografia_mail_general = '#E2E2E2' %}
+		{% assign color_acento1_mail_general = '#F2ED93' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(29,29,29,1.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#1D1D1DFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(42,43,43,1.0)' %}
+    	{% assign bg_bannertono_mail_general = 'rgba(0,58,52,0.4)' %}
+  		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '15px 10px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(0,58,52,1.0)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(17,78,78,0.5)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd' %}
+		{% assign bg_banner_tono_mail_general = '#003A34' %}
+		{% assign bg_banner_tono_opacity_mail_general = '50%' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+		{% assign bg_descuento_mail_general = '#003A34' %}
+		{% assign color_descuento_mail_general = '#E2E2E2' %}
+		{% assign bg_creditos_mail_general = '#003A34' %}
+		{% assign color_creditos_mail_general = '#E2E2E2' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(0,0,0,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(145, 154, 176, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'darkneutro' %}
+		{% assign bg_img_mail_general = 'https://lh3.googleusercontent.com/d/15b2Dj9cVVtRrIXEJb4NZnOENgkIWx11E' %}
+		{% assign bg_img_size_mail_general = '100% auto' %}
+		{% assign bg_solid_mail_general = '#040404' %}
+		{% assign bg_rgb_mail_general = 'rgba(4,4,4,0.7)' %}
+		{% assign color_texto_mail_general = '#E2E2E2' %}
+		{% assign color_tag_tipografia_mail_general = '#E2E2E2' %}
+		{% assign color_acento1_mail_general = '#FFEBC2' %}
+		{% assign color_acento2_mail_general = '#FF441F' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(29,29,29,1.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#1D1D1DFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign bg_bannertono_mail_general = 'rgba(0,0,0,0.4)' %}
+		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '15px 10px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd' %}
+		{% assign bg_banner_tono_mail_general = '#000000' %}
+		{% assign bg_banner_tono_opacity_mail_general = '50%' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+		{% assign bg_descuento_mail_general = '#2A2B2B' %}
+		{% assign color_descuento_mail_general = '#E2E2E2' %}
+		{% assign bg_creditos_mail_general = '#2A2B2B' %}
+		{% assign color_creditos_mail_general = '#E2E2E2' %}
+		{% assign padd_deal_mail_general = '5px 0px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1e-aCBPdnaVeeOvzkzCzMs7TkI2jq3B_4' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(0,0,0,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1AJ_chYh5EZCiqNzNLRqyRE3IgIpB4U0l' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(145, 154, 176, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'pro' %}
+		{% assign bg_img_mail_general = 'https://lh3.googleusercontent.com/d/1NcvFMuLVHz-E19h0EbtvpzNKv_XH12hA' %}
+		{% assign bg_img_size_mail_general = '100% 100%' %}
+		{% assign bg_solid_mail_general = '#121212' %}
+		{% assign bg_rgb_mail_general = 'rgba(18,18,18,0.7)' %}
+		{% assign color_texto_mail_general = '#EEEEEE' %}
+		{% assign color_tag_tipografia_mail_general = '#EEEEEE' %}
+		{% assign color_acento1_mail_general = '#DAA868' %}
+		{% assign color_acento2_mail_general = '#A2A2A2' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(29,29,29,1.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#1D1D1DFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(4,4,4,1.0)' %}
+		{% assign bg_bannertono_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '15px 10px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(218,168,104,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(42,43,43,1.0)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd' %}
+		{% assign bg_banner_tono_mail_general = '#2A2B2B' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+		{% assign bg_descuento_mail_general = 'rgba(204,152,78,0.5)' %}
+		{% assign color_descuento_mail_general = '#FEE4C0' %}
+		{% assign bg_creditos_mail_general = 'rgba(204,152,78,0.5)' %}
+		{% assign color_creditos_mail_general = '#FEE4C0' %}
+		{% assign padd_deal_mail_general = '6px 8px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1_F8tVia9lbp9aOmD24CqTSWzOebR5Wvr' %}
+		{% assign bg_solid_generico100_mail_body = '#000000' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(0,0,0,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1Wv02SvjwIjWU0Lf2GbDyGhoQCQhYoCOu' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(145, 154, 176, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% elsif tema_general_mail_general == 'problack' %}
+		{% assign bg_img_mail_general = 'https://lh3.googleusercontent.com/d/1lY0Y5wzI9i_NyR9taNXABrr9emnyewJH' %}
+		{% assign bg_img_size_mail_general = '100% 100%' %}
+		{% assign bg_solid_mail_general = '#ECEFF3' %}
+		{% assign bg_rgb_mail_general = 'rgba(236,239,243,0.7)' %}
+		{% assign color_texto_mail_general = '#191919' %}
+		{% assign color_tag_tipografia_mail_general = '#191919' %}
+		{% assign color_acento1_mail_general = '#D89950' %}
+		{% assign color_acento2_mail_general = '#919AAA' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(251,251,251,1.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#FBFBFBFF' %}
+		{% assign bg_contenedor2_mail_general = 'rgba(251,251,251,1.0)' %}
+		{% assign bg_bannertono_mail_general = 'rgba(224,228,231,1.0)' %}
+		{% assign bg_bannerimg_mail_general = '' %}
+		{% assign padd_banner_mail_general = '15px 10px' %}
+		{% assign bg_tag_fondo_mail_general = 'rgba(218,168,104,0.5)' %}
+		{% assign bg_tag_contenedor_mail_general = 'rgba(216,217,217,1.0)' %}
+		{% assign img_overlay_1_mail_general = 'https://lh3.googleusercontent.com/d/1OBg12RyuiaImsmqxBb9mjfm2bXrX7FgE' %}
+		{% assign img_overlay_2_mail_general = 'https://lh3.googleusercontent.com/d/1V7dCVfHn6lvF6N6iPIU1m39GMyfbIKIk' %}
+		{% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1UkXsu-PcDdSpPmzoQ-RgRGBUIO2Flfhd'%}
+		{% assign bg_banner_tono_mail_general = '#E0E4E7' %}
+		{% assign color_textos_legales_mail_general = '#7D8188' %}
+		{% assign bg_descuento_mail_general = 'rgba(204,152,78,0.5)' %}
+		{% assign color_descuento_mail_general = '#000000' %}
+		{% assign bg_creditos_mail_general = 'rgba(204,152,78,0.5)' %}
+		{% assign color_creditos_mail_general = '#000000' %}
+  		{% assign padd_deal_mail_general = '6px 8px' %}
+		{% assign coronapro_mail_body = 'https://lh3.googleusercontent.com/d/1_F8tVia9lbp9aOmD24CqTSWzOebR5Wvr' %}
+		{% assign bg_solid_generico100_mail_body = '#FFFFFF' %}
+		{% assign bg_solid_generico50_mail_body = 'rgba(255,255,255,0.5)' %}
+		{% assign icon_link_generico_mail_body = 'https://lh3.googleusercontent.com/d/1Wv02SvjwIjWU0Lf2GbDyGhoQCQhYoCOu' %}
+		{% assign body_container_background_radius = ' 16px' %}
+		{% assign body_container_background_radius-peq = ' 8px' %}
+		{% assign body_container_background_padding-peq = '7px' %}
+		{% assign body_container_background_padding = '10px' %}
+		{% assign body_container_background_border = ' 1px solid rgba(145, 154, 176, 0.4)' %}
+		{% assign body_container_img_dots = 'https://lh3.googleusercontent.com/d/19EQoRd7tH_SFWbNJ6T2AfzX5rJfnFe9W' %}
+{% if body_container_background == 'Sinfondo' %}
+        {% assign img_fondo_especial_mail_general = 'https://lh3.googleusercontent.com/d/1_q4ca1b7DkKOGnFqwVfKMTFTmhMp0E2A' %}
+		{% assign bg_contenedor1_mail_general = 'rgba(0,0,0,0.0)' %}
+		{% assign bg_contenedor1_hex_mail_general = '#00000000' %}
+		{% assign body_container_background_padding = '0px' %}
+		{% assign body_container_background_border = ' 0px solid rgba(255, 255, 255, 0.0)' %}
+		{% assign body_container_background_radius = '0px' %}
+{% endif %}
+
+	{% endif %}
+
+-->

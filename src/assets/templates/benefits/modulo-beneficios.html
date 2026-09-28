@@ -1,0 +1,39 @@
+<!-- 
+MODULO BENEFICIOS:
+
+
+VARIACIONES:
+
+El usuario puede desactivar el fondo del contenedor,
+si el usuario desactiva el fondo del contenedor se afectan las vairables "Fondo" y "SinFondo" del liquid
+
+CONTENIDO: dentro de role="celda2": 
+-se puede cambiar el alineado vertical-align: middle; a top o bottom
+-se puede cambiar el alineado de las moleculas
+-se pueden insertar varias moléculas 
+-entre una molécula y otra siempre debe haber un  <div class="separador-S"> </div>
+-por defecto trae una molecula de icono, y dos de texto
+se pueden eliminar o cambiar de orden, si se eliminan moléculas tambien se debe eliminar los separadores
+
+Si el usuario activa la opción de hacer el modulo clickeable se debe agregar la etiqueta <a> cubriendo todlo el contenedor, si no se debe eliminar 
+
+-->
+<a href="LINKMODULO">
+<div style="border-radius: {{body_container_background_radius}}; overflow: hidden; border:{{body_container_background_border}}; max-width: 480px; margin: 0 auto;  background: {{bg_contenedor1_mail_general}}; ">
+  <table  role="module"  bgcolor="" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 auto; font-family:arial,helvetica,sans-serif; max-width: 480px; overflow: hidden; ">
+    <tr style="background-image: url({{img_fondo_especial_mail_general}}); background-size: cover;">
+      <td width="40%" class="beneficios-mob"  style="vertical-align: top; text-align:left; overflow: hidden; padding: {{body_container_background_padding}}; "><div> <img role="imagen-auto" border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto;  border-radius: 8px; overflow: hidden; " alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1K55fPu7buJT65XOj9VqaplZD2J4WTaTb"> <!--  la url de esta imagen se puede modificar --> 
+          <!-- Este border radius se debe poder modificar por el usuario--> 
+          
+        </div></td>
+      <td role="celda2" style="vertical-align: middle; word-break: break-all; padding: 7px 7px;  "><!-- ICONO M: por defecto no tiene border-radius, se puede agregar uno de border-radius: 7px;  --> 
+        <img role="molecula-iconoM" src="https://lh3.googleusercontent.com/d/13Wpazp2ezX37GZylmssneVLoF0fxq2yi" width="25" style="display: block; line-height: 15px; margin: {{alineado_molecular_mail_body}};" alt="img">
+        <div class="separador-S"></div>
+        <h3 style="color:{{color_texto_mail_general}}; margin:0; text-align: {{body_alineado_molecular}};">Descuentos de hasta xxx</h3>
+        <h5 role="componente" style="color: #E2E2E2; "></h5>
+        <div class="separador-S"></div>
+        <h4 style="color:{{color_texto_mail_general}}; margin:0; text-align: {{body_alineado_molecular}};">En todos tus pedidos en la app, pidiendo desde $XXXXXX</h4></td>
+    </tr>
+  </table>
+</div>
+</a> 

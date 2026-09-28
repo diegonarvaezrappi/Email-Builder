@@ -1,0 +1,470 @@
+<!-- ============================================================================
+     FOOTER B2B · RESTAURANTES
+     ============================================================================
+     Variante para comunicaciones a comercios aliados (restaurantes). Sale del
+     Footer General y conserva su estructura y sus 11 temas, pero el contenido
+     es otro: aquí no hay promociones ni membresías, hay soporte y accesos.
+
+     Qué cambia frente al General:
+       · La firma NO es elegible. Siempre el bigote — se eliminaron las 12
+         ramas por país y la variable `firma`.
+       · Copy propio: "Estamos cerca / para apoyarte" (PT-BR en Brasil).
+       · TRES botones en vez de uno: WhatsApp de soporte (número por país),
+         Portal Partners y Rappi Aliados (ambos con link único).
+       · El Centro de ayuda apunta al de partners y va en negrita.
+       · NO lleva legales de Turbo, de licores ni de membresía Pro.
+       · `cond` se conserva como campo abierto para texto adicional.
+     ============================================================================ -->
+
+<!--
+----------------------------
+-------- STYLE LOOK --------
+----------------------------
+Idéntico al del Footer General: los mismos 11 temas y los mismos valores. Ver
+la tabla de estilo visual por tema en Figma, 06 · Organisms §6.15.
+
+{% assign font_style_look = font_style_look | default: 'negro' %}
+
+	{% if font_style_look == 'negro' %}
+		{% assign color_letra = '#7D8188' %}
+		{% assign color_borde_footer = ' 1px solid #7D8188' %}
+		{% assign color_textwa = '#7D8188' %}
+		{% assign color_bordewa = '2px solid #7D8188' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1jUTxnpXK0J43xxT6mbnvAuHBlRUa0gc1' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'beige100' %}
+		{% assign color_letra = '#633D11' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#633D11' %}
+		{% assign color_bordewa = '2px solid #633D11' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'beige150' %}
+		{% assign color_letra = '#633D11' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'rosa100' %}
+		{% assign color_letra = '#4F145E' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'purpura100' %}
+		{% assign color_letra = '#4C2B8C' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'celeste100' %}
+		{% assign color_letra = '#0F3749' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#0DAE09' %}
+		{% assign color_bordewa = '2px solid #0DAE09' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'verde100' %}
+		{% assign color_letra = '#102E14' %}
+		{% assign color_borde_footer = '1px solid #102E14' %}
+		{% assign color_textwa = '#102E14' %}
+		{% assign color_bordewa = '2px solid #102E14' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'gris100' %}
+		{% assign color_letra = '#000000' %}
+		{% assign color_borde_footer = '1px solid #FE3F23' %}
+		{% assign color_textwa = '#000000' %}
+		{% assign color_bordewa = '2px solid #000000' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1l2pSc8pTHDt-pXx9LgxA20oVe1qXe7hn' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+	{% elsif font_style_look == 'pro' %}
+		{% assign color_letra = '#9EA1A2' %}
+		{% assign color_borde_footer = '1px solid #9EA1A2' %}
+		{% assign color_textwa = '#9EA1A2' %}
+		{% assign color_bordewa = '2px solid #9EA1A2' %}
+		{% assign color_fondowa = 'rgba(244,149,2,0.0)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign show_hr = true %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/15j7YHNv1qVdDAWUNs_G6OhQImaYbNz2g' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1dL43rjEJfev_We8qjnbFx_mk7HUJ7N7j' %}
+
+	{% elsif font_style_look == 'problack' %}
+		{% assign color_letra = '#000000' %}
+		{% assign color_borde_footer = '1px solid #000000' %}
+		{% assign color_textwa = '#000000' %}
+		{% assign color_bordewa = '2px solid #000000' %}
+		{% assign color_fondowa = 'rgba(244,149,2,0.0)' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign show_hr = true %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/15j7YHNv1qVdDAWUNs_G6OhQImaYbNz2g' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1dL43rjEJfev_We8qjnbFx_mk7HUJ7N7j' %}
+
+	{% else %}
+       {% assign color_letra = '#7D8188' %}
+		{% assign color_borde_footer = '1px solid #7D8188' %}
+		{% assign color_textwa = '#7D8188' %}
+		{% assign color_bordewa = '2px solid #7D8188' %}
+		{% assign walogo = 'https://lh3.googleusercontent.com/d/1i5UoD4PfTvMP723o8aEFNStFErMb_82q' %}
+		{% assign color_fondowa = 'rgba(115,195,91,0.1)' %}
+		{% assign logo = 'https://lh3.googleusercontent.com/d/1jUTxnpXK0J43xxT6mbnvAuHBlRUa0gc1' %}
+		{% assign bigote = 'https://lh3.googleusercontent.com/d/1m3sibudK6RTejw-GIy4-pbjhYamNWyFO' %}
+		{% assign show_hr = false %}
+
+{% endif %}
+
+----------------------------------
+--------------- FIRMA -------------
+----------------------------------
+B2B no tiene firma elegible: siempre el bigote. Por eso aquí no existe la
+variable `firma` ni las 12 ramas por país del Footer General.
+
+{% assign img-firma = 'https://lh3.googleusercontent.com/d/1PnaP1k0YqwVbr3oMvLIHnWdGopEH23lR' %}
+
+
+----------------------------------
+------------- LEGALES ------------
+----------------------------------
+Solo lo que B2B usa: las etiquetas y URLs de la fila de links, y las dos
+líneas de razón social. NO hay legales de Turbo, de licores ni de membresía
+Pro, y tampoco la URL de promociones del Footer General.
+
+El Centro de ayuda es el de partners y es el mismo en los 9 países.
+{% assign centro_ayuda_url = "https://partners.rappi.com/support-center?" %}
+
+{% if ${user_id} contains 'AR' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/argentina/politica-de-privacidad-de-rappi/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/argentina/terminos-y-condiciones-rappi-2/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque sos nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Rappi ARG S.A.S. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'BR' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/brazil/aviso-de-privacidade-e-politicas-de-uso-das-informacao-utilizadas-pela-rappi/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/brazil/termos-e-condicoes-de-uso-da-plataforma-rappi/" %}
+	{% assign centro_ayuda = "Ajuda" %}
+	{% assign aviso_privacidad = "Termos de privacidade" %}
+	{% assign terminos_y_condiciones = "Termos e condições" %}
+	{% assign cancelar_suscription = "Cancelar inscrição" %}
+	{% assign aplican_tyc = "Aplicam-se T&C" %}
+	{% assign bottom_line_1 = "Você recebeu este e-mail porque está cadastrado na nossa base de dados." %}
+	{% assign bottom_line_2 = "Copyright © Rappi Brasil Intermediação de Negócios LTDA. Todos os direitos reservados." %}
+
+{% elsif ${user_id} contains 'CO' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/colombia/politica-de-proteccion-y-tratamiento-de-datos-personales-rappi-s-a-s/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/colombia/terminos-y-condiciones-de-uso-de-plataforma-rappi-2/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque eres nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © RAPPI S.A.S. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'CL' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/chile/politica-de-privacidad/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/chile/terminos-y-condiciones-consumidores-rappi/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque eres nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Rappi Chile SpA. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'CR' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/costa-rica/politica-de-privacidad-de-rappi-2/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/costa-rica/terminos-y-condiciones-rappi-3/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque sos nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Rappi Pura Vida S.A. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'EC' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/ecuador/politica-de-privacidad-de-rappi-y-tratamiento-de-datos-persolanes/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/ecuador/terminos-y-condiciones-ecuador/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque eres nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Rappiec S.A. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'MX' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/mexico/aviso-de-privacidad-usuarios/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/mexico/terminos-y-condiciones-de-uso-de-plataforma-rappi-3/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque eres nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Tecnologías Rappi S.A.P.I. de C.V. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'PE' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/peru/politica-de-privacidad-de-rappi-y-tratamiento-de-datos-personales/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/peru/terminos-y-condiciones-rappi/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque eres nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Rappi S.A.C. Todos los derechos reservados." %}
+
+{% elsif ${user_id} contains 'UY' %}
+	{% assign aviso_privacidad_url = "https://legal.rappi.com.co/uruguay/aviso-de-privacidad/" %}
+	{% assign terminos_y_condiciones_url = "https://legal.rappi.com.co/uruguay/terminos-y-condiciones-de-uso-de-plataforma-rappi/" %}
+	{% assign centro_ayuda = "Centro de ayuda" %}
+	{% assign aviso_privacidad = "Aviso de privacidad" %}
+	{% assign terminos_y_condiciones = "Términos y Condiciones" %}
+	{% assign cancelar_suscription = "Cancelar suscripción" %}
+	{% assign aplican_tyc = "Aplican Términos y Condiciones" %}
+	{% assign bottom_line_1 = "Recibiste este mail porque sos nuestro usuario." %}
+	{% assign bottom_line_2 = "Copyright © Brisanier SA - Rappi Uruguay Todos los derechos reservados." %}
+
+{% else %}
+	{% abort_message('No country in user_id') %}
+{% endif %}
+
+----------------------------------
+------- COPY Y TRES BOTONES ------
+----------------------------------
+La franja superior de B2B. A diferencia del General, que tiene un solo botón,
+aquí van TRES y están siempre los tres:
+
+  1 · Canal de WhatsApp   número de soporte, distinto por país
+  2 · Portal Partners     link único, igual en los 9 países
+  3 · Rappi Aliados       link único, igual en los 9 países
+
+Con tres botones la franja crece, así que la celda de la firma sube a 170px
+—el General usa 90px con uno y 130px con dos—. Solo afecta a escritorio: las
+media queries del <head> lo pisan con height:auto!important.
+
+{% assign alto_firma = '70px' %}
+
+-- copy: solo cambia por idioma --
+{% if ${user_id} contains 'BR' %}
+	{% assign b2b_copy = "Estamos aqui para te apoiar" %}
+	{% assign wa_copy = "Canal do WhatsApp" %}
+{% else %}
+	{% assign b2b_copy = "Estamos cerca para apoyarte" %}
+	{% assign wa_copy = "Canal de Whatsapp" %}
+{% endif %}
+
+-- WhatsApp de soporte: un número por grupo de países --
+{% if ${user_id} contains 'CO' %}
+	{% assign deeplink_whatsapp = "https://wa.me/5715140348?" %}
+{% elsif ${user_id} contains 'AR' or ${user_id} contains 'UY' %}
+	{% assign deeplink_whatsapp = "https://wa.me/5491159845795?" %}
+{% elsif ${user_id} contains 'MX' or ${user_id} contains 'CR' %}
+	{% assign deeplink_whatsapp = "https://wa.me/5215541637682?" %}
+{% elsif ${user_id} contains 'CL' %}
+	{% assign deeplink_whatsapp = "https://wa.me/56232411896" %}
+{% elsif ${user_id} contains 'EC' or ${user_id} contains 'PE' %}
+	{% assign deeplink_whatsapp = "https://wa.me/59324018990?" %}
+{% elsif ${user_id} contains 'BR' %}
+	{% assign deeplink_whatsapp = "https://wa.me/551149358891?" %}
+{% endif %}
+
+-- los otros dos botones no cambian por país: mismo copy, link e ícono en los 9 --
+{% assign partners_copy = "Portal Partners" %}
+{% assign deeplink_partners = "https://merchants.rappi.com" %}
+{% assign partners_logo = 'https://lh3.googleusercontent.com/d/1EMJCNBctJ8R1TR5sW81XjVu2V_ynDJbu' %}
+
+{% assign aliados_copy = "Rappi Aliados" %}
+{% assign deeplink_aliados = "https://restaurantes.rappi.com/login" %}
+{% assign aliados_logo = 'https://lh3.googleusercontent.com/d/1Yh_8K6q8uP8ecK4Ly-QJTe-re42lESR3' %}
+
+-->
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- BLOQUEO de dark mode: los templates traen sus colores de marca y el
+     auto-dark de Apple Mail (iOS/macOS) los reinterpretaba (fondo oscuro →
+     gris claro). "light only" declara que el correo SOLO soporta su esquema
+     tal cual — Apple Mail lo respeta y no toca nada. Gmail ignora estas
+     metas, pero su transformación sí respeta fondos de color. -->
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<!--[if !mso]><!-->
+
+<style type="text/css">
+body a {
+    text-decoration: none !important;
+}
+a {
+    text-decoration: none !important;
+}
+.ii a[href] {
+    color: inherit!important;
+    text-decoration: none!important;
+}
+
+@media (max-width:480px) {
+.txtfooter {
+    font-size: 8px!important;
+    line-height: 8px !important;
+}
+.txtfooterwas {
+    font-size: 14px!important;
+    line-height: 13px !important;
+}
+.altofooter1 {
+    height: auto!important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+}
+
+@media (max-width:620px) {
+.txtfooter {
+    font-size: 8px!important;
+    line-height: 8px !important;
+}
+.txtfooterwas {
+    font-size: 14px!important;
+    line-height: 13px !important;
+}
+.altofooter1 {
+    height: auto!important;
+}
+.columns {
+    width: 100% !important;
+}
+.column {
+    width: 100% !important;
+    padding: 0px 0px 0px 0px !important;
+    height: auto !important;
+}
+}
+</style>
+</head>
+
+<body style="width: 100%; height:auto;font-family:Helvetica,Tahoma,Verdana,Sans-serif; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; padding: 0px; Margin: 0; border-spacing: 0;">
+<div style="padding: 0px 15px">
+  <table width="480" style="width:480px; border-spacing:0; border-collapse: separate; margin:30px auto;" cellpadding="0" cellspacing="0" align="center" border="0" bgcolor="" class="column column-0">
+    <tbody>
+      <tr valign="middle">
+        <td style="padding:0px 0px;margin:0px;border-spacing:0; vertical-align: middle; background-image: url({{bg_bannerimg_mail_general}}); background-size: 100% 100%; background-position: center top; overflow: hidden;"><div>
+            <table width="240" style="width:240px;" cellpadding="0" cellspacing="0" align="left" border="0" class="column column-0">
+              <tbody>
+                <tr>
+                  <td class="altofooter1" style="margin:0px;border-spacing:0; overflow: hidden; vertical-align: bottom; height: {{alto_firma}};"><img border="0" height="25" style="display:block; color:#000000; text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px; height: auto; max-height: 25px;  width: auto; max-width: 200px; margin-bottom: 10px;" alt="-" data-proportionally-constrained="true" data-responsive="false" src="{{img-firma}}"></td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <!-- MODULO PARA IMG FIJA -->
+            <table width="240" style="width:240px; padding: 0px 0px 0px 0px" cellpadding="0" cellspacing="0" align="left" border="0"  class="column column-1">
+              <tbody>
+                <tr style="" >
+                  <td class="altofooter1" style="padding:0px 0px 7px 0px;margin:0px;border-spacing:0;vertical-align: top;  "><div style="">
+                      <!-- COPY DE LA FRANJA
+                           Fuera de los <a>: lo comparten los tres botones. -->
+                      <span class="txtfooterwas" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 16px; line-height: 17px;  color: {{color_letra}};"> {{b2b_copy}} </span>
+
+               
+
+
+                      <!-- BOTÓN 3 · RAPPI ALIADOS — link único para los 9 países -->
+                      <a href="{{deeplink_aliados}}" target="_blank" style="text-decoration: none; ">
+                      <div>
+                        <table class="btn_wa" style="border-radius: 55px; padding: 0px 2px; text-decoration: none; vertical-align: middle; border:{{color_bordewa}}; width: auto; text-decoration: none; margin-top: 5px;" valign="middle">
+                          <tbody>
+                            <tr>
+                              <td style=" vertical-align: middle;">
+                                <div style="text-align: center; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;   font-size: 11px;"> <span style="font-size: 11px; "><img border="0" alt="" style="height: 15px;max-height: 15px; min-height: 15px; width: auto; padding-top: 0px; line-height: 2px;" src="{{aliados_logo}}"></span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td> <td style=" vertical-align: middle;">
+                                <div style="text-align: center; color: {{color_textwa}}; text-decoration: none; font-family: Helvetica, Tahoma, Verdana, Sans-serif;padding: 0px 3px; "> <span style="font-size: 11px; line-height: 10px; ">{{aliados_copy}}</span> 
+                                  <!-- TEXTO CTA --> 
+                                </div></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      </a> </div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div></td>
+      </tr>
+      <tr style="">
+        <td style="padding:0px 0px;margin:0px; vertical-align: middle; border-top: {{color_borde_footer}}; padding-top: 7px;   "><div> <a href="{{centro_ayuda_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}}; font-weight: bold;"> <strong>{{centro_ayuda}}</strong> </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <a href="{{aviso_privacidad_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{aviso_privacidad}} </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <a href="{{terminos_y_condiciones_url}}" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{terminos_y_condiciones}} </span></a> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};">&nbsp;|&nbsp; </span> <!-- PENDIENTE: link de cancelar suscripción --> <a href="" style="text-decoration: none; color: {{color_letra}}"> <span class="txtfooter" style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none;font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 9px;  color: {{color_letra}};"> {{cancelar_suscription}} </span></a> </div>
+          <div>
+            <!-- LEGALES B2B — sin Turbo, sin licores, sin membresía Pro.
+                 {{cond}} queda como campo abierto para texto adicional. -->
+            <p style="-webkit-text-size-adjust: none; -ms-text-size-adjust: none; font-family:Helvetica,Tahoma,Verdana,Sans-serif; font-size: 9px; line-height: 12px;  padding: 0px; margin: 0 auto; max-width: 480px; color: {{color_letra}};"><br>
+              {{bottom_line_1}} {{bottom_line_2}} {{aplican_tyc}}
+              <!--{% if cond != nil %}--> {{cond}} <!--{% endif %}--> 
+            </p>
+          </div></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+<!--
+---------------------
+/* CLEAN VARIABLES */
+---------------------
+Style related variables:
+{% assign font_style_look = '' %}
+{% assign color_letra = '' %}
+{% assign cond = '' %}
+
+B2B no usa: firma (la imagen es fija), show_legal_tyc, show_legal_turbo,
+show_legal_liquor ni pro_membresia. Esas variables no existen en este archivo.
+-->

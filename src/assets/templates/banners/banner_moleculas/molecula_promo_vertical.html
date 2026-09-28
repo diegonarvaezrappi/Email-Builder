@@ -1,0 +1,14 @@
+<!-- MOLECULA PROMOS VERTICAL -->
+
+<!-- El fondo va en el <div> contenedor, no en un bgcolor del <table>: el atributo bgcolor no
+     acepta rgba() y algunos temas (Verde 100, Pro, ProBlack) lo usan con alfa.
+     El centrado lo da el margin del div (0 auto), no el de la tabla. -->
+
+<div style="background:{{bg_descuento_mail_general}}; border-radius: 7px; width: auto; padding: 3px 6px; display: table; margin: 0px auto 7px auto;">
+  <table style=" width: auto; font-family:arial,helvetica,sans-serif;">
+    <tr>
+      <td  style="vertical-align: middle; text-align: center; "><div class="{{banner_copy_modulo_ahora_class}}" style="writing-mode: sideways-lr; height: 70px; width: 20px; font-size: {{banner_copy_modulo_ahora_fontsize_vertical}}; line-height: {{banner_copy_modulo_ahora_lineheight_vertical}}; color: {{color_descuento_mail_general}};">Ahora</div></td>
+      <td style="vertical-align: middle; text-align: center; "><span class="{{banner_copy_modulo_prom_class}}" style="font-weight: bold; font-size: {{banner_copy_modulo_promo_fontsize_vertical}}; line-height: {{banner_copy_modulo_promo_lineheight_vertical}}; color: {{color_descuento_mail_general}};letter-spacing: -2px;  ">{{banner_copy_modulo_promo}}</span></td>
+    </tr>
+  </table>
+</div>

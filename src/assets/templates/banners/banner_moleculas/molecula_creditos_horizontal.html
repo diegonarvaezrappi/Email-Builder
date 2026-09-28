@@ -1,0 +1,15 @@
+<!-- MOLECULA CREDITOS -->
+
+<!--esta molecula puede cambiar de color, por defecto trae {{bg_creditos_mail_general}} con tipografía  {{color_creditos_mail_general}}, si cambia a "generico" debe ser fondo {{bg_solid_generico100_mail_body}} con tipografía {{color_acento1_mail_general}}   -->
+
+<!-- El fondo va en el <div> contenedor, no en un bgcolor del <table>: el atributo bgcolor no
+     acepta rgba() y algunos temas (Verde 100, Pro, ProBlack) lo usan con alfa. -->
+
+<div style="background:{{bg_creditos_mail_general}}; border-radius: 7px; width: auto; padding: 3px 6px; margin-bottom: 7px; display: table;">
+  <table style=" width: auto;  font-family:arial,helvetica,sans-serif;">
+    <tr>
+      <td style="vertical-align: middle; text-align: left; "><span class="{{banner_copy_modulo_creditos_class}}" style="font-weight: bold; font-size: {{banner_copy_modulo_creditos_fontsize}}; line-height: {{banner_copy_modulo_creditos_lineheight}}; color: {{color_creditos_mail_general}}; letter-spacing: -2px; ">{{banner_copy_modulo_creditos}}</span>
+        <div class="bnr-sm" style="font-weight: bold; font-size: 14px; line-height: 15px; color: {{color_creditos_mail_general}} ; width: 100%; letter-spacing: 4px; ">DE REINTEGRO</div></td>
+    </tr>
+  </table>
+</div>

@@ -1,0 +1,97 @@
+<!-- MODULO 2 COLUMNAS:
+
+Se debe replicar la tabla en su versión escritorio y mobile, todos los moficiadores se deben aplicar a ambos formatos
+
+-Se puede cambiar el orden de las celdas
+-Se puede cambiar el alineado
+-Se puede quitar el fondo del contenedor general y
+-Se puede quitar el fondo de la imagen de forma independiente
+-Se puede hacer clickeable o no
+-En el campo de imagen se puede tener con padding o sin padding
+-En el campo de moléculas se pueden insertar varias, en ambos formatos por igual
+
+-->
+<a href="LINKMODULOCOULUMNAS">
+<div style="display: contents; background:{{bg_contenedor1_mail_general}}; border-radius: {{body_container_background_radius}}; overflow: hidden;"> 
+  
+  <!--  la siguiente es la tabla para escritorio 
+
+-->
+  
+  <table class="mobile_hide" role="module"  bgcolor="" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 auto; font-family:arial,helvetica,sans-serif; max-width: 480px; table-layout: responsive; overflow: hidden">
+    <tr style="">
+      <td role="columna-textos"  style="vertical-align: middle; text-align:left; word-break: break-all; "><div style="float: left; text-align: left; padding: {{body_container_background_padding}};"> 
+          
+          <!-- 
+En el siguiente contenedor se pueden insertar moléculas -->
+          
+          <div style="float: left; width: 100%; ">
+            <h2 role="molecula-texto" style="color:{{color_texto_mail_general}}; margin:0; text-align: {{body_alineado_molecular}};">Titulo</h2>
+            <!-- MOLECULA SEPARADOR S -->
+            
+            <div role="molecula-separador" style="margin-bottom: 10px;">
+              <div style="height: 10px; width: 50px; border-bottom: 1px solid ; border-color: {{color_acento1_mail_general}}; margin-bottom: 5px; margin: {{alineado_molecular_mail_body}};  "></div>
+            </div>
+            <h3 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">bloque de texto bloque de texto bloque de texto </h3>
+          </div>
+        </div></td>
+      
+      <!-- El background de la siguiente celda se puede quitar -->
+      
+      <td width="50%" style="vertical-align: middle; text-align:center; background-image: url({{img_overlay_2_mail_general}}); background-size: cover; background-position: center center; overflow: hidden; border-radius: 10px; "><!-- DEBE VENIR POR DEFECTO CON LA IMAGEN CO ANCHO MODIFICABLE --> 
+        
+        <!-- OPCIÓN IMAGEN FULL, CONTENEDOR SIN PADDING -->
+        
+        <div> <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; border-radius: 12px; vertical-align: middle;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1Xs3HucYUDlfipuPnegf5ZXO3w2Z5m28u"> 
+          
+          <!-- Este src se debe reemplazar por el usuario--> 
+          
+        </div>
+        
+        <!-- OPCIÓN IMAGEN ANCHO MODIFICABLE, CONTENEDOR CON PADDING -->
+        
+        <div style="padding: 10px;"> <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: {{body_img_modulo_auto_ancho}}%; max-width: 240px; margin: 0 auto; border-radius: 12px; vertical-align: middle;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/14VKG5CPVNPIVbOQYkyHgtxfW1uLorjXP"> 
+          
+          <!-- Este src se debe reemplazar por el usuario--> 
+          
+        </div></td>
+    </tr>
+  </table>
+  
+  <!--  la siguiente es la tabla para mobile -->
+  
+  <table role="module" class="desktop_hide" bgcolor="" cellpadding="0" cellspacing="0" width="100%" style="width: 100%; margin: 0 auto; font-family:arial,helvetica,sans-serif; max-width: 480px; border-radius: {{body_container_background_radius}}; overflow: hidden; display: none;">
+    <tr style=""> 
+      
+      <!-- En el siguiente contenedor se replican las moléculas de escritorio -->
+      
+      <td role="columna-textos"  style="vertical-align: middle; text-align:left; word-break: break-all; padding: {{body_container_background_padding}};"><h2 role="molecula-texto" style="color:{{color_texto_mail_general}}; margin:0; text-align: {{body_alineado_molecular}};">Titulo</h2>
+        
+        <!-- MOLECULA SEPARADOR S -->
+        
+        <div role="molecula-separador" style="margin-bottom: 10px;">
+          <div style="height: 10px; width: 50px; border-bottom: 1px solid ; border-color: {{color_acento1_mail_general}}; margin-bottom: 5px; margin: {{alineado_molecular_mail_body}};  "></div>
+        </div>
+        <h3 role="molecula-texto" style="color:{{color_texto_mail_general}}; ">bloque de texto bloque de texto bloque de texto </h3></td>
+    </tr>
+    <tr style="">
+      <td width="100%" style="vertical-align: middle; text-align:left; background-image: url({{img_overlay_2_mail_general}}); background-size: cover; background-position: center center;border-radius: 10px; overflow: hidden; "><!-- OPCIÓN IMAGEN FULL, CONTENEDOR SIN PADDING -->
+        
+        <div> <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: 100%; margin: 0 auto; border-radius: 12px; vertical-align: middle;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/1Xs3HucYUDlfipuPnegf5ZXO3w2Z5m28u"> 
+          
+          <!-- Este src se debe reemplazar por el usuario--> 
+          
+        </div>
+        
+        <!-- OPCIÓN IMAGEN ANCHO MODIFICABLE, CONTENEDOR CON PADDING -->
+        
+        <div style="padding: 10px;"> <img border="0" style="display:block;  text-decoration:none; font-family:Helvetica, arial, sans-serif; font-size:16px;  width: {{body_img_modulo_auto_ancho}}%; max-width: 240px; margin: 0 auto; border-radius: 12px; vertical-align: middle;" alt="tag" data-proportionally-constrained="true" data-responsive="false" src="https://lh3.googleusercontent.com/d/14VKG5CPVNPIVbOQYkyHgtxfW1uLorjXP"> 
+          
+          <!-- Este src se debe reemplazar por el usuario--> 
+          
+        </div></td>
+    </tr>
+  </table>
+</div>
+</a> 
+<!-- FIN dos columnas--> 

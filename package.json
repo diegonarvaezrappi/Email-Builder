@@ -4,10 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "sync-master": "node scripts/sync-master.mjs",
-    "predev": "node scripts/sync-master.mjs",
+    "sync": "node scripts/sync-master.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/sync-master.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run"
