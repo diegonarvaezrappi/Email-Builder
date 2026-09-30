@@ -180,7 +180,7 @@ export function InspectorPanel({
           Deal {position} de {found.block.fields.items.length}
         </h2>
         <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
-        <DealCardPropertiesPanel value={card.fields} onChange={(next) => onChangeDealCard(card.id, next)} />
+        <DealCardPropertiesPanel value={card.fields} onChange={(next) => onChangeDealCard(card.id, next)} doc={doc} />
       </aside>
     )
   }

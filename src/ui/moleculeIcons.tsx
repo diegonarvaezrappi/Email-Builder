@@ -359,6 +359,8 @@ export const MODULE_ITEM_ICONS: Record<ModuleItemType, ComponentType<IconProps>>
   COLUMNA_TEXTO: ColumnaTextoIcon,
   BULLET_ICONO_SIMPLE: BulletIconoSimpleIcon,
   CUPON_MONTO: CuponMontoIcon,
+  TAGS: TagsIcon,
+  CTA_INTERNO: CtaInternoIcon,
 }
 
 export const MOLECULE_ICONS: Record<BannerItemType, ComponentType<IconProps>> = {

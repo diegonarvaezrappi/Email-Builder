@@ -16,7 +16,8 @@
 // ============================================================================
 import type { EmailDocument } from '../../../model'
 import { cssUrlValue } from '../../../global/vars'
-import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText, substituteImgSrcOrRemove } from '../../../template/htmlText'
+import { backgroundImageAltAttrs, escapeHtmlAttr, substituteImgSrcOrRemove } from '../../../template/htmlText'
+import { richTextHtml } from '../../../richText/themeColors'
 import { indexOfOrThrow, tagOpenInsertionPoint } from '../../../template/htmlEdits'
 import {
   IMG_FIJA_LOGO_LINK_PLACEHOLDER as IMG_FIJA_LOGO_LINK_TOKEN,
@@ -459,7 +460,7 @@ function renderTagPill(template: string, imgStart: number, imgEnd: number, tag: 
           .replace(/src="[^"]*"/, () => `src="${escapeHtmlAttr(tag.iconUrl)}"`)
           .replace(/alt="[^"]*"/, () => `alt="${escapeHtmlAttr(tag.iconAlt)}"`)
       : ''
-  const body = tail.replace(TAG_TEXT_PLACEHOLDER.slice(1), () => ` ${escapeHtmlText(tag.text)} </h4>`)
+  const body = tail.replace(TAG_TEXT_PLACEHOLDER.slice(1), () => ` ${richTextHtml(tag.text)} </h4>`)
   return head + icon + body
 }
 
@@ -536,8 +537,8 @@ export function renderTextoPastillaSnippet(fields: TextoPastillaFields): string 
     )
   }
   const table = fields.pillPosition === 'derecha' ? tables[0][0] : tables[1][0]
-  let html = substituteOnce(table, TEXTO_PASTILLA_TEXT_LITERAL, `>${escapeHtmlText(fields.text)}<`, fileName)
-  html = substituteOnce(html, TEXTO_PASTILLA_PILL_LITERAL, `>${escapeHtmlText(fields.pillText)}<`, fileName)
+  let html = substituteOnce(table, TEXTO_PASTILLA_TEXT_LITERAL, `>${richTextHtml(fields.text)}<`, fileName)
+  html = substituteOnce(html, TEXTO_PASTILLA_PILL_LITERAL, `>${richTextHtml(fields.pillText)}<`, fileName)
   return html
 }
 
@@ -625,11 +626,6 @@ export function renderFranjaLogosSnippet(fields: FranjaLogosFields): string {
 // ('center' vertical, 'left' horizontal) preserva el comportamiento de
 // siempre para esos call sites.
 
-export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
-  const align = ctx.bannerType === 'horizontal' ? (ctx.horizontalMoleculeAlign ?? 'left') : (ctx.moleculeAlign ?? 'center')
-  // `cta_size` (ver components/cta/schema.ts) tampoco es un campo propio de
-  // CTA_INTERNO — no pedido para este piece, y 'big' reproduce el único
-  // tamaño que existía antes de esa variable (rama `{% else %}` de
-  // cta-template.html, byte-idéntica a 'big').
-  return renderCtaSnippet({ ...fields, align, size: 'big' }, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema), doc.footer.tipoFooter)
+export function renderCtaInternoSnippet(fields: CtaInternoFields, doc: EmailDocument, _ctx: BannerItemRenderCtx): string {
+  return renderCtaSnippet(fields, resolveCtaStyle(doc.global.ctaStyle, doc.global.tema), doc.footer.tipoFooter)
 }

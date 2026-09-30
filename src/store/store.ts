@@ -16,6 +16,7 @@ import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import type { ModuleItem, ModuleItemType } from '../moduleItems/schemas'
 import { applyImageModuleExclusivity, findImageModuleIndex, type ImageModuleType } from '../components/banner/exclusivity'
 import { enforceHorizontalItemOrder } from '../components/banner/horizontalOrder'
+import { bannerMoleculeAlignFor } from '../components/banner/schema'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
 import { bannerItemKey, blockKey, dealCardKey, moduleItemKey } from '../tropicalize/keys'
@@ -294,7 +295,9 @@ export const useBuilder = create<BuilderState>()(
         set((s) => {
           const def = getBannerItemDef(type)
           if (!def) return s
-          const item = { id: newId(), type, fields: def.defaultFields } as BannerItem
+          // Un CTA nuevo arranca alineado como el resto de piezas del banner.
+          const fields = type === 'CTA_INTERNO' ? { ...def.defaultFields, align: bannerMoleculeAlignFor(s.document.banner) } : def.defaultFields
+          const item = { id: newId(), type, fields } as BannerItem
           const filtered = applyImageModuleExclusivity(s.document.banner.items, type)
           const next = [...filtered]
           next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, item)

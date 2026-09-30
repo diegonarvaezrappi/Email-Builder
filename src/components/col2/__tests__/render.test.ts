@@ -138,12 +138,12 @@ describe('renderCol2Snippet · alineado general (una sola variable, no por celda
     // (con espacio) — el <div> "float: left; text-align: left;" de la celda
     // de texto de escritorio es un literal ESTÁTICO no relacionado, no se
     // cuenta acá (mismo tipo de coincidencia que "margin: 0 auto" en COL3).
-    expect(html.match(/role="molecula-texto"[^>]*text-align: left/g)?.length).toBe(2)
+    expect(html.match(/role="molecula-texto"[^>]*text-align: left/g)?.length).toBe(4) // título + subtítulo de cada celda
   })
 
   it('center: applies to BOTH tables at once', () => {
     const html = render({ ...defaultCol2Fields, align: 'center' })
-    expect(html.match(/role="molecula-texto"[^>]*text-align: center/g)?.length).toBe(2)
+    expect(html.match(/role="molecula-texto"[^>]*text-align: center/g)?.length).toBe(4) // título + subtítulo de cada celda
     expect(html).not.toMatch(UNRESOLVED_MODULE_ALIGN_RE)
   })
 })

@@ -135,17 +135,17 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     const html = render(
       cards(
         card('a', {
-          copy1: 'Mi promo',
-          copy2: 'Mi bajada',
-          markdownText: '$1.234',
-          complemento1Text: '50% OFF',
+          copy1: richTextFromPlain('Mi promo'),
+          copy2: richTextFromPlain('Mi bajada'),
+          markdownText: richTextFromPlain('$1.234'),
+          complemento1Text: richTextFromPlain('50% OFF'),
           complemento2Text: richTextFromPlain('$9.999'),
-          categoriaText: 'Sushi',
-          ratingText: '4.2',
-          tiempoText: '15 min.',
-          tag1Text: 'envío gratis',
-          tag2Text: 'nuevo',
-          ctaText: 'Pedir ya',
+          categoriaText: richTextFromPlain('Sushi'),
+          ratingText: richTextFromPlain('4.2'),
+          tiempoText: richTextFromPlain('15 min.'),
+          tag1Text: richTextFromPlain('envío gratis'),
+          tag2Text: richTextFromPlain('nuevo'),
+          ctaText: richTextFromPlain('Pedir ya'),
         }),
       ),
     )
@@ -160,7 +160,7 @@ describe('renderDealsSnippet · piezas opcionales', () => {
 
   it('mantiene los separadores del maestro que no son dato (el &nbsp; del rating/tiempo, el "|" fijo antes del precio anterior)', () => {
     const html = render(
-      cards(card('a', { ratingText: '4.2', tiempoText: '15 min.', complemento2Text: richTextFromPlain('Antes $9.999') })),
+      cards(card('a', { ratingText: richTextFromPlain('4.2'), tiempoText: richTextFromPlain('15 min.'), complemento2Text: richTextFromPlain('Antes $9.999') })),
     )
     expect(html).toContain('&nbsp;4.2')
     expect(html).toContain('&nbsp;15 min.')
@@ -170,7 +170,7 @@ describe('renderDealsSnippet · piezas opcionales', () => {
   })
 
   it('copy1/copy2 vacíos quitan su <h4>, y no queda Liquid de la variable', () => {
-    const html = render(cards(card('a', { copy1: '', copy2: '' })))
+    const html = render(cards(card('a', { copy1: richTextFromPlain(''), copy2: richTextFromPlain('') })))
     expect(html).not.toContain('deals_copy_1_promo')
     expect(html).not.toContain('deals_copy_2_promo')
     expect(count(html, '<h4')).toBe(count(html, '</h4>'))
@@ -334,7 +334,7 @@ describe('renderDealsSnippet · legales (fila del par, toggle por tarjeta)', () 
   })
 
   it('una sola la activa = la fila aparece con las 2 celdas, y la que no la activó queda con el texto vacío', () => {
-    const html = render(cards(card('a', { legalEnabled: true, legalText: 'Solo A' }), card('b')))
+    const html = render(cards(card('a', { legalEnabled: true, legalText: richTextFromPlain('Solo A') }), card('b')))
     expect(count(html, 'class="legal"')).toBe(2)
     expect(html).toContain('Solo A')
     expect(countCells(html)).toBe(6)
@@ -344,7 +344,7 @@ describe('renderDealsSnippet · legales (fila del par, toggle por tarjeta)', () 
 
   it('las 2 la activan = cada celda con su propio texto', () => {
     const html = render(
-      cards(card('a', { legalEnabled: true, legalText: 'Legal A' }), card('b', { legalEnabled: true, legalText: 'Legal B' })),
+      cards(card('a', { legalEnabled: true, legalText: richTextFromPlain('Legal A') }), card('b', { legalEnabled: true, legalText: richTextFromPlain('Legal B') })),
     )
     expect(html).toContain('Legal A')
     expect(html).toContain('Legal B')
@@ -357,7 +357,7 @@ describe('renderDealsSnippet · legales (fila del par, toggle por tarjeta)', () 
   })
 
   it('una tarjeta impar con legales activa la fila de su par, con la celda de al lado vacía', () => {
-    const html = render(cards(card('a'), card('b'), card('c', { legalEnabled: true, legalText: 'Legal C' })))
+    const html = render(cards(card('a'), card('b'), card('c', { legalEnabled: true, legalText: richTextFromPlain('Legal C') })))
     expect(html).toContain('Legal C')
     // Acá se cruzan las 2 reglas: la fila de legales es del par (así que
     // aparece), pero la 2ª celda no tiene tarjeta, así que va vacía como sus
@@ -378,7 +378,7 @@ describe('renderDealsSnippet · enlaces, escapado y limpieza', () => {
   })
 
   it('escapa el texto del usuario en los nodos HTML', () => {
-    const html = render(cards(card('a', { copy1: '<script>alert(1)</script>' })))
+    const html = render(cards(card('a', { copy1: richTextFromPlain('<script>alert(1)</script>') })))
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')
   })
@@ -468,7 +468,7 @@ describe('renderDealsSnippet · orden de piezas (pieceOrder)', () => {
 
   it('la fila de legales no se ve afectada por ningún pieceOrder', () => {
     const custom: DealCardPieceType[] = [...DEAL_CARD_PIECE_TYPES].reverse()
-    const html = render(cards(card('a', { pieceOrder: custom, legalEnabled: true, legalText: 'Ley custom' }), card('b')))
+    const html = render(cards(card('a', { pieceOrder: custom, legalEnabled: true, legalText: richTextFromPlain('Ley custom') }), card('b')))
     expect(html).toContain('Ley custom')
     expect(count(html, 'class="legal"')).toBe(2)
   })

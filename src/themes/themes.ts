@@ -279,6 +279,14 @@ export const PASTEL_THEME_SLUGS = ['beige100', 'beige150', 'rosa100', 'purpura10
 export const DARK_THEME_SLUGS = ['darkneon', 'darkturbo', 'darkneutro']
 
 /**
+ * Los temas que se pueden elegir en la app. Los 3 oscuros/invertidos se
+ * retiraron del selector (decisión del usuario, 2026-09-29): siguen en el
+ * maestro y la app aún sabe renderizarlos, pero ningún documento puede
+ * quedar en uno de ellos — ver la migración de `tema` en global/schema.ts.
+ */
+export const SELECTABLE_THEME_SLUGS: string[] = THEME_SLUGS.filter((slug) => !DARK_THEME_SLUGS.includes(slug))
+
+/**
  * `font_style_look` real que le corresponde a cada tema en
  * `footer_general.html`/`footer_sinamor.html` — pull ~2026-09-02, mismo lote
  * de commits que la "actualización del cta" (`e0debcf`/`03ff5fc`): esos 2
@@ -369,7 +377,6 @@ const THEME_LABELS: Record<string, string> = {
 
 const THEME_GROUPS: { label: string; slugs: string[] }[] = [
   { label: 'Pastel', slugs: PASTEL_THEME_SLUGS },
-  { label: 'Oscuros / invertidos', slugs: DARK_THEME_SLUGS },
   { label: 'Premium', slugs: PREMIUM_THEME_SLUGS },
 ]
 
@@ -389,6 +396,6 @@ export function groupedThemes(): { label: string; themes: ThemeDef[] }[] {
   })).filter((g) => g.themes.length > 0)
 
   const known = new Set(THEME_GROUPS.flatMap((g) => g.slugs))
-  const rest = THEMES.filter((t) => !known.has(t.slug))
+  const rest = THEMES.filter((t) => !known.has(t.slug) && SELECTABLE_THEME_SLUGS.includes(t.slug))
   return rest.length > 0 ? [...grouped, { label: 'Otros', themes: rest }] : grouped
 }

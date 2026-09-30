@@ -18,7 +18,7 @@ const promo = (id: string, promoText = '120'): BannerItem => ({
 })
 const tags = (id: string): BannerItem => ({ id, type: 'TAGS', fields: { tags: [defaultTagItem('tag 1')] } })
 const textom = (id: string): BannerItem => ({ id, type: 'TEXTOM', fields: { text: richTextFromPlain('x') } })
-const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#' } })
+const ctaInterno = (id: string): BannerItem => ({ id, type: 'CTA_INTERNO', fields: { text: 'x', deeplink: '#', align: 'center', size: 'big' } })
 const imgFija = (id: string): BannerItem => ({
   id,
   type: 'IMG_FIJA',
@@ -324,11 +324,11 @@ describe('renderBannerSnippet', () => {
       expect(renderBannerSnippet(d.banner, d)).toContain('BITEM:PROMO:a')
     })
 
-    it('CTA_INTERNO follows moleculeAlign in vertical (default center, "left" when set)', () => {
-      const vertCenter = withItems([ctaInterno('c')])
+    // Desde el 2026-09-30 el CTA tiene alineación propia, como el de contenidos:
+    // el selector de moléculas ya no la pisa.
+    it('CTA_INTERNO keeps its own alignment, not moleculeAlign', () => {
       const vertLeft = withItems([ctaInterno('c')], { banner: { ...defaultEmailDocument.banner, moleculeAlign: 'left' } })
-      expect(renderBannerSnippet(vertCenter.banner, vertCenter)).toContain("cta_alineado = 'center'")
-      expect(renderBannerSnippet(vertLeft.banner, vertLeft)).toContain("cta_alineado = 'left'")
+      expect(renderBannerSnippet(vertLeft.banner, vertLeft)).toContain("cta_alineado = 'center'")
     })
   })
 
@@ -400,13 +400,9 @@ describe('renderBannerSnippet', () => {
       expect(renderBannerSnippet(d.banner, d)).toContain('BITEM:PROMO:a')
     })
 
-    it('CTA_INTERNO follows horizontalMoleculeAlign (default left, "center" when set)', () => {
+    it('CTA_INTERNO keeps its own alignment, not horizontalMoleculeAlign', () => {
       const horizLeft = withItems([ctaInterno('c')], { banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal' } })
-      const horizCenter = withItems([ctaInterno('c')], {
-        banner: { ...defaultEmailDocument.banner, bannerType: 'horizontal', horizontalMoleculeAlign: 'center' },
-      })
-      expect(renderBannerSnippet(horizLeft.banner, horizLeft)).toContain("cta_alineado = 'left'")
-      expect(renderBannerSnippet(horizCenter.banner, horizCenter)).toContain("cta_alineado = 'center'")
+      expect(renderBannerSnippet(horizLeft.banner, horizLeft)).toContain("cta_alineado = 'center'")
     })
   })
 

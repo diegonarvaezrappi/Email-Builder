@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { defaultEmailDocument } from '../../../registry'
 import type { EmailDocument } from '../../../model'
-import { richTextFromPlain } from '../../../richText/model'
+import { plainText, richTextFromPlain } from '../../../richText/model'
 import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
 import { defaultFranjaLogoItem, defaultTagItem, tagsFieldsSchema } from '../items/schemas'
@@ -512,7 +512,7 @@ describe('renderTagsSnippet', () => {
     const tags = Array.from({ length: n }, (_, i) => defaultTagItem(`tag${i}`))
     const html = renderTagsSnippet({ tags }, doc(), ctx('horizontal'))
     expect((html.match(/<h4/g) ?? []).length).toBe(n)
-    for (const t of tags) expect(html).toContain(`> ${t.text} </h4>`)
+    for (const t of tags) expect(html).toContain(`> ${plainText(t.text)} </h4>`)
   })
 
   it('never duplicates the wrapper table/structure regardless of label count', () => {
@@ -541,7 +541,7 @@ describe('renderTagsSnippet', () => {
 
   it('hides only the disabled icon, keeping its own text and the other pills intact', () => {
     const html = renderTagsSnippet(
-      { tags: [{ text: 'a', iconEnabled: false, iconUrl: defaultTagItem().iconUrl, iconAlt: defaultTagItem().iconAlt }, defaultTagItem('b')] },
+      { tags: [{ text: richTextFromPlain('a'), iconEnabled: false, iconUrl: defaultTagItem().iconUrl, iconAlt: defaultTagItem().iconAlt }, defaultTagItem('b')] },
       doc(),
       ctx('vertical'),
     )
@@ -551,14 +551,14 @@ describe('renderTagsSnippet', () => {
   })
 
   it('treats a blank icon URL as "no icon", same convention as every other <img> field', () => {
-    const html = renderTagsSnippet({ tags: [{ text: 'a', iconEnabled: true, iconUrl: '', iconAlt: 'Rappi' }] }, doc(), ctx('vertical'))
+    const html = renderTagsSnippet({ tags: [{ text: richTextFromPlain('a'), iconEnabled: true, iconUrl: '', iconAlt: 'Rappi' }] }, doc(), ctx('vertical'))
     expect(html).not.toContain('<img')
     expect(html).toContain('> a </h4>')
   })
 
   it('substitutes a custom icon URL and alt', () => {
     const html = renderTagsSnippet(
-      { tags: [{ text: 'a', iconEnabled: true, iconUrl: 'https://x.test/custom-icon.png', iconAlt: 'mi alt' }] },
+      { tags: [{ text: richTextFromPlain('a'), iconEnabled: true, iconUrl: 'https://x.test/custom-icon.png', iconAlt: 'mi alt' }] },
       doc(),
       ctx('vertical'),
     )
@@ -589,12 +589,10 @@ describe('renderSeparadorSnippet', () => {
 })
 
 describe('renderTextoPastillaSnippet', () => {
-  const fields = (over: Partial<{ text: string; pillText: string; pillPosition: 'derecha' | 'izquierda' }> = {}) => ({
-    text: 'Supermercados',
-    pillText: 'Martes',
-    pillPosition: 'derecha' as const,
-    ...over,
-  })
+  const fields = (over: Partial<{ text: string; pillText: string; pillPosition: 'derecha' | 'izquierda' }> = {}) => {
+    const f = { text: 'Supermercados', pillText: 'Martes', pillPosition: 'derecha' as const, ...over }
+    return { ...f, text: richTextFromPlain(f.text), pillText: richTextFromPlain(f.pillText) }
+  }
 
   it('substitutes both texts', () => {
     const html = renderTextoPastillaSnippet(fields({ text: 'Restaurantes', pillText: 'Hoy' }))
@@ -683,27 +681,30 @@ describe('renderFranjaLogosSnippet', () => {
 })
 
 describe('renderCtaInternoSnippet', () => {
-  it('cta_alineado is fixed by orientation: left for horizontal, center for vertical', () => {
-    const fields = { text: 'Pide aquí', deeplink: '#' }
-    expect(renderCtaInternoSnippet(fields, doc(), ctx('horizontal'))).toContain("cta_alineado = 'left'")
-    expect(renderCtaInternoSnippet(fields, doc(), ctx('vertical'))).toContain("cta_alineado = 'center'")
+  const cta = (over = {}) => ({ text: 'x', deeplink: '#', align: 'center' as const, size: 'big' as const, ...over })
+
+  // Desde el 2026-09-30 el CTA del banner es igual al de contenidos: alineación
+  // y tamaño son campos propios, no dependen de la orientación del banner.
+  it('uses its own alignment, whatever the banner orientation', () => {
+    expect(renderCtaInternoSnippet(cta({ align: 'center' }), doc(), ctx('horizontal'))).toContain("cta_alineado = 'center'")
+    expect(renderCtaInternoSnippet(cta({ align: 'left' }), doc(), ctx('vertical'))).toContain("cta_alineado = 'left'")
+  })
+
+  it('uses its own size', () => {
+    expect(renderCtaInternoSnippet(cta({ size: 'small' }), doc(), ctx('horizontal'))).toContain("cta_size = 'small'")
+    expect(renderCtaInternoSnippet(cta({ size: 'big' }), doc(), ctx('horizontal'))).toContain("cta_size = 'big'")
   })
 
   it('reflects doc.global.ctaStyle — the ONE exception to "clean Liquid output" (real Braze content block)', () => {
     const withStyle = doc({ global: { ...defaultEmailDocument.global, ctaStyle: 'negrogris' } })
-    const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, withStyle, ctx('horizontal'))
+    const html = renderCtaInternoSnippet(cta(), withStyle, ctx('horizontal'))
     expect(html).toContain("style_Look = 'negrogris'")
     expect(html).toContain('{{content_blocks.${CTA-template}}}')
   })
 
-  it('always emits cta_size = \'big\' — CTA_INTERNO has no size control of its own (out of scope, matches the pre-cta_size visual)', () => {
-    const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, doc(), ctx('horizontal'))
-    expect(html).toContain("cta_size = 'big'")
-  })
-
   it('resolves ctaStyle "default" via the CURRENT tema, not the literal string "default"', () => {
     const withDefault = doc({ global: { ...defaultEmailDocument.global, ctaStyle: 'default', tema: 'problack' } })
-    const html = renderCtaInternoSnippet({ text: 'x', deeplink: '#' }, withDefault, ctx('horizontal'))
+    const html = renderCtaInternoSnippet(cta(), withDefault, ctx('horizontal'))
     expect(html).toContain("style_Look = 'problack'")
     expect(html).not.toContain("style_Look = 'default'")
   })

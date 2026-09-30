@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { richTextFromPlain } from '../../../richText/model'
 import { cloneCol1Fields, createDefaultCol1Fields, defaultCol1Fields } from '../schema'
 
 describe('defaultCol1Fields', () => {
@@ -30,8 +31,8 @@ describe('cloneCol1Fields', () => {
     const original = createDefaultCol1Fields()
     original.image = { imageUrl: 'https://x.test/mine.png', imageAlt: 'mine', borderRadiusEnabled: true }
     original.items = [
-      { id: 'a', areaKey: 'above', type: 'TITULO_TEXTO', fields: { text: 'Arriba' } } as (typeof original.items)[number],
-      { id: 'b', areaKey: 'below', type: 'TITULO_TEXTO', fields: { text: 'Abajo' } } as (typeof original.items)[number],
+      { id: 'a', areaKey: 'above', type: 'TITULO_TEXTO', fields: { text: richTextFromPlain('Arriba') } } as (typeof original.items)[number],
+      { id: 'b', areaKey: 'below', type: 'TITULO_TEXTO', fields: { text: richTextFromPlain('Abajo') } } as (typeof original.items)[number],
     ]
     const clone = cloneCol1Fields(original)
 

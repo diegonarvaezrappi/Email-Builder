@@ -5,7 +5,7 @@
 // no repetir), no un select con los 4 valores crudos de CSS — ver
 // global/background.ts para la traducción entre ambas representaciones.
 // ============================================================================
-import type { ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import {
   BACKGROUND_POSITION_LABELS,
   BACKGROUND_POSITION_VALUES,
@@ -19,7 +19,7 @@ import {
   withRepeatY,
 } from '../global/background'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
-import type { GlobalFields } from '../global/schema'
+import { HEX_COLOR_RE, type GlobalFields } from '../global/schema'
 import { Popover } from './Popover'
 
 interface BackgroundSizePositionRepeatFieldsProps {
@@ -96,6 +96,60 @@ export function BackgroundSizePositionRepeatFields({
   )
 }
 
+interface ColorFieldProps {
+  label: string
+  /** `#RRGGBB` o '' (sin color). */
+  value: string
+  onChange: (next: string) => void
+}
+
+/**
+ * Color sólido: el selector nativo más un campo de texto hex. El texto se
+ * guarda recién cuando es un `#RRGGBB` válido, así escribir a medias no deja
+ * valores rotos; "×" lo quita.
+ */
+export function ColorField({ label, value, onChange }: ColorFieldProps) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+
+  const commit = (next: string) => {
+    const hex = next.trim().startsWith('#') ? next.trim() : `#${next.trim()}`
+    if (HEX_COLOR_RE.test(hex)) onChange(hex.toUpperCase())
+  }
+
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <div className="color-field">
+        <input
+          type="color"
+          aria-label={`${label}: selector`}
+          value={value || '#FFFFFF'}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value.toUpperCase())}
+        />
+        <div className="input-with-clear">
+          <input
+            type="text"
+            placeholder="Sin color (ej. #FFF0DD)"
+            maxLength={7}
+            value={draft}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              setDraft(e.target.value)
+              commit(e.target.value)
+            }}
+            onBlur={() => setDraft(value)}
+          />
+          {value !== '' && (
+            <button type="button" className="input-clear" aria-label="Quitar el color de fondo" title="Quitar el color de fondo" onClick={() => onChange('')}>
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+    </label>
+  )
+}
+
 export type BackgroundScope = 'general' | 'hero' | 'contents'
 
 const BACKGROUND_KEYS = {
@@ -163,6 +217,9 @@ export function BackgroundCard({ scope, title, value, onChange }: BackgroundCard
           onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.alt, e.target.value)}
         />
       </label>
+      {scope === 'contents' && (
+        <ColorField label="Color de fondo" value={value.contentsBgColor} onChange={(next) => set('contentsBgColor', next)} />
+      )}
     </div>
   )
 }
@@ -207,6 +264,10 @@ export function HeroContentsBackgroundPanel({ prefix, value, onChange }: HeroCon
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
         />
       </label>
+
+      {prefix === 'contents' && (
+        <ColorField label="Color de fondo" value={value.contentsBgColor} onChange={(next) => onChange({ ...value, contentsBgColor: next })} />
+      )}
 
       <BackgroundSizePositionRepeatFields
         size={value[sizeKey]}

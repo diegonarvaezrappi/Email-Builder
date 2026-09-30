@@ -31,8 +31,17 @@ import iconoRaw from '../assets/templates/content-modules/content_moleculas/mole
 import beneficiosModuleRaw from '../assets/templates/benefits/modulo-beneficios.html?raw'
 import col3ModuleRaw from '../assets/templates/col3/modulo-3-columnas.html?raw'
 import cuponesModuleRaw from '../assets/templates/coupons/cupones-modulo.html?raw'
-import { escapeHtmlText, substituteImgSrcOrRemove } from '../template/htmlText'
+import tagIconoRaw from '../assets/templates/content-modules/content_moleculas/molecula_tag_icono.html?raw'
+import { renderCtaSnippet } from '../components/cta/render'
+import type { CtaFields } from '../components/cta/schema'
+import type { TagsFields } from '../components/banner/items/schemas'
+import { resolveCtaStyle } from '../themeDefaults'
+import { richTextHtml } from '../richText/themeColors'
+import { plainText } from '../richText/model'
+import type { EmailDocument } from '../model'
+import { escapeHtmlAttr, substituteImgSrcOrRemove } from '../template/htmlText'
 import { applyEdits, elementBounds, indexOfOrThrow, innerBounds, textRunBounds, voidElementBounds } from '../template/htmlEdits'
+import { BULLET_ICONO_DEFAULT_URLS } from './schemas'
 import type {
   BeneficiosTextoFields,
   BeneficiosTituloFields,
@@ -44,6 +53,7 @@ import type {
   CuponMontoFields,
   IconoFields,
   IconoSize,
+  ModuleCtaFields,
   SeparadorLineaFields,
   SubtituloTextoFields,
   TituloTextoFields,
@@ -66,7 +76,7 @@ export function renderTituloTextoSnippet(fields: TituloTextoFields): string {
   const bounds = elementBounds(raw, literalIndex, 'h2', TITLE_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h2', TITLE_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
 }
 
 // --- SUBTITULO_TEXTO -------------------------------------------------------------
@@ -77,9 +87,17 @@ export function renderSubtituloTextoSnippet(fields: SubtituloTextoFields): strin
   const raw = stripComments(titleModuleRaw)
   const literalIndex = indexOfOrThrow(raw, SUBTITULO_TEXTO_LITERAL, TITLE_FILE_NAME)
   const bounds = elementBounds(raw, literalIndex, 'h3', TITLE_FILE_NAME)
-  const template = raw.slice(bounds.start, bounds.end)
+  // El `<h3>` del maestro no trae `text-align` (su `<h2>` hermano sí): sin
+  // esto el subtítulo no sigue el alineado del módulo. Se agrega el mismo
+  // token que usa el título; lo resuelve substituteModuleAlignVars.
+  const template = withModuleTextAlign(raw.slice(bounds.start, bounds.end))
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h3', TITLE_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
+}
+
+function withModuleTextAlign(tag: string): string {
+  if (/text-align\s*:/.test(tag.slice(0, tag.indexOf('>')))) return tag
+  return tag.replace('style="', 'style="text-align: {{body_alineado_molecular}}; ')
 }
 
 // --- SEPARADOR_LINEA -------------------------------------------------------------
@@ -106,7 +124,17 @@ const BULLET_TEXTO_LITERAL = 'bloque de texto bloque de texto bloque de texto'
 
 export function renderBulletIconoSnippet(fields: BulletIconoFields): string {
   const fileName = BULLET_ICONO_FILE_NAME[fields.size]
-  const raw = stripComments(BULLET_ICONO_RAW[fields.size])
+  let raw = stripComments(BULLET_ICONO_RAW[fields.size])
+
+  // El ícono va ANTES que el título/texto en el archivo: se resuelve primero
+  // y los bounds de abajo se calculan ya sobre el resultado.
+  const iconPlaceholder = BULLET_ICONO_DEFAULT_URLS[fields.size]
+  if (fields.imageUrl.trim() === '') {
+    const tdBounds = elementBounds(raw, indexOfOrThrow(raw, iconPlaceholder, fileName), 'td', fileName)
+    raw = raw.slice(0, tdBounds.start) + raw.slice(tdBounds.end)
+  } else {
+    raw = substituteImgSrcOrRemove(raw, iconPlaceholder, fields.imageUrl, fields.imageAlt, fileName)
+  }
 
   const tituloIndex = indexOfOrThrow(raw, BULLET_TITULO_LITERAL, fileName)
   const tituloBounds = elementBounds(raw, tituloIndex, 'h3', fileName)
@@ -116,15 +144,33 @@ export function renderBulletIconoSnippet(fields: BulletIconoFields): string {
   const textoBounds = elementBounds(raw, textoIndex, 'h4', fileName)
   const textoTextBounds = textRunBounds(raw, textoBounds, 'h4', fileName)
 
+  // Sin texto: se quitan el <h4> y el separador que lo antecede (no queda una
+  // línea vacía debajo del título) y las 2 celdas pasan a valign="middle",
+  // así el título queda centrado respecto del ícono.
+  if (plainText(fields.texto).trim() === '') {
+    const separadorStart = indexOfOrThrow(raw, BULLET_SEPARADOR, fileName, tituloBounds.end)
+    const html = applyEdits(
+      raw,
+      [
+        { ...tituloTextBounds, replacement: richTextHtml(fields.titulo) },
+        { start: separadorStart, end: textoBounds.end, replacement: '' },
+      ],
+      fileName,
+    )
+    return html.replace(/valign="top"/g, 'valign="middle"')
+  }
+
   return applyEdits(
     raw,
     [
-      { ...tituloTextBounds, replacement: escapeHtmlText(fields.titulo) },
-      { ...textoTextBounds, replacement: escapeHtmlText(fields.texto) },
+      { ...tituloTextBounds, replacement: richTextHtml(fields.titulo) },
+      { ...textoTextBounds, replacement: richTextHtml(fields.texto) },
     ],
     fileName,
   )
 }
+
+const BULLET_SEPARADOR = '<div class="separador-S"></div>'
 
 // --- BULLET_NUMERADO -------------------------------------------------------------
 // Mismo par título/texto que BULLET_ICONO + el número de fábrica (' 1 ', un
@@ -152,9 +198,9 @@ export function renderBulletNumeradoSnippet(fields: BulletNumeradoFields): strin
   return applyEdits(
     raw,
     [
-      { ...numeroTextBounds, replacement: escapeHtmlText(fields.numero) },
-      { ...tituloTextBounds, replacement: escapeHtmlText(fields.titulo) },
-      { ...textoTextBounds, replacement: escapeHtmlText(fields.texto) },
+      { ...numeroTextBounds, replacement: richTextHtml(fields.numero) },
+      { ...tituloTextBounds, replacement: richTextHtml(fields.titulo) },
+      { ...textoTextBounds, replacement: richTextHtml(fields.texto) },
     ],
     BULLET_NUMERADO_FILE_NAME,
   )
@@ -220,7 +266,7 @@ export function renderBeneficiosTituloSnippet(fields: BeneficiosTituloFields): s
   const bounds = elementBounds(raw, literalIndex, 'h3', BENEFITS_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h3', BENEFITS_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
 }
 
 export function renderBeneficiosTextoSnippet(fields: BeneficiosTextoFields): string {
@@ -229,7 +275,7 @@ export function renderBeneficiosTextoSnippet(fields: BeneficiosTextoFields): str
   const bounds = elementBounds(raw, literalIndex, 'h4', BENEFITS_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h4', BENEFITS_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
 }
 
 // --- COLUMNA_TEXTO -----------------------------------------------------------
@@ -250,7 +296,7 @@ export function renderColumnaTextoSnippet(fields: ColumnaTextoFields): string {
   const bounds = elementBounds(raw, literalIndex, 'h4', COL3_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const textBounds = textRunBounds(template, { start: 0, end: template.length }, 'h4', COL3_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
 }
 
 // --- BULLET_ICONO_SIMPLE -----------------------------------------------------
@@ -288,7 +334,7 @@ export function renderBulletIconoSimpleSnippet(fields: BulletIconoSimpleFields):
   const textIndex = indexOfOrThrow(template, BULLET_ICONO_SIMPLE_TEXT_LITERAL, COUPONS_FILE_NAME)
   const textElBounds = elementBounds(template, textIndex, 'h4', COUPONS_FILE_NAME)
   const textBounds = textRunBounds(template, textElBounds, 'h4', COUPONS_FILE_NAME)
-  return template.slice(0, textBounds.start) + escapeHtmlText(fields.text) + template.slice(textBounds.end)
+  return template.slice(0, textBounds.start) + richTextHtml(fields.text) + template.slice(textBounds.end)
 }
 
 // --- CUPON_MONTO --------------------------------------------------------------
@@ -316,5 +362,58 @@ export function renderCuponMontoSnippet(fields: CuponMontoFields): string {
   const bounds = elementBounds(raw, anchorIndex, 'h1', COUPONS_FILE_NAME)
   const template = raw.slice(bounds.start, bounds.end)
   const innerTextBounds = innerBounds(template, { start: 0, end: template.length }, 'h1', COUPONS_FILE_NAME)
-  return template.slice(0, innerTextBounds.start) + escapeHtmlText(fields.text) + template.slice(innerTextBounds.end)
+  return template.slice(0, innerTextBounds.start) + richTextHtml(fields.text) + template.slice(innerTextBounds.end)
 }
+
+// --- TAGS ------------------------------------------------------------------------
+// content_moleculas/molecula_tag_icono.html trae UNA pastilla (ícono + texto)
+// dentro de un contenedor que lleva el alineado del módulo. Para 1–3 tags se
+// conserva el contenedor y se repite la pastilla, que es inline-block: quedan
+// en una sola fila, como en el banner.
+
+const TAG_ICONO_FILE_NAME = 'molecula_tag_icono.html'
+const TAG_ICONO_OUTER_ANCHOR = 'role="molecula-tag"'
+const TAG_ICONO_TEXT_LITERAL = ' tag 1 </h4>'
+
+export function renderModuleTagsSnippet(fields: TagsFields): string {
+  const raw = stripComments(tagIconoRaw).trim()
+  const outer = elementBounds(raw, indexOfOrThrow(raw, TAG_ICONO_OUTER_ANCHOR, TAG_ICONO_FILE_NAME), 'div', TAG_ICONO_FILE_NAME)
+  const inner = innerBounds(raw, outer, 'div', TAG_ICONO_FILE_NAME)
+  const pillStart = indexOfOrThrow(raw, '<div', TAG_ICONO_FILE_NAME, inner.start)
+  const pill = elementBounds(raw, pillStart + 1, 'div', TAG_ICONO_FILE_NAME)
+  const template = raw.slice(pill.start, pill.end)
+
+  const imgStart = indexOfOrThrow(template, '<img', TAG_ICONO_FILE_NAME)
+  const imgEnd = template.indexOf('>', imgStart) + 1
+  indexOfOrThrow(template, TAG_ICONO_TEXT_LITERAL, TAG_ICONO_FILE_NAME)
+
+  const pills = fields.tags.map((tag) => {
+    const img = template.slice(imgStart, imgEnd)
+    // "se debe poder cambiar o quitar el ícono" (comentario del maestro): sin
+    // ícono o sin URL se quita el <img> entero; el texto queda.
+    const icon =
+      tag.iconEnabled && tag.iconUrl.trim() !== ''
+        ? img.replace(/src="[^"]*"/, () => `src="${escapeHtmlAttr(tag.iconUrl)}"`).replace(/alt="[^"]*"/, () => `alt="${escapeHtmlAttr(tag.iconAlt)}"`)
+        : ''
+    const rest = template.slice(imgEnd).replace(TAG_ICONO_TEXT_LITERAL, () => ` ${richTextHtml(tag.text)} </h4>`)
+    return template.slice(0, imgStart) + icon + rest
+  })
+
+  return raw.slice(0, inner.start) + pills.join('') + raw.slice(inner.end)
+}
+
+// --- CTA_INTERNO -----------------------------------------------------------------
+// El mismo CTA del banner (content block de Braze). El alineado no es un campo
+// propio: sigue al del módulo, igual que en el banner sigue al de las
+// moléculas. Se emite el token que el módulo reemplaza al final
+// (substituteModuleAlignVars → 'left' / 'center').
+
+export function renderModuleCtaSnippet(fields: ModuleCtaFields, doc: EmailDocument): string {
+  return renderCtaSnippet(
+    { ...fields, align: MODULE_ALIGN_TOKEN as CtaFields['align'] },
+    resolveCtaStyle(doc.global.ctaStyle, doc.global.tema),
+    doc.footer.tipoFooter,
+  )
+}
+
+const MODULE_ALIGN_TOKEN = '{{body_alineado_molecular}}'

@@ -22,6 +22,7 @@
 // sin cambios — un tercer valor de areaKey es tan válido como un segundo.
 // ============================================================================
 import { z } from 'zod'
+import { richTextFromPlain } from '../../richText/model'
 import { newId } from '../../ids'
 import { MODULE_ALIGN_VALUES } from '../contentModules/generalFields'
 import { moduleItemSchema, type ModuleItem } from '../../moduleItems/schemas'
@@ -107,7 +108,7 @@ function col3DefaultItems(ids: [string, string, string, string, string, string, 
     return [
       { id: iconoId, areaKey, type: 'ICONO', fields: { imageUrl: COL3_DEFAULT_ICON_URL, imageAlt: 'img', size: 'M', borderRadiusEnabled: false } },
       { id: separadorId, areaKey, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },
-      { id: textoId, areaKey, type: 'COLUMNA_TEXTO', fields: { text: 'Texto corto' } },
+      { id: textoId, areaKey, type: 'COLUMNA_TEXTO', fields: { text: richTextFromPlain('Texto corto') } },
     ]
   })
 }

@@ -81,9 +81,11 @@ export interface BannerItemRenderCtx {
    *  que `moleculeAlign` — renderCtaInternoSnippet lo trata como 'left' (el
    *  default de esta orientación) cuando falta. */
   horizontalMoleculeAlign?: BannerHorizontalMoleculeAlign
+  /** Ver `bannerSchema.bottomSpacing`. Omitido = true (el maestro). */
+  bottomSpacing?: boolean
 }
 
-export const bannerSchema = z.object({
+const bannerObjectSchema = z.object({
   bannerType: z.enum(BANNER_TYPE_VALUES).default('vertical'),
   /** Reemplaza las 2 apariciones del token de relleno manual
    *  AQUIELLINKDELBANNER (href + originalsrc). Vacío = <a> sin destino. Desde
@@ -143,8 +145,45 @@ export const bannerSchema = z.object({
    * que _vertical.html ya trae de fábrica.
    */
   horizontalMoleculeAlign: z.enum(BANNER_HORIZONTAL_MOLECULE_ALIGN_VALUES).default('left'),
+  /**
+   * Cada pieza del maestro trae su `margin-bottom` (7px) para separarse de la
+   * siguiente; en la ÚLTIMA pieza ese margen queda como espacio al final del
+   * banner, antes de Contents. Apagado, se quita solo el de la última pieza.
+   * Default = el maestro.
+   */
+  bottomSpacing: z.boolean().default(true),
 })
-export type BannerFields = z.infer<typeof bannerSchema>
+
+/** La alineación que tenía por defecto una pieza del banner: la del selector
+ *  de moléculas según la orientación. La usan la migración de abajo y
+ *  insertBannerItem para un CTA_INTERNO recién agregado. */
+export function bannerMoleculeAlignFor(banner: { bannerType?: unknown; moleculeAlign?: unknown; horizontalMoleculeAlign?: unknown }): 'left' | 'center' {
+  const pick = (v: unknown, fallback: 'left' | 'center') => (v === 'left' || v === 'center' ? v : fallback)
+  return banner.bannerType === 'horizontal' ? pick(banner.horizontalMoleculeAlign, 'left') : pick(banner.moleculeAlign, 'center')
+}
+
+/**
+ * Un CTA_INTERNO guardado antes del 2026-09-30 no tiene `align` propio: seguía
+ * al de las moléculas del banner. Al cargarlo recibe ESA alineación, así el
+ * banner se sigue viendo igual (sin esto caería al default 'center').
+ */
+function migrateLegacyCtaAlign(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value
+  const banner = value as { items?: unknown }
+  if (!Array.isArray(banner.items)) return value
+  const align = bannerMoleculeAlignFor(banner as Parameters<typeof bannerMoleculeAlignFor>[0])
+  return {
+    ...banner,
+    items: banner.items.map((item) => {
+      const it = item as { type?: unknown; fields?: Record<string, unknown> }
+      if (it?.type !== 'CTA_INTERNO' || !it.fields || 'align' in it.fields) return item
+      return { ...it, fields: { ...it.fields, align } }
+    }),
+  }
+}
+
+export const bannerSchema = z.preprocess(migrateLegacyCtaAlign, bannerObjectSchema)
+export type BannerFields = z.infer<typeof bannerObjectSchema>
 
 /**
  * El `items: []` del schema queda puro/determinista; la regla de negocio de

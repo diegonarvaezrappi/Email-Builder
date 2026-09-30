@@ -216,7 +216,7 @@ describe('renderEmailPreview', () => {
       d({
         banner: {
           ...defaultEmailDocument.banner,
-          items: [{ id: 'banner-cta', type: 'CTA_INTERNO', fields: { text: 'CTA del banner', deeplink: '#' } }],
+          items: [{ id: 'banner-cta', type: 'CTA_INTERNO', fields: { text: 'CTA del banner', deeplink: '#', align: 'center', size: 'big' } }],
         },
         contenidos: [ctaBlock('a', 'CTA libre')],
       }),

@@ -14,7 +14,8 @@
 // también el orden en que aparecen en el panel de componentes.
 // ============================================================================
 import { z } from 'zod'
-import { defaultRichText, richTextSchema } from '../../../richText/model'
+import { ctaFieldsSchema } from '../../cta/schema'
+import { defaultRichText, richTextFromPlain, richTextSchema } from '../../../richText/model'
 
 export const BANNER_ITEM_TYPE_VALUES = [
   'PROMO',
@@ -209,7 +210,7 @@ export const tagItemSchema = z.preprocess(
   (value) =>
     typeof value === 'string' ? { text: value, iconEnabled: true, iconUrl: TAG_ICON_DEFAULT_URL, iconAlt: TAG_ICON_ALT_DEFAULT } : value,
   z.object({
-    text: z.string().default('tag 1'),
+    text: richTextSchema.default(defaultRichText('tag 1')),
     iconEnabled: z.boolean().default(true),
     iconUrl: z.string().default(TAG_ICON_DEFAULT_URL),
     iconAlt: z.string().default(TAG_ICON_ALT_DEFAULT),
@@ -217,7 +218,7 @@ export const tagItemSchema = z.preprocess(
 )
 export type TagItem = z.infer<typeof tagItemSchema>
 export const defaultTagItem = (text = 'tag 1'): TagItem => ({
-  text,
+  text: richTextFromPlain(text),
   iconEnabled: true,
   iconUrl: TAG_ICON_DEFAULT_URL,
   iconAlt: TAG_ICON_ALT_DEFAULT,
@@ -229,16 +230,13 @@ export const tagsFieldsSchema = z.object({ tags: z.array(tagItemSchema).min(1).m
 export type TagsFields = z.infer<typeof tagsFieldsSchema>
 export const defaultTagsFields: TagsFields = tagsFieldsSchema.parse({})
 
-/** `cta_alineado` NO es un campo propio de esta pieza: sigue el selector de
- *  alineado de moléculas del banner que lo contiene — bannerSchema.
- *  moleculeAlign en vertical, bannerSchema.horizontalMoleculeAlign en
- *  horizontal — ver renderCtaInternoSnippet en items/render.ts. El
- *  color/estilo sale de doc.global.ctaStyle, compartido con el CTA libre de
- *  CONTENIDOS. */
-export const ctaInternoFieldsSchema = z.object({
-  text: z.string().default('Pide ahora'),
-  deeplink: z.string().default(''),
-})
+/** El CTA del banner tiene los MISMOS campos que el CTA de contenidos
+ *  (pedido del usuario, 2026-09-30): texto, enlace, alineación y tamaño. Hasta
+ *  entonces la alineación seguía a la de las moléculas del banner y el tamaño
+ *  iba fijo en 'big'; los CTA guardados así se migran en bannerSchema
+ *  (conservan esa alineación) y uno nuevo arranca alineado como el banner
+ *  (insertBannerItem). El color sale de doc.global.ctaStyle, compartido. */
+export const ctaInternoFieldsSchema = ctaFieldsSchema
 export type CtaInternoFields = z.infer<typeof ctaInternoFieldsSchema>
 export const defaultCtaInternoFields: CtaInternoFields = ctaInternoFieldsSchema.parse({})
 
@@ -314,8 +312,8 @@ export const TEXTO_PASTILLA_POSITION_LABELS: Record<TextoPastillaPosition, strin
   izquierda: 'Pastilla a la izquierda',
 }
 export const textoPastillaFieldsSchema = z.object({
-  text: z.string().default('Supermercados'),
-  pillText: z.string().default('Martes'),
+  text: richTextSchema.default(defaultRichText('Supermercados')),
+  pillText: richTextSchema.default(defaultRichText('Martes')),
   pillPosition: z.enum(TEXTO_PASTILLA_POSITION_VALUES).default('derecha'),
 })
 export type TextoPastillaFields = z.infer<typeof textoPastillaFieldsSchema>

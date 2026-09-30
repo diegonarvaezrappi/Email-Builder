@@ -210,15 +210,19 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
   // cambiar bannerType de vertical a horizontal (ui/LeftPanel.tsx) no pasa
   // por esas acciones — ver horizontalOrder.ts.
   const orderedItems = enforceHorizontalItemOrder(items, ctx.bannerType)
+  const rendered = orderedItems.filter((item) => getBannerItemDef(item.type)?.orientations.includes(ctx.bannerType))
+  const lastItem = rendered[rendered.length - 1]
   for (const item of orderedItems) {
     const def = getBannerItemDef(item.type)
     if (!def || !def.orientations.includes(ctx.bannerType)) continue
+    const trimBottom = ctx.bottomSpacing === false && item === lastItem
 
     // Los transforms de alineado van ADENTRO de renderVariant (no aplicados
     // una sola vez afuera) para que CADA rama los reciba — así el camino base
     // (sin tropicalizar) queda exactamente igual que antes de esta feature.
     const renderVariant = (fields: unknown): string => {
-      const itemHtml = def.render(fields, doc, ctx)
+      const raw = def.render(fields, doc, ctx)
+      const itemHtml = trimBottom ? withoutBottomSpacing(raw, item.type) : raw
       if (ctx.bannerType === 'vertical' && ctx.moleculeAlign === 'left') return alignMoleculeLeft(itemHtml)
       if (ctx.bannerType === 'horizontal' && def.zone === 'MOLECULA' && ctx.horizontalMoleculeAlign === 'center') {
         return alignMoleculeCenter(itemHtml)
@@ -236,12 +240,27 @@ export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: B
   return groups
 }
 
+/** Quita el espacio que la pieza deja debajo de sí: el `margin-bottom` de su
+ *  contenedor (la primera etiqueta), escrito suelto o como 3er valor del
+ *  shorthand `margin` (PROMO/CREDITOS: `margin: 0px auto 7px auto`). TAGS no
+ *  usa margen sino el padding de su celda (`padding: 5px 10px`). */
+function withoutBottomSpacing(html: string, type: BannerItem['type']): string {
+  if (type === 'TAGS') return html.replace('padding: 5px 10px;', 'padding: 5px 10px 0px 10px;')
+  const tag = /<(?!!)[a-zA-Z][^>]*>/.exec(html)
+  if (!tag) return html
+  const trimmed = tag[0]
+    .replace(/margin-bottom:\s*[^;"]+/, 'margin-bottom: 0px')
+    .replace(/margin:\s*([^;"\s]+)\s+([^;"\s]+)\s+[^;"\s]+\s+([^;"\s]+)\s*;/, 'margin: $1 $2 0px $3;')
+  return html.slice(0, tag.index) + trimmed + html.slice(tag.index + tag[0].length)
+}
+
 export function renderBannerSnippet(fields: BannerFields, doc: EmailDocument): string {
   const { shell, moleculeTable } = bannerShell(fields.bannerType)
   const ctx: BannerItemRenderCtx = {
     bannerType: fields.bannerType,
     moleculeAlign: fields.moleculeAlign,
     horizontalMoleculeAlign: fields.horizontalMoleculeAlign,
+    bottomSpacing: fields.bottomSpacing,
   }
 
   const body = groupBannerItems(fields.items, doc, ctx)

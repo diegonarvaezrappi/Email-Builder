@@ -56,6 +56,15 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
         <span>Fondo del banner (color/imagen por defecto del tema)</span>
       </label>
 
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.bottomSpacing}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set('bottomSpacing', e.target.checked)}
+        />
+        <span>Espacio inferior del banner (antes de Contents)</span>
+      </label>
+
       {value.bannerType === 'vertical' && (
         <label className="field">
           <span>Alineado de las moléculas</span>

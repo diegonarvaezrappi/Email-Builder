@@ -38,6 +38,7 @@
 // ============================================================================
 import { z } from 'zod'
 import { newId } from '../../ids'
+import { defaultRichText, richTextFromPlain, richTextSchema } from '../../richText/model'
 import { moduleItemSchema, type ModuleItem } from '../../moduleItems/schemas'
 import { defaultSeparadorFields, defaultTextoPastillaFields } from '../banner/items/schemas'
 import { defaultCuponMontoFields } from '../../moduleItems/schemas'
@@ -74,7 +75,7 @@ export const cuponCellFieldsSchema = z.object({
   linkEnabled: z.boolean().default(false),
   link: z.string().default(''),
   legalEnabled: z.boolean().default(false),
-  legalText: z.string().default('Aplican términos y condiciones |'),
+  legalText: richTextSchema.default(defaultRichText('Aplican términos y condiciones |')),
 })
 export type CuponCellFields = z.infer<typeof cuponCellFieldsSchema>
 
@@ -93,11 +94,11 @@ export const tituloCellFieldsSchema = z.object({
   /** Alt del `<img role="molecula-iconoS">` — default reproduce el `alt="Rappi"`
    *  que celda_cupon_titulo.html ya trae de fábrica. */
   tagIconAlt: z.string().default('Rappi'),
-  titleText: z.string().default('Aca un titulo'),
+  titleText: richTextSchema.default(defaultRichText('Aca un titulo')),
   linkEnabled: z.boolean().default(false),
   link: z.string().default(''),
   legalEnabled: z.boolean().default(false),
-  legalText: z.string().default('Aplican términos y condiciones |'),
+  legalText: richTextSchema.default(defaultRichText('Aplican términos y condiciones |')),
 })
 export type TituloCellFields = z.infer<typeof tituloCellFieldsSchema>
 
@@ -137,11 +138,11 @@ function cuponesDefaultItems(ids: [string, string, string, string, string, strin
         id: pastillaId,
         areaKey,
         type: 'TEXTO_PASTILLA',
-        fields: { ...defaultTextoPastillaFields, text: 'Restaurantes', pillText: 'Solo en', pillPosition: 'izquierda' },
+        fields: { ...defaultTextoPastillaFields, text: richTextFromPlain('Restaurantes'), pillText: richTextFromPlain('Solo en'), pillPosition: 'izquierda' },
       },
       { id: montoId, areaKey, type: 'CUPON_MONTO', fields: defaultCuponMontoFields },
       { id: separadorId, areaKey, type: 'SEPARADOR', fields: { ...defaultSeparadorFields, size: 'S' } },
-      { id: bulletId, areaKey, type: 'BULLET_ICONO_SIMPLE', fields: { imageUrl: TITULO_CELL_TAG_ICON_URL, imageAlt: 'img', text: 'Cupón xxxxxxxxxxx' } },
+      { id: bulletId, areaKey, type: 'BULLET_ICONO_SIMPLE', fields: { imageUrl: TITULO_CELL_TAG_ICON_URL, imageAlt: 'img', text: richTextFromPlain('Cupón xxxxxxxxxxx') } },
     ]
   })
 }

@@ -30,7 +30,8 @@ import {
   type Bounds,
   type Edit,
 } from '../../template/htmlEdits'
-import { escapeHtmlText, substituteImgSrcOrRemove } from '../../template/htmlText'
+import { substituteImgSrcOrRemove } from '../../template/htmlText'
+import { richTextHtml } from '../../richText/themeColors'
 import { wrapWithModuleItemMarkers } from '../../template/contentBlocks'
 import { resolveThemeVars } from '../../themes/inlineTheme'
 import { moduleItemKey } from '../../tropicalize/keys'
@@ -157,7 +158,7 @@ function renderTituloCell(fields: TituloCellFields): string {
   const styleIndex = indexOfOrThrow(html, TITULO_HEADING_STYLE_ANCHOR, TITULO_FILE_NAME)
   const h1Bounds = elementBounds(html, styleIndex, 'h1', TITULO_FILE_NAME)
   const innerTextBounds = innerBounds(html, h1Bounds, 'h1', TITULO_FILE_NAME)
-  html = html.slice(0, innerTextBounds.start) + escapeHtmlText(fields.titleText) + html.slice(innerTextBounds.end)
+  html = html.slice(0, innerTextBounds.start) + richTextHtml(fields.titleText) + html.slice(innerTextBounds.end)
 
   html = resolveModuleLink(html, TITULO_LINK_TOKEN, fields.linkEnabled, fields.link, TITULO_FILE_NAME)
   return html
@@ -182,7 +183,7 @@ function renderLegalCell(cellHtml: string, fields: CuponesCellFields): string {
   const spanIndex = indexOfOrThrow(cellHtml, LEGAL_CLASS_ANCHOR, MODULE_FILE_NAME)
   const spanBounds = elementBounds(cellHtml, spanIndex, 'span', MODULE_FILE_NAME)
   const textBounds = textRunBounds(cellHtml, spanBounds, 'span', MODULE_FILE_NAME)
-  const text = fields.legalEnabled ? escapeHtmlText(fields.legalText) : ''
+  const text = fields.legalEnabled ? richTextHtml(fields.legalText) : ''
   return cellHtml.slice(0, textBounds.start) + text + cellHtml.slice(textBounds.end)
 }
 

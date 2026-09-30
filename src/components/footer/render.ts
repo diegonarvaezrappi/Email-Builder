@@ -1,6 +1,35 @@
+import footerGeneralRaw from '../../assets/templates/footer_general.html?raw'
+import footerSimpleRaw from '../../assets/templates/footer_simple.html?raw'
+import footerRtsRaw from '../../assets/templates/footer_rts.html?raw'
+import footerB2bRaw from '../../assets/templates/footer_b2b.html?raw'
 import { toLiquidStringLiteral, wrapUrlsAsFooterLinks } from '../../template/liquidText'
 import { colorFooterForTheme } from '../../themes/themes'
 import type { FooterFields, TipoFooter } from './schema'
+
+const FOOTER_RAW_BY_TIPO: Record<TipoFooter, string> = {
+  General: footerGeneralRaw,
+  SinAmor: footerSimpleRaw,
+  RTS: footerRtsRaw,
+  B2B: footerB2bRaw,
+}
+
+/** Color del texto de los legales si el footer no trae una rama para el estilo (su `{% else %}`). */
+const FOOTER_TEXT_COLOR_FALLBACK = '#7D8188'
+
+/**
+ * El `color_letra` que el content block asigna para un `font_style_look`: el
+ * color con el que pinta los legales, y por eso el que tiene que llevar un link
+ * escrito en "Legales adicionales". Se lee del propio footer (no hay una
+ * variable de tema equivalente: difiere de `color_texto_mail_general` en varios
+ * temas) y no se puede delegar a Braze con `{{color_letra}}`, porque `cond` es
+ * un string y Liquid no evalúa lo que viene dentro de una variable.
+ */
+export function footerTextColor(tipoFooter: TipoFooter, fontStyleLook: string): string {
+  const raw = FOOTER_RAW_BY_TIPO[tipoFooter]
+  const branch = new RegExp(`font_style_look == '${fontStyleLook}' %\\}\\s*\\{% assign color_letra = '(#[0-9A-Fa-f]{6})' %\\}`).exec(raw)
+  const fallback = /\{% else %\}\s*\{% assign color_letra = '(#[0-9A-Fa-f]{6})' %\}/.exec(raw)
+  return branch?.[1] ?? fallback?.[1] ?? FOOTER_TEXT_COLOR_FALLBACK
+}
 
 /** Nombre del Content Block de Braze a referenciar, según Tipo de Footer. */
 export const FOOTER_CONTENT_BLOCK_BY_TIPO: Record<TipoFooter, string> = {
@@ -50,7 +79,7 @@ export function resolveFontStyleLook(tema: string): string {
  */
 export function renderFooterAssignLines(fields: FooterFields, tema: string): string[] {
   const fontStyleLook = resolveFontStyleLook(tema)
-  const cond = wrapUrlsAsFooterLinks(fields.legalesAdicionales)
+  const cond = wrapUrlsAsFooterLinks(fields.legalesAdicionales, footerTextColor(fields.tipoFooter, fontStyleLook))
   return [
     `{% assign cond = ${toLiquidStringLiteral(cond)} %}`,
     `{% assign font_style_look = '${fontStyleLook}' %}`,

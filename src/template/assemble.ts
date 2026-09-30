@@ -157,6 +157,8 @@ interface SectionBackground {
   size: BackgroundSize
   position: BackgroundPosition
   repeat: BackgroundRepeat
+  /** Color sólido (`#RRGGBB`) debajo de la imagen; vacío = ninguno. */
+  color?: string
 }
 
 /**
@@ -178,6 +180,11 @@ function applySectionBackground(html: string, commentAnchor: string, bg: Section
   openTag = withBackgroundDecl(openTag, bg.size, bg.position, bg.repeat)
   if (bg.url.trim() !== '') {
     openTag = insertBackgroundImageAltAtStart(openTag, bg.alt, fileName)
+  }
+  if (bg.color) {
+    // En CSS y también como `bgcolor`: un hex sólido sí vale en el atributo
+    // (CLAUDE.md §4.1), y es lo que respeta Outlook de escritorio.
+    openTag = openTag.replace('style="', `bgcolor="${bg.color}" style="background-color: ${bg.color}; `)
   }
   return html.slice(0, bounds.start) + openTag + html.slice(bounds.end)
 }
@@ -250,6 +257,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
       size: doc.global.contentsBgSize,
       position: doc.global.contentsBgPosition,
       repeat: doc.global.contentsBgRepeat,
+      color: doc.global.contentsBgColor,
     },
     'template_base.html',
   )

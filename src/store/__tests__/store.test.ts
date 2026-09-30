@@ -148,7 +148,7 @@ describe('duplicateContentBlock', () => {
     useBuilder.setState((s) => ({
       document: {
         ...s.document,
-        contenidos: [{ id: 'row-1', type: 'DEALS', fields: { items: [dealCard('a', { copy1: 'Original' }), dealCard('b')] } }],
+        contenidos: [{ id: 'row-1', type: 'DEALS', fields: { items: [dealCard('a', { copy1: richTextFromPlain('Original') }), dealCard('b')] } }],
       },
     }))
     useBuilder.getState().duplicateContentBlock('row-1')
@@ -159,7 +159,7 @@ describe('duplicateContentBlock', () => {
     expect(originalIds).toEqual(['a', 'b'])
     for (const id of copyIds) expect(originalIds).not.toContain(id)
     // Los VALORES sí se preservan — es una copia, no una fila en blanco.
-    expect(contenidos[1].fields.items[0].fields.copy1).toBe('Original')
+    expect(contenidos[1].fields.items[0].fields.copy1).toEqual(richTextFromPlain('Original'))
   })
 })
 
@@ -457,7 +457,7 @@ const moduleItem = (id: string, areaKey = 'main', text = id): ModuleItem => ({
   id,
   areaKey,
   type: 'TITULO_TEXTO',
-  fields: { text },
+  fields: { text: richTextFromPlain(text) },
 })
 
 const titleBlock = (id: string, items: ModuleItem[]): TitleBlock => ({
@@ -505,14 +505,14 @@ describe('duplicateDealCard', () => {
   it('copia la tarjeta justo después, con un id nuevo y los mismos campos', () => {
     // Mismo motivo que arriba: arranca con 1 sola tarjeta para que la copia
     // (la 2ª) no choque con el tope de la fila.
-    setDealsBlock([dealCard('a', { copy1: 'Mi promo' })])
+    setDealsBlock([dealCard('a', { copy1: richTextFromPlain('Mi promo') })])
     useBuilder.getState().duplicateDealCard('a')
     const ids = dealCardIds()
     expect(ids).toHaveLength(2)
     expect(ids[0]).toBe('a')
     expect(ids[1]).not.toBe('a')
     const copy = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items[1]
-    expect(copy.fields.copy1).toBe('Mi promo')
+    expect(copy.fields.copy1).toEqual(richTextFromPlain('Mi promo'))
   })
 
   it('no hace nada si el bloque ya llegó al tope de 2 (una fila completa)', () => {
@@ -596,11 +596,11 @@ describe('removeDealCard', () => {
 
 describe('updateDealCardFields', () => {
   it('actualiza solo la tarjeta apuntada, dejando las otras intactas', () => {
-    setDealsBlock([dealCard('a'), dealCard('b', { copy1: 'B original' })])
+    setDealsBlock([dealCard('a'), dealCard('b', { copy1: richTextFromPlain('B original') })])
     useBuilder.getState().updateDealCardFields('a', { ...defaultDealCardFields, copy1: 'A editada' })
     const items = (useBuilder.getState().document.contenidos[0] as DealsBlock).fields.items
     expect(items[0].fields.copy1).toBe('A editada')
-    expect(items[1].fields.copy1).toBe('B original')
+    expect(items[1].fields.copy1).toEqual(richTextFromPlain('B original'))
   })
 
   it('encuentra la tarjeta aunque el bloque DEALS no sea el primero de contenidos', () => {
@@ -651,7 +651,7 @@ describe('duplicateModuleItem', () => {
     expect(ids[0]).toBe('a')
     expect(ids[1]).not.toBe('a')
     const block = useBuilder.getState().document.contenidos[0] as TitleBlock
-    expect(block.fields.items[1].fields).toEqual({ text: 'Mi título' })
+    expect(block.fields.items[1].fields).toEqual({ text: richTextFromPlain('Mi título') })
   })
 
   it('ignora un itemId que no existe', () => {
@@ -708,7 +708,7 @@ describe('updateModuleItemFields', () => {
     useBuilder.getState().updateModuleItemFields('a', { text: 'A editada' })
     const block = useBuilder.getState().document.contenidos[0] as TitleBlock
     expect(block.fields.items[0].fields).toEqual({ text: 'A editada' })
-    expect(block.fields.items[1].fields).toEqual({ text: 'B original' })
+    expect(block.fields.items[1].fields).toEqual({ text: richTextFromPlain('B original') })
   })
 
   it('encuentra el item aunque el bloque TITLE no sea el primero de contenidos', () => {

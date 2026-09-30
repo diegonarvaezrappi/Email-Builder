@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { richTextFromPlain } from '../../../richText/model'
 import {
   DEAL_CARD_PIECE_LABELS,
   DEAL_CARD_PIECE_TYPES,
@@ -48,10 +49,10 @@ describe('isDealCardPieceHidden', () => {
   })
 
   it('copy1/copy2 se ocultan solo si el texto queda vacío (o solo espacios)', () => {
-    expect(isDealCardPieceHidden(fields({ copy1: '' }), 'copy1')).toBe(true)
-    expect(isDealCardPieceHidden(fields({ copy1: '   ' }), 'copy1')).toBe(true)
-    expect(isDealCardPieceHidden(fields({ copy1: 'algo' }), 'copy1')).toBe(false)
-    expect(isDealCardPieceHidden(fields({ copy2: '' }), 'copy2')).toBe(true)
+    expect(isDealCardPieceHidden(fields({ copy1: richTextFromPlain('') }), 'copy1')).toBe(true)
+    expect(isDealCardPieceHidden(fields({ copy1: richTextFromPlain('   ') }), 'copy1')).toBe(true)
+    expect(isDealCardPieceHidden(fields({ copy1: richTextFromPlain('algo') }), 'copy1')).toBe(false)
+    expect(isDealCardPieceHidden(fields({ copy2: richTextFromPlain('') }), 'copy2')).toBe(true)
   })
 
   it('precio se oculta solo si NINGUNO de sus 3 sub-campos está prendido', () => {
@@ -107,7 +108,7 @@ describe('hideDealCardPiece', () => {
   })
 
   it('copy1 se vacía (no solo se "apaga" con un booleano que no existe)', () => {
-    expect(hideDealCardPiece(fields(), 'copy1').copy1).toBe('')
+    expect(hideDealCardPiece(fields(), 'copy1').copy1).toEqual([])
   })
 })
 
@@ -121,7 +122,7 @@ describe('restoreDealCardPiece', () => {
   })
 
   it('restablece a los valores de fábrica, no a un estado arbitrario', () => {
-    const edited = fields({ tag1Enabled: false, tag1Text: 'lo que sea', tag1IconUrl: 'https://otra-cosa' })
+    const edited = fields({ tag1Enabled: false, tag1Text: richTextFromPlain('lo que sea'), tag1IconUrl: 'https://otra-cosa' })
     const restored = restoreDealCardPiece(edited, 'tag1')
     expect(restored.tag1Enabled).toBe(defaultDealCardFields.tag1Enabled)
     expect(restored.tag1Text).toBe(defaultDealCardFields.tag1Text)

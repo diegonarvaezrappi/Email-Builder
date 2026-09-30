@@ -199,7 +199,7 @@ describe('renderLogosSnippet · alineado y fondo generales', () => {
 
   it('center: applies to BOTH tables', () => {
     const html = render({ ...defaultLogosFields, align: 'center' })
-    expect(html.match(/role="molecula-texto"[^>]*text-align: center/g)?.length).toBe(2)
+    expect(html.match(/role="molecula-texto"[^>]*text-align: center/g)?.length).toBe(4) // título + subtítulo de cada tabla
   })
 
   it('backgroundEnabled=false (default): "off" theme values', () => {

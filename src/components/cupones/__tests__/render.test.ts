@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { richTextFromPlain } from '../../../richText/model'
 import { defaultEmailDocument } from '../../../registry'
 import { THEME_SLUGS } from '../../../themes/themes'
 import type { EmailDocument } from '../../../model'
@@ -104,7 +105,7 @@ describe('renderCuponesSnippet · link por celda (LINKCUPON)', () => {
 
 describe('renderCuponesSnippet · celda "título" (swap-in)', () => {
   it('a titulo cell renders the tag + heading text, no free area, its own LINKTITULO', () => {
-    const tituloCell = { ...createDefaultTituloCellFields(), titleText: 'Mi título de cupón' }
+    const tituloCell = { ...createDefaultTituloCellFields(), titleText: richTextFromPlain('Mi título de cupón') }
     const fields = withCell(defaultCuponesFields, 0, tituloCell)
     const html = render(fields)
     expect(html).toContain('Mi título de cupón')
@@ -115,8 +116,8 @@ describe('renderCuponesSnippet · celda "título" (swap-in)', () => {
   })
 
   it('replaces the WHOLE heading, not just the text run after the master\'s fixed "Aca un<br>" lead-in (real bug found via CDP visual check)', () => {
-    let fields = withCell(defaultCuponesFields, 0, { ...createDefaultTituloCellFields(), titleText: 'Mi título de cupón' })
-    fields = withCell(fields, 1, { ...createDefaultTituloCellFields(), titleText: 'Otro título' })
+    let fields = withCell(defaultCuponesFields, 0, { ...createDefaultTituloCellFields(), titleText: richTextFromPlain('Mi título de cupón') })
+    fields = withCell(fields, 1, { ...createDefaultTituloCellFields(), titleText: richTextFromPlain('Otro título') })
     const html = render(fields)
     expect(html).not.toContain('Aca un')
   })
@@ -159,7 +160,7 @@ describe('renderCuponesSnippet · legales (fila compartida, toggle per-celda)', 
   it('enabling ONLY cell1\'s legal shows the row with cell1 filled, cell2 blank', () => {
     const cell0 = defaultCuponesFields.cells[0]
     if (cell0.type !== 'cupon') throw new Error('expected cupon cell')
-    const fields = withCell(defaultCuponesFields, 0, { ...cell0, legalEnabled: true, legalText: 'Solo cell1' })
+    const fields = withCell(defaultCuponesFields, 0, { ...cell0, legalEnabled: true, legalText: richTextFromPlain('Solo cell1') })
     const html = render(fields)
     expect(html).toContain('class="legal"')
     expect(html.match(/Solo cell1/g)?.length).toBe(1)

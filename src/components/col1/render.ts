@@ -29,7 +29,7 @@ import { renderTropicalized } from '../../tropicalize/render'
 import { resolveGlobalVars } from '../../global/vars'
 import { getModuleItemDef, type ModuleItemRenderCtx } from '../../bodyMoleculeRegistry'
 import type { ModuleItem } from '../../moduleItems/schemas'
-import { moduleBackgroundVars, resolveModuleLink } from '../contentModules/generalRender'
+import { moduleBackgroundVars, resolveModuleLink, substituteModuleAlignVars } from '../contentModules/generalRender'
 import { COL1_AREA_ABOVE, COL1_AREA_BELOW, type Col1Fields } from './schema'
 
 const FILE_NAME = 'modulo-1columna.html'
@@ -116,12 +116,10 @@ export function renderCol1Snippet(fields: Col1Fields, doc: EmailDocument, ctx: C
   }
 
   let html = resolveModuleLink(raw, LINK_TOKEN, fields.linkEnabled, fields.link, FILE_NAME)
-  // Sin substituteModuleAlignVars a propósito: el maestro de este módulo NO
-  // trae los tokens body_alineado_molecular/alineado_molecular_mail_body en
-  // ningún lado (verificado leyendo el archivo completo) — no hay nada real
-  // que sustituir. `fields.align` sigue existiendo (generalModuleFieldsSchema
-  // completo, mismo tipo que el resto) pero el toggle se oculta en el panel
-  // (ver PropertiesPanel.tsx) para no mostrar un control que no hace nada.
+  // El maestro de este módulo no trae tokens de alineado propios (por eso el
+  // control se oculta en el panel), pero las moléculas que se insertan sí
+  // (Tags, CTA…): se resuelven con `fields.align`, que queda en su default.
+  html = substituteModuleAlignVars(html, fields.align)
 
   const vars = { ...resolveGlobalVars(doc.global), ...moduleBackgroundVars(doc.global.tema, fields.backgroundEnabled) }
   return resolveThemeVars(html, vars)

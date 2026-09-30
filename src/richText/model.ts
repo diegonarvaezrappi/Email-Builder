@@ -109,8 +109,15 @@ export interface RichTextColorMap {
   colorAcento2: string
 }
 
+/** Un texto guardado antes de pasar a RichText puede seguir llegando como
+ *  string por un camino que no pasa por el schema — los overrides de
+ *  tropicalizar se guardan sin tipar (tropicalize/schema.ts). */
+export function asRichText(value: RichText | string): RichText {
+  return typeof value === 'string' ? richTextFromPlain(value) : value
+}
+
 export function plainText(runs: RichText): string {
-  return runs.map((run) => run.text).join('')
+  return asRichText(runs).map((run) => run.text).join('')
 }
 
 export function richTextFromPlain(text: string): RichText {

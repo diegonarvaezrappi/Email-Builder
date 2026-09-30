@@ -23,7 +23,14 @@
 // arriba) — igual que TITULO_TEXTO/SUBTITULO_TEXTO no se limitan a Título.
 // ============================================================================
 import { z } from 'zod'
-import { franjaLogosFieldsSchema, separadorFieldsSchema, textoPastillaFieldsSchema } from '../components/banner/items/schemas'
+import { defaultRichText, richTextSchema } from '../richText/model'
+import {
+  ctaInternoFieldsSchema,
+  franjaLogosFieldsSchema,
+  separadorFieldsSchema,
+  tagsFieldsSchema,
+  textoPastillaFieldsSchema,
+} from '../components/banner/items/schemas'
 
 export const MODULE_ITEM_TYPE_VALUES = [
   'TITULO_TEXTO',
@@ -44,6 +51,11 @@ export const MODULE_ITEM_TYPE_VALUES = [
   // día 1 como el resto del catálogo.
   'BULLET_ICONO_SIMPLE',
   'CUPON_MONTO',
+  // Pedido del usuario (2026-09-30): Tags y CTA, que existían solo en el
+  // banner, también dentro de los módulos. Mismos campos que sus piezas de
+  // banner; Tags se pinta con content_moleculas/molecula_tag_icono.html.
+  'TAGS',
+  'CTA_INTERNO',
 ] as const
 export type ModuleItemType = (typeof MODULE_ITEM_TYPE_VALUES)[number]
 
@@ -54,13 +66,13 @@ export type ModuleItemType = (typeof MODULE_ITEM_TYPE_VALUES)[number]
  *  maestro no pide modificadores para esta molécula puntual (simplificación
  *  deliberada de esta fase — se puede sumar RichText después si hace falta,
  *  mismo criterio que ya tienen TEXTOXL/TEXTOM del banner). */
-export const tituloTextoFieldsSchema = z.object({ text: z.string().default('Titulo') })
+export const tituloTextoFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('Titulo')) })
 export type TituloTextoFields = z.infer<typeof tituloTextoFieldsSchema>
 export const defaultTituloTextoFields: TituloTextoFields = tituloTextoFieldsSchema.parse({})
 
 /** `<h3 role="molecula-texto">` — mismo criterio que TITULO_TEXTO (tag fijo, texto plano). */
 export const subtituloTextoFieldsSchema = z.object({
-  text: z.string().default('bloque de texto bloque de texto bloque de texto'),
+  text: richTextSchema.default(defaultRichText('bloque de texto bloque de texto bloque de texto')),
 })
 export type SubtituloTextoFields = z.infer<typeof subtituloTextoFieldsSchema>
 export const defaultSubtituloTextoFields: SubtituloTextoFields = subtituloTextoFieldsSchema.parse({})
@@ -90,10 +102,22 @@ export const defaultSeparadorLineaFields: SeparadorLineaFields = separadorLineaF
 export const BULLET_ICONO_SIZE_VALUES = ['S', 'M', 'L'] as const
 export type BulletIconoSize = (typeof BULLET_ICONO_SIZE_VALUES)[number]
 export const BULLET_ICONO_SIZE_LABELS: Record<BulletIconoSize, string> = { S: 'Chico', M: 'Mediano', L: 'Grande' }
+/** El ícono de fábrica de cada archivo del maestro. El default de `imageUrl`
+ *  es el de 'L' (el `size` por defecto); cambiar el tamaño no reescribe la
+ *  URL — mismo criterio que ICONO. */
+export const BULLET_ICONO_DEFAULT_URLS: Record<BulletIconoSize, string> = {
+  S: 'https://lh3.googleusercontent.com/d/1wZxPSRbT-maSuZWDyZz99Ewi2A2RH37-',
+  M: 'https://lh3.googleusercontent.com/d/1vdunOvDi3k-LLdfUwk2Qpotyl9u7ionz',
+  L: 'https://lh3.googleusercontent.com/d/1OnoMAEG3mWUinKdMpWpqQ9lt4s3a8tiS',
+}
 export const bulletIconoFieldsSchema = z.object({
   size: z.enum(BULLET_ICONO_SIZE_VALUES).default('L'),
-  titulo: z.string().default('Subtitulo'),
-  texto: z.string().default('bloque de texto bloque de texto bloque de texto'),
+  /** URL del ícono. En blanco se quita la celda del ícono entera, igual que
+   *  BULLET_ICONO_SIMPLE: un <img> suelto dejaría el hueco del <td> con ancho fijo. */
+  imageUrl: z.string().default(BULLET_ICONO_DEFAULT_URLS.L),
+  imageAlt: z.string().default('img'),
+  titulo: richTextSchema.default(defaultRichText('Subtitulo')),
+  texto: richTextSchema.default(defaultRichText('bloque de texto bloque de texto bloque de texto')),
 })
 export type BulletIconoFields = z.infer<typeof bulletIconoFieldsSchema>
 export const defaultBulletIconoFields: BulletIconoFields = bulletIconoFieldsSchema.parse({})
@@ -104,9 +128,9 @@ export const defaultBulletIconoFields: BulletIconoFields = bulletIconoFieldsSche
  *  en sí (`numero`) es texto libre, no se auto-incrementa entre instancias
  *  (mismo criterio "sin magia" que el resto de los campos de texto plano). */
 export const bulletNumeradoFieldsSchema = z.object({
-  numero: z.string().default('1'),
-  titulo: z.string().default('Subtitulo'),
-  texto: z.string().default('bloque de texto bloque de texto bloque de texto'),
+  numero: richTextSchema.default(defaultRichText('1')),
+  titulo: richTextSchema.default(defaultRichText('Subtitulo')),
+  texto: richTextSchema.default(defaultRichText('bloque de texto bloque de texto bloque de texto')),
 })
 export type BulletNumeradoFields = z.infer<typeof bulletNumeradoFieldsSchema>
 export const defaultBulletNumeradoFields: BulletNumeradoFields = bulletNumeradoFieldsSchema.parse({})
@@ -147,12 +171,12 @@ export const defaultIconoFields: IconoFields = iconoFieldsSchema.parse({})
  *  simplificación deliberada). El `<h3>`/`<h4>` de acá NO llevan
  *  `role="molecula-texto"` en el maestro (a diferencia de Título/Bullet) —
  *  se preserva tal cual, no se "corrige" la falta del atributo. */
-export const beneficiosTituloFieldsSchema = z.object({ text: z.string().default('Descuentos de hasta xxx') })
+export const beneficiosTituloFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('Descuentos de hasta xxx')) })
 export type BeneficiosTituloFields = z.infer<typeof beneficiosTituloFieldsSchema>
 export const defaultBeneficiosTituloFields: BeneficiosTituloFields = beneficiosTituloFieldsSchema.parse({})
 
 export const beneficiosTextoFieldsSchema = z.object({
-  text: z.string().default('En todos tus pedidos en la app, pidiendo desde $XXXXXX'),
+  text: richTextSchema.default(defaultRichText('En todos tus pedidos en la app, pidiendo desde $XXXXXX')),
 })
 export type BeneficiosTextoFields = z.infer<typeof beneficiosTextoFieldsSchema>
 export const defaultBeneficiosTextoFields: BeneficiosTextoFields = beneficiosTextoFieldsSchema.parse({})
@@ -171,7 +195,7 @@ export const defaultBeneficiosTextoFields: BeneficiosTextoFields = beneficiosTex
  * modulo-beneficios.html (ninguno de los 2 depende de que el texto sea único
  * en el archivo, solo de que la 1ra copia sea una plantilla válida).
  */
-export const columnaTextoFieldsSchema = z.object({ text: z.string().default('Texto corto') })
+export const columnaTextoFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('Texto corto')) })
 export type ColumnaTextoFields = z.infer<typeof columnaTextoFieldsSchema>
 export const defaultColumnaTextoFields: ColumnaTextoFields = columnaTextoFieldsSchema.parse({})
 
@@ -190,7 +214,7 @@ export const bulletIconoSimpleFieldsSchema = z.object({
   /** Alt del `<img role="molecula-iconoS">` — default reproduce el `alt="img"`
    *  que cupones-modulo.html ya trae de fábrica. */
   imageAlt: z.string().default('img'),
-  text: z.string().default('Cupón xxxxxxxxxxx'),
+  text: richTextSchema.default(defaultRichText('Cupón xxxxxxxxxxx')),
 })
 export type BulletIconoSimpleFields = z.infer<typeof bulletIconoSimpleFieldsSchema>
 export const defaultBulletIconoSimpleFields: BulletIconoSimpleFields = bulletIconoSimpleFieldsSchema.parse({})
@@ -202,8 +226,14 @@ export const defaultBulletIconoSimpleFields: BulletIconoSimpleFields = bulletIco
  * [[project_banner_text_colors_2026-08-03]]). Texto plano, sin RichText —
  * misma simplificación deliberada que TITULO_TEXTO/COLUMNA_TEXTO. Fase 8.
  */
-export const cuponMontoFieldsSchema = z.object({ text: z.string().default('Aca un markdown') })
+export const cuponMontoFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('Aca un markdown')) })
 export type CuponMontoFields = z.infer<typeof cuponMontoFieldsSchema>
+
+/** El CTA dentro de un módulo: los campos del CTA interno del banner más el
+ *  tamaño (en el banner va siempre 'big'). Los guardados sin `size` quedan en 'big'. */
+export const moduleCtaFieldsSchema = ctaInternoFieldsSchema.omit({ align: true })
+export type ModuleCtaFields = z.infer<typeof moduleCtaFieldsSchema>
+export const defaultModuleCtaFields: ModuleCtaFields = moduleCtaFieldsSchema.parse({})
 export const defaultCuponMontoFields: CuponMontoFields = cuponMontoFieldsSchema.parse({})
 
 /** Unión discriminada derivada de zod — mismo criterio que bannerItemSchema.
@@ -225,5 +255,7 @@ export const moduleItemSchema = z.discriminatedUnion('type', [
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('COLUMNA_TEXTO'), fields: columnaTextoFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('BULLET_ICONO_SIMPLE'), fields: bulletIconoSimpleFieldsSchema }),
   z.object({ id: z.string(), areaKey: z.string(), type: z.literal('CUPON_MONTO'), fields: cuponMontoFieldsSchema }),
+  z.object({ id: z.string(), areaKey: z.string(), type: z.literal('TAGS'), fields: tagsFieldsSchema }),
+  z.object({ id: z.string(), areaKey: z.string(), type: z.literal('CTA_INTERNO'), fields: moduleCtaFieldsSchema }),
 ])
 export type ModuleItem = z.infer<typeof moduleItemSchema>

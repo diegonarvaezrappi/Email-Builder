@@ -479,6 +479,7 @@ const CONTENT_MOLECULAS_FILES_TO_COPY = [
   'molecula_bullet_icono_l.html',
   'molecula_bullet_numerado.html',
   'molecula_icono.html',
+  'molecula_tag_icono.html',
 ]
 const CONTENT_MOLECULAS_KNOWN_PENDING_FILES = [
   'modificadores-texto.html',
@@ -486,7 +487,6 @@ const CONTENT_MOLECULAS_KNOWN_PENDING_FILES = [
   'molecula_link_interno.html',
   'molecula_separadores.html',
   'molecula_tag_basico.html',
-  'molecula_tag_icono.html',
   'molecula_tag_promo.html',
   'molecula_tag_verde.html',
   'molecula_texto_pastilla.html',

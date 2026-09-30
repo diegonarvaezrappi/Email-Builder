@@ -106,6 +106,15 @@ const PNG_PREVIEW_COUNTRY: PreviewCountry = 'CO'
 const PNG_WIDTH = 600
 
 /**
+ * Ancho de la ventana en la que se renderiza el mail antes de capturarlo. Tiene
+ * que quedar POR ENCIMA del punto de corte más ancho del maestro
+ * (`@media (max-width:620px)`): con la ventana a 600px el mail entraba en su
+ * versión móvil (footer apilado, tablas `desktop_hide`) y el PNG no coincidía
+ * con el preview de escritorio. Se captura solo la columna de 600px.
+ */
+const PNG_VIEWPORT_WIDTH = 700
+
+/**
  * html2canvas no soporta `writing-mode` (no está en su lista de props
  * CSS soportadas) — lo único que lo usa en todo el proyecto es la celda
  * vertical "Ahora"/"Desde" de PROMO (ver molecula_promo_*.html /
@@ -166,6 +175,90 @@ export function neutralizeVerticalWritingModeForCapture(frameDoc: Document): voi
     rotated.style.transform = `translate(-50%, -50%) rotate(${rotationDeg}deg)`
     rotated.style.transformOrigin = 'center center'
     el.appendChild(rotated)
+  })
+}
+
+/**
+ * Tres diferencias de html2canvas con el navegador real, que hacían que el PNG
+ * no se viera como el preview. Todas se corrigen sobre la copia oculta del mail
+ * justo antes de capturar; el HTML exportado no se toca.
+ */
+
+const isTransparent = (color: string) => color === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(color)
+
+/**
+ * Chrome pinta el fondo de un `<tr>` recortado por el `border-radius` de sus
+ * celdas; html2canvas lo pinta como un rectángulo y las esquinas asoman
+ * cuadradas (la imagen de alto fijo del banner). Se baja ese fondo a cada celda
+ * redondeada como capa inferior de su propio fondo.
+ */
+export function moveRowBackgroundsIntoRoundedCells(frameDoc: Document): void {
+  const win = frameDoc.defaultView
+  if (!win) return
+  frameDoc.querySelectorAll<HTMLTableRowElement>('tr').forEach((tr) => {
+    const row = win.getComputedStyle(tr)
+    if (row.backgroundImage === 'none' && isTransparent(row.backgroundColor)) return
+    const rounded = Array.from(tr.cells).filter((cell) => parseFloat(win.getComputedStyle(cell).borderTopLeftRadius) > 0)
+    if (rounded.length === 0) return
+    for (const cell of rounded) {
+      const own = win.getComputedStyle(cell)
+      const stack = (mine: string, fromRow: string) => (own.backgroundImage === 'none' ? fromRow : `${mine}, ${fromRow}`)
+      if (row.backgroundImage !== 'none') {
+        cell.style.backgroundImage = stack(own.backgroundImage, row.backgroundImage)
+        cell.style.backgroundSize = stack(own.backgroundSize, row.backgroundSize)
+        cell.style.backgroundPosition = stack(own.backgroundPosition, row.backgroundPosition)
+        cell.style.backgroundRepeat = stack(own.backgroundRepeat, row.backgroundRepeat)
+      }
+      if (isTransparent(own.backgroundColor)) cell.style.backgroundColor = row.backgroundColor
+    }
+    tr.style.backgroundImage = 'none'
+    tr.style.backgroundColor = 'transparent'
+  })
+}
+
+/**
+ * Dentro de un `inline-block` con fondo semitransparente (las pastillas de
+ * tags), html2canvas pinta el fondo ENCIMA del texto y este sale deslavado. Un
+ * `position: relative` (sin desplazamiento, no mueve nada) sube el contenido a
+ * una capa que se pinta después.
+ */
+export function liftContentOverTranslucentInlineBlocks(frameDoc: Document): void {
+  const win = frameDoc.defaultView
+  if (!win) return
+  frameDoc.querySelectorAll<HTMLElement>('[style*="background"]').forEach((box) => {
+    const style = win.getComputedStyle(box)
+    const alpha = /rgba\([^)]*,\s*([\d.]+)\)$/.exec(style.backgroundColor)?.[1]
+    if (style.display !== 'inline-block' || alpha === undefined || Number(alpha) <= 0 || Number(alpha) >= 1) return
+    box.querySelectorAll<HTMLElement>('*').forEach((child) => {
+      if (win.getComputedStyle(child).position === 'static') child.style.position = 'relative'
+    })
+  })
+}
+
+/**
+ * El navegador ajusta un borde de 1px a una fila entera de píxeles; html2canvas
+ * lo dibuja donde cae (ej. y=2448.42) y queda repartido entre dos filas, a
+ * medio tono (la línea roja del footer salía rosada). Se desplaza el elemento
+ * la fracción que le sobra para que el borde caiga exacto.
+ */
+export function snapThinBordersToPixels(frameDoc: Document): void {
+  const win = frameDoc.defaultView
+  if (!win) return
+  frameDoc.querySelectorAll<HTMLElement>('td, th, div, table, p, hr').forEach((el) => {
+    const style = win.getComputedStyle(el)
+    if (style.position !== 'static') return
+    const isThin = (side: 'Top' | 'Bottom') => {
+      const width = parseFloat(style[`border${side}Width`])
+      return style[`border${side}Style`] !== 'none' && width > 0 && width < 2
+    }
+    const thinTop = isThin('Top')
+    if (!thinTop && !isThin('Bottom')) return
+    const rect = el.getBoundingClientRect()
+    const edge = thinTop ? rect.top : rect.bottom
+    const fraction = edge - Math.floor(edge)
+    if (fraction === 0) return
+    el.style.position = 'relative'
+    el.style.top = `${fraction < 0.5 ? -fraction : 1 - fraction}px`
   })
 }
 
@@ -289,7 +382,7 @@ export async function downloadPng(doc: EmailDocument, filename = 'email', countr
   iframe.style.position = 'fixed'
   iframe.style.top = '0'
   iframe.style.left = '-10000px'
-  iframe.style.width = `${PNG_WIDTH}px`
+  iframe.style.width = `${PNG_VIEWPORT_WIDTH}px`
   iframe.style.border = 'none'
   document.body.appendChild(iframe)
 
@@ -315,11 +408,22 @@ export async function downloadPng(doc: EmailDocument, filename = 'email', countr
 
     iframe.style.height = `${frameDoc.body.scrollHeight}px`
 
+    moveRowBackgroundsIntoRoundedCells(frameDoc)
+    liftContentOverTranslucentInlineBlocks(frameDoc)
+    // Al final: mide posiciones, así que necesita el layout ya definitivo.
+    snapThinBordersToPixels(frameDoc)
+
+    // La columna del mail va centrada en la ventana: se recorta desde su borde
+    // izquierdo real (la tabla del HERO mide exactamente los 600px).
+    const column = frameDoc.querySelector('table[role="HERO-SECTION"]')?.getBoundingClientRect()
+    const x = column ? Math.round(column.left) : Math.round((PNG_VIEWPORT_WIDTH - PNG_WIDTH) / 2)
+
     const canvas = await html2canvas(frameDoc.body, {
       useCORS: true,
       backgroundColor: '#ffffff',
+      x,
       width: PNG_WIDTH,
-      windowWidth: PNG_WIDTH,
+      windowWidth: PNG_VIEWPORT_WIDTH,
       height: frameDoc.body.scrollHeight,
     })
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DARK_THEME_SLUGS,
   colorFooterForTheme,
   groupedThemes,
   MODULE_BACKGROUND_VAR_NAMES,
@@ -217,9 +218,16 @@ describe('PASTEL_THEME_SLUGS', () => {
 })
 
 describe('presentation helpers', () => {
-  it('shows every repo theme in some group, so a new one is never invisible', () => {
+  it('shows every selectable repo theme in some group, so a new one is never invisible', () => {
     const shown = groupedThemes().flatMap((g) => g.themes.map((t) => t.slug))
-    expect(shown.sort()).toEqual(THEMES.map((t) => t.slug).sort())
+    expect(shown.sort()).toEqual(THEMES.map((t) => t.slug).filter((slug) => !DARK_THEME_SLUGS.includes(slug)).sort())
+  })
+
+  // Retirados del selector el 2026-09-29: siguen en el maestro, pero no se eligen.
+  it('never offers the 3 dark/inverted themes', () => {
+    const shown = groupedThemes().flatMap((g) => g.themes.map((t) => t.slug))
+    for (const slug of DARK_THEME_SLUGS) expect(shown).not.toContain(slug)
+    expect(groupedThemes().map((g) => g.label)).toEqual(['Pastel', 'Premium'])
   })
 
   it('falls back to the raw slug when a theme has no friendly label', () => {

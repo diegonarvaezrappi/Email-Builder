@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { plainText, type RichText } from '../../../richText/model'
 import {
   cloneCuponesFields,
   createDefaultCuponCellFields,
@@ -39,9 +40,9 @@ describe('defaultCuponesFields', () => {
     const pastillas = defaultCuponesFields.items.filter((it) => it.type === 'TEXTO_PASTILLA')
     expect(pastillas).toHaveLength(2)
     for (const item of pastillas) {
-      const fields = item.fields as { text: string; pillText: string; pillPosition: string }
-      expect(fields.pillText).toBe('Solo en')
-      expect(fields.text).toBe('Restaurantes')
+      const fields = item.fields as { text: RichText; pillText: RichText; pillPosition: string }
+      expect(plainText(fields.pillText)).toBe('Solo en')
+      expect(plainText(fields.text)).toBe('Restaurantes')
       expect(fields.pillPosition).toBe('izquierda')
     }
   })
@@ -92,7 +93,7 @@ describe('createDefaultCuponCellFields / createDefaultTituloCellFields', () => {
   it('createDefaultTituloCellFields returns a fresh "titulo" cell with factory defaults', () => {
     const cell = createDefaultTituloCellFields()
     expect(cell.type).toBe('titulo')
-    expect(cell.titleText).toBe('Aca un titulo')
+    expect(plainText(cell.titleText)).toBe('Aca un titulo')
     expect(cell.linkEnabled).toBe(false)
   })
 })

@@ -156,6 +156,28 @@
   cursor: pointer;
 }
 
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-field input[type='color'] {
+  flex-shrink: 0;
+  width: 38px;
+  height: 34px;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.color-field .input-with-clear {
+  flex: 1;
+  min-width: 0;
+}
+
 .input-with-clear {
   position: relative;
   display: flex;
@@ -742,6 +764,10 @@
   font-size: 11px;
   font-weight: normal;
   color: var(--text);
+}
+
+.field .field-hint-error {
+  color: var(--danger);
 }
 
 /* Subtítulo que agrupa campos dentro de un panel largo (la tarjeta de deal

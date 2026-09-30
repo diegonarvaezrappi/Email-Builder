@@ -40,7 +40,9 @@
 import dealColumnasRaw from '../../assets/templates/deals/deal_columnas.html?raw'
 import type { EmailDocument } from '../../model'
 import { cssUrlValue, resolveGlobalVars } from '../../global/vars'
-import { backgroundImageAltAttrs, escapeHtmlAttr, escapeHtmlText } from '../../template/htmlText'
+import { backgroundImageAltAttrs, escapeHtmlAttr } from '../../template/htmlText'
+import { richTextHtml } from '../../richText/themeColors'
+import { plainText, type RichText } from '../../richText/model'
 import { wrapWithDealCardMarkers, wrapWithDealCardPieceMarkers } from '../../template/contentBlocks'
 import { DEAL_LINK_PLACEHOLDER, linkOrPlaceholder } from '../../template/linkPlaceholders'
 import * as htmlEdits from '../../template/htmlEdits'
@@ -217,13 +219,13 @@ const ICON_TEXT_SEPARATOR = '&nbsp;'
 /** LINEA 1 y LINEA 2: el texto ES la variable Liquid, así que se ancla en ella
  *  (única por celda). Anclar en `role="molecula-texto"` no serviría: el maestro
  *  lo repite en la celda de legales. */
-function copyLineEdits(cell: string, liquidVar: string, text: string): Edit[] {
+function copyLineEdits(cell: string, liquidVar: string, text: RichText): Edit[] {
   const index = indexOfOrThrow(cell, liquidVar)
-  if (text.trim() === '') {
+  if (plainText(text).trim() === '') {
     // "si no existe texto para esta linea se elimina toda la etiqueta".
     return [{ ...elementBounds(cell, index, 'h4'), replacement: '' }]
   }
-  return [{ start: index, end: index + liquidVar.length, replacement: escapeHtmlText(text) }]
+  return [{ start: index, end: index + liquidVar.length, replacement: richTextHtml(text) }]
 }
 
 /** El maestro trae `Antes <del>$999</del>` fijo, pegado justo después del
@@ -279,7 +281,7 @@ function tagGroupBounds(cell: string, iconPlaceholder: string): Bounds {
  * fragmento entero desaparece del reensamblado si `enabled` es false, ver
  * renderTextCell), lo que hace falta acá es solo el reemplazo de texto/ícono.
  */
-function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, iconAlt: string, text: string): Edit[] {
+function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconUrl: string, iconAlt: string, text: RichText): Edit[] {
   const iconIndex = indexOfOrThrow(cell, iconPlaceholder)
   // "se debe poder cambiar o quitar el ícono, si se quita, se elimina la div
   // completa" — sin ícono no hay pill, así que apagar el tag (o dejar la URL
@@ -292,7 +294,7 @@ function tagEdits(cell: string, iconPlaceholder: string, enabled: boolean, iconU
     { start: iconIndex, end: iconIndex + iconPlaceholder.length, replacement: escapeHtmlAttr(iconUrl) },
     altAttrEdit(cell, voidElementBounds(cell, iconIndex, 'img'), iconAlt),
     // Los espacios alrededor son del maestro (` tag 1 `), no del dato.
-    { ...labelBounds, replacement: ` ${escapeHtmlText(text)} ` },
+    { ...labelBounds, replacement: ` ${richTextHtml(text)} ` },
   ]
 }
 
@@ -300,7 +302,7 @@ function ctaEdits(cell: string, fields: DealCardFields): Edit[] {
   const anchorIndex = indexOfOrThrow(cell, CTA_ANCHOR)
   if (!fields.ctaEnabled) return [{ ...elementBounds(cell, anchorIndex, 'h4'), replacement: '' }]
   const strongBounds = elementBounds(cell, anchorIndex, 'strong')
-  return [{ ...textRunBounds(cell, strongBounds, 'strong'), replacement: escapeHtmlText(fields.ctaText) }]
+  return [{ ...textRunBounds(cell, strongBounds, 'strong'), replacement: richTextHtml(fields.ctaText) }]
 }
 
 /** LINEA 3 completa: badge de descuento (+ Corona Pro opcional) + 2
@@ -316,12 +318,12 @@ function precioFragmentEdits(fragment: string, fields: DealCardFields): Edit[] {
     // la edición del ícono NO se emite en esta rama (ver applyEdits).
     edits.push({ ...markdownBounds, replacement: '' })
   } else {
-    edits.push({ ...textRunBounds(fragment, markdownBounds, 'h4'), replacement: escapeHtmlText(fields.markdownText) })
+    edits.push({ ...textRunBounds(fragment, markdownBounds, 'h4'), replacement: richTextHtml(fields.markdownText) })
     if (!fields.coronaProEnabled) {
       edits.push({ ...voidElementBounds(fragment, indexOfOrThrow(fragment, CORONA_PRO_VAR), 'img'), replacement: '' })
     }
   }
-  edits.push(...togglePiece(fragment, COMPLEMENTO_1_ANCHOR, 'h5', fields.complemento1Enabled, escapeHtmlText(fields.complemento1Text)))
+  edits.push(...togglePiece(fragment, COMPLEMENTO_1_ANCHOR, 'h5', fields.complemento1Enabled, richTextHtml(fields.complemento1Text)))
   edits.push(...complemento2Edits(fragment, fields))
   return edits
 }
@@ -331,9 +333,9 @@ function precioFragmentEdits(fragment: string, fields: DealCardFields): Edit[] {
  *  cambia el texto que va después de cada uno. */
 function ratingGroupFragmentEdits(fragment: string, fields: DealCardFields): Edit[] {
   return [
-    ...togglePiece(fragment, CATEGORIA_ANCHOR, 'h5', fields.categoriaEnabled, escapeHtmlText(fields.categoriaText)),
-    ...togglePiece(fragment, RATING_ANCHOR, 'h5', fields.ratingEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.ratingText)}`),
-    ...togglePiece(fragment, TIEMPO_ANCHOR, 'h5', fields.tiempoEnabled, `${ICON_TEXT_SEPARATOR}${escapeHtmlText(fields.tiempoText)}`),
+    ...togglePiece(fragment, CATEGORIA_ANCHOR, 'h5', fields.categoriaEnabled, richTextHtml(fields.categoriaText)),
+    ...togglePiece(fragment, RATING_ANCHOR, 'h5', fields.ratingEnabled, `${ICON_TEXT_SEPARATOR}${richTextHtml(fields.ratingText)}`),
+    ...togglePiece(fragment, TIEMPO_ANCHOR, 'h5', fields.tiempoEnabled, `${ICON_TEXT_SEPARATOR}${richTextHtml(fields.tiempoText)}`),
   ]
 }
 
@@ -464,7 +466,7 @@ function renderLegalCell(cell: string, card: DealCard): string {
   // La fila de legales es del PAR, pero el toggle es por tarjeta: si esta no lo
   // activó y su compañera sí, la celda queda con el <span> vacío. El maestro es
   // explícito en que ahí se quita el contenido, nunca la celda.
-  const text = card.fields.legalEnabled ? escapeHtmlText(card.fields.legalText) : ''
+  const text = card.fields.legalEnabled ? richTextHtml(card.fields.legalText) : ''
   return applyEdits(cell, [{ ...textRunBounds(cell, bounds, 'span'), replacement: text }])
 }
 

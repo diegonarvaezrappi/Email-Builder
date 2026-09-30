@@ -44,3 +44,41 @@ describe('globalSchema.ctaStyle', () => {
     expect(globalSchema.parse({ ctaStyle: null }).ctaStyle).toBe('default')
   })
 })
+
+// Los 3 oscuros/invertidos salieron del selector el 2026-09-29.
+describe('globalSchema · tema', () => {
+  it('moves a saved/imported doc on a dark/inverted theme to the default theme instead of discarding it', () => {
+    for (const tema of ['darkneon', 'darkturbo', 'darkneutro']) {
+      const parsed = globalSchema.safeParse({ tema })
+      expect(parsed.success).toBe(true)
+      expect(parsed.success && parsed.data.tema).toBe('beige100')
+    }
+  })
+
+  it('keeps any selectable theme as is', () => {
+    expect(globalSchema.parse({ tema: 'pro' }).tema).toBe('pro')
+    expect(globalSchema.parse({ tema: 'verde100' }).tema).toBe('verde100')
+  })
+
+  it('still rejects a theme that does not exist at all', () => {
+    expect(globalSchema.safeParse({ tema: 'tema-inventado' }).success).toBe(false)
+  })
+})
+
+describe('globalSchema · contentsBgColor', () => {
+  it('defaults to no color', () => {
+    expect(globalSchema.parse({}).contentsBgColor).toBe('')
+  })
+
+  it('keeps a valid #RRGGBB (normalized to upper case)', () => {
+    expect(globalSchema.parse({ contentsBgColor: '#ff0dd1' }).contentsBgColor).toBe('#FF0DD1')
+  })
+
+  it('drops an invalid saved value instead of rejecting the document', () => {
+    for (const bad of ['#FFF', 'rojo', 'rgba(0,0,0,0.5)', 123]) {
+      const parsed = globalSchema.safeParse({ contentsBgColor: bad })
+      expect(parsed.success).toBe(true)
+      expect(parsed.success && parsed.data.contentsBgColor).toBe('')
+    }
+  })
+})

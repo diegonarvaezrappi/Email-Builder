@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultFooterFields } from '../schema'
-import { renderFooterSnippet, resolveFontStyleLook } from '../render'
+import { footerTextColor, renderFooterSnippet, resolveFontStyleLook } from '../render'
 
 // Temas reales del repo (01-foundations/global-styles/head-meta-tags.html).
 // Desde el pull ~2026-09-02 ("actualización del cta", mismo lote que tocó
@@ -123,7 +123,7 @@ describe('renderFooterSnippet', () => {
       'beige100',
     )
     expect(snippet).toContain(
-      '<a href="https://promos.rappi.com/colombia/2025/promo2x1" style="text-decoration: none; color:#7D8188">https://promos.rappi.com/colombia/2025/promo2x1</a>',
+      '<a href="https://promos.rappi.com/colombia/2025/promo2x1" style="text-decoration: none; color:#633D11">https://promos.rappi.com/colombia/2025/promo2x1</a>',
     )
   })
 
@@ -139,5 +139,30 @@ describe('renderFooterSnippet', () => {
     const snippet = renderFooterSnippet(defaultFooterFields, 'beige100')
     expect(snippet).not.toContain('<!--')
     expect(snippet).not.toContain('DENTRO DE LAS COMILLAS')
+  })
+
+  // El link de "Legales adicionales" lleva el color de los legales que lo rodean
+  // (color_letra del footer), no un gris fijo.
+  it('colors a link in "Legales adicionales" like the surrounding legal text, per theme', () => {
+    const legalesAdicionales = 'Más info https://promos.rappi.com/x'
+    const cases: [string, string][] = [
+      ['beige100', '#633D11'],
+      ['purpura100', '#4C2B8C'],
+      ['verde100', '#102E14'],
+      ['pro', '#9EA1A2'],
+      ['problack', '#000000'],
+    ]
+    for (const [tema, color] of cases) {
+      expect(renderFooterSnippet({ ...defaultFooterFields, legalesAdicionales }, tema)).toContain(`color:${color}">https://promos.rappi.com/x</a>`)
+    }
+  })
+
+  it('reads the color from the chosen footer type, including its fallback branch', () => {
+    for (const tipo of ['General', 'SinAmor', 'RTS', 'B2B'] as const) {
+      expect(footerTextColor(tipo, 'rosa100')).toBe('#4F145E')
+    }
+    // footer_simple.html no tiene rama 'problack': el texto cae al gris del else, y el link con él.
+    expect(footerTextColor('SinAmor', 'problack')).toBe('#7D8188')
+    expect(footerTextColor('General', 'problack')).toBe('#000000')
   })
 })

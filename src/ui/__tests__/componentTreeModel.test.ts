@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { richTextFromPlain } from '../../richText/model'
 import { defaultEmailDocument } from '../../registry'
 import type { ContentBlock, DealsBlock, EmailDocument } from '../../model'
 import type { DealCardFields } from '../../components/deals/schema'
@@ -193,7 +194,7 @@ describe('buildTreeViewModel · acordeón', () => {
   it('tags a hidden deal line (derived from its fields) instead of dropping it', () => {
     const block = firstDealsBlock(defaultEmailDocument)
     const card = block.fields.items[0]
-    const doc = withPatchedFirstCard(block, { ...card.fields, copy1: '' })
+    const doc = withPatchedFirstCard(block, { ...card.fields, copy1: richTextFromPlain('') })
     const rows = nodes(buildTreeViewModel(doc, open(blockExpandKey(block.id), dealCardExpandKey(card.id)), 'contents').rows)
     expect(rows.find((r) => r.selection.dealCardPieceType === 'copy1')).toMatchObject({ tag: 'oculta' })
   })

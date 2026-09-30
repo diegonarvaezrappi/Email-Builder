@@ -86,6 +86,12 @@ describe('renderTitleSnippet · alineado general', () => {
     expect(html).toContain('text-align: left')
   })
 
+  it('center: el subtítulo se centra igual que el título', () => {
+    const html = render({ ...defaultTitleFields, align: 'center' })
+    expect(html).toMatch(/<h3 role="molecula-texto" style="text-align: center; /)
+    expect(html).toMatch(/<h2 role="molecula-texto" style="[^"]*text-align: center;/)
+  })
+
   it('center: text-align center, margin 0 auto', () => {
     const html = render({ ...defaultTitleFields, align: 'center' })
     expect(html).toContain('text-align: center')

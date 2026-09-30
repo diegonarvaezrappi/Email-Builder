@@ -6,13 +6,20 @@ import type { GlobalFields } from './global/schema'
 import {
   defaultFranjaLogosFields,
   defaultSeparadorFields,
+  defaultTagsFields,
   defaultTextoPastillaFields,
   franjaLogosFieldsSchema,
   separadorFieldsSchema,
+  tagsFieldsSchema,
   textoPastillaFieldsSchema,
 } from './components/banner/items/schemas'
 import { renderFranjaLogosSnippet, renderSeparadorSnippet, renderTextoPastillaSnippet } from './components/banner/items/render'
-import { FranjaLogosPropertiesPanel, SeparadorPropertiesPanel, TextoPastillaPropertiesPanel } from './components/banner/items/panels'
+import {
+  FranjaLogosPropertiesPanel,
+  SeparadorPropertiesPanel,
+  TagsPropertiesPanel,
+  TextoPastillaPropertiesPanel,
+} from './components/banner/items/panels'
 import {
   beneficiosTextoFieldsSchema,
   beneficiosTituloFieldsSchema,
@@ -38,6 +45,8 @@ import {
   subtituloTextoFieldsSchema,
   tituloTextoFieldsSchema,
   type ModuleItemType,
+  defaultModuleCtaFields,
+  moduleCtaFieldsSchema,
 } from './moduleItems/schemas'
 import {
   renderBeneficiosTextoSnippet,
@@ -51,6 +60,8 @@ import {
   renderSeparadorLineaSnippet,
   renderSubtituloTextoSnippet,
   renderTituloTextoSnippet,
+  renderModuleCtaSnippet,
+  renderModuleTagsSnippet,
 } from './moduleItems/render'
 import {
   BeneficiosTextoPropertiesPanel,
@@ -64,6 +75,7 @@ import {
   SeparadorLineaPropertiesPanel,
   SubtituloTextoPropertiesPanel,
   TituloTextoPropertiesPanel,
+  ModuleCtaPropertiesPanel,
 } from './moduleItems/panels'
 
 /** Lo que una molécula de módulo necesita saber de su instancia — mismo
@@ -240,6 +252,25 @@ export const bodyMoleculeRegistry: Record<ModuleItemType, ModuleItemDef<any>> = 
     render: (fields, _doc, _ctx) => renderCuponMontoSnippet(fields),
     PropertiesPanel: CuponMontoPropertiesPanel,
     Icon: MODULE_ITEM_ICONS.CUPON_MONTO,
+  },
+  // Mismos campos y panel que las piezas TAGS / CTA_INTERNO del banner.
+  TAGS: {
+    type: 'TAGS',
+    label: 'Tags',
+    schema: tagsFieldsSchema,
+    defaultFields: defaultTagsFields,
+    render: (fields, _doc, _ctx) => renderModuleTagsSnippet(fields),
+    PropertiesPanel: TagsPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.TAGS,
+  },
+  CTA_INTERNO: {
+    type: 'CTA_INTERNO',
+    label: 'CTA',
+    schema: moduleCtaFieldsSchema,
+    defaultFields: defaultModuleCtaFields,
+    render: (fields, doc, _ctx) => renderModuleCtaSnippet(fields, doc),
+    PropertiesPanel: ModuleCtaPropertiesPanel,
+    Icon: MODULE_ITEM_ICONS.CTA_INTERNO,
   },
 }
 

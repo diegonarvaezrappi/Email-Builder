@@ -1,6 +1,8 @@
 import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../model'
 import type { GlobalFields } from '../../global/schema'
+import { RichTextInput } from '../../richText/RichTextInput'
+import { richTextColorsForTema } from '../../richText/themeColors'
 import { createDefaultCuponCellFields, createDefaultTituloCellFields, type CuponesCellFields, type CuponesFields } from './schema'
 
 interface CuponesPropertiesPanelProps {
@@ -26,7 +28,8 @@ const CELL_TYPE_LABELS: Record<CuponesCellFields['type'], string> = { cupon: 'Cu
  * ui/InspectorPanel.tsx, mismo criterio que el resto de los módulos con área
  * libre.
  */
-export function CuponesPropertiesPanel({ value, onChange }: CuponesPropertiesPanelProps) {
+export function CuponesPropertiesPanel({ value, onChange, doc }: CuponesPropertiesPanelProps) {
+  const colors = richTextColorsForTema(doc.global.tema)
   const updateCell = (index: number, cell: CuponesCellFields) => {
     const cells = [...value.cells] as CuponesFields['cells']
     cells[index] = cell
@@ -100,11 +103,7 @@ export function CuponesPropertiesPanel({ value, onChange }: CuponesPropertiesPan
               </label>
               <label className="field">
                 <span>Texto</span>
-                <input
-                  type="text"
-                  value={cell.titleText}
-                  onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, titleText: e.target.value })}
-                />
+                <RichTextInput value={cell.titleText} onChange={(titleText) => updateCell(index, { ...cell, titleText })} colors={colors} />
               </label>
             </>
           )}
@@ -138,11 +137,11 @@ export function CuponesPropertiesPanel({ value, onChange }: CuponesPropertiesPan
           </label>
           <label className="field">
             <span>Texto legal</span>
-            <input
-              type="text"
-              disabled={!cell.legalEnabled}
+            <RichTextInput
               value={cell.legalText}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => updateCell(index, { ...cell, legalText: e.target.value })}
+              onChange={(legalText) => updateCell(index, { ...cell, legalText })}
+              colors={colors}
+              disabled={!cell.legalEnabled}
             />
           </label>
         </div>

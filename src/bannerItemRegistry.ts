@@ -2,6 +2,7 @@ import type { ZodType, ZodTypeDef } from 'zod'
 import type { ComponentType, SVGProps } from 'react'
 import type { EmailDocument } from './model'
 import { MOLECULE_ICONS } from './ui/moleculeIcons'
+import { CtaPropertiesPanel } from './components/cta/PropertiesPanel'
 import type { GlobalFields } from './global/schema'
 import type { BannerType, BannerItemRenderCtx } from './components/banner/schema'
 import { BANNER_ITEM_TYPE_VALUES, type BannerItemType } from './components/banner/items/schemas'
@@ -50,7 +51,6 @@ import {
 } from './components/banner/items/render'
 import {
   CreditosPropertiesPanel,
-  CtaInternoPropertiesPanel,
   FranjaLogosPropertiesPanel,
   ImgAutomaticaModuloPropertiesPanel,
   ImgAutomaticaMoleculaPropertiesPanel,
@@ -175,7 +175,7 @@ export const bannerItemRegistry: Record<BannerItemType, BannerItemDef<any>> = {
     schema: ctaInternoFieldsSchema,
     defaultFields: defaultCtaInternoFields,
     render: renderCtaInternoSnippet,
-    PropertiesPanel: CtaInternoPropertiesPanel,
+    PropertiesPanel: CtaPropertiesPanel,
     Icon: MOLECULE_ICONS.CTA_INTERNO,
   },
   IMG_FIJA: {

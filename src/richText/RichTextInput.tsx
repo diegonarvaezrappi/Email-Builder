@@ -36,6 +36,8 @@ interface RichTextInputProps {
    *  diferencia de TEXTOXL/TEXTOM/TEXTO_COMPLEMENTARIO que sí los traen.
    *  Default true (comportamiento sin cambios para esos 3). */
   showColors?: boolean
+  /** Nombre accesible del campo cuando no lo acompaña un <span> visible. */
+  ariaLabel?: string
 }
 
 function colorsEqual(a: RichTextColorMap, b: RichTextColorMap): boolean {
@@ -48,7 +50,7 @@ const COLOR_SWATCHES: { mark: 'colorBase' | 'colorAcento1' | 'colorAcento2'; lab
   { mark: 'colorAcento2', label: 'Subtono 2' },
 ]
 
-export function RichTextInput({ value, onChange, colors, disabled = false, showColors = true }: RichTextInputProps) {
+export function RichTextInput({ value, onChange, colors, disabled = false, showColors = true, ariaLabel }: RichTextInputProps) {
   const ref = useRef<HTMLDivElement>(null)
   const lastValueRef = useRef<RichText | null>(null)
   const lastColorsRef = useRef<RichTextColorMap | null>(null)
@@ -242,6 +244,8 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
         ref={ref}
         className="rich-text-editable"
         contentEditable={!disabled}
+        role="textbox"
+        aria-label={ariaLabel}
         suppressContentEditableWarning
         onInput={handleInput}
         onKeyDown={handleKeyDown}

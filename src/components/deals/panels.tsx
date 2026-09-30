@@ -2,8 +2,8 @@ import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../model'
 import type { GlobalFields } from '../../global/schema'
 import { RichTextInput } from '../../richText/RichTextInput'
-import type { RichTextColorMap } from '../../richText/model'
-import { themeVars } from '../../themes/themes'
+import { plainText, type RichText, type RichTextColorMap } from '../../richText/model'
+import { richTextColorsForTema } from '../../richText/themeColors'
 import {
   DEAL_CARD_PIECE_LABELS,
   DEAL_CARD_PIECE_TYPES,
@@ -19,22 +19,6 @@ import {
   type DealLogoShape,
   type DealsFields,
 } from './schema'
-
-/** Mismo helper que components/banner/items/panels.tsx (no exportado desde
- *  ahí, se duplica acá) — colores REALES del tema activo para la vista
- *  previa de RichTextInput mientras se escribe (el HTML final deja
- *  `{{color_x_mail_general}}` sin resolver hasta la pasada de tema de
- *  renderDealsSnippet). Hoy ningún campo de deals expone los 3 colores
- *  (`showColors={false}` en complemento2Text, ver más abajo), pero
- *  RichTextInput igual requiere un `RichTextColorMap` válido. */
-function richTextColorsForTema(tema: string): RichTextColorMap {
-  const vars = themeVars(tema)
-  return {
-    colorBase: vars.color_texto_mail_general ?? '#000000',
-    colorAcento1: vars.color_acento1_mail_general ?? '#000000',
-    colorAcento2: vars.color_acento2_mail_general ?? '#000000',
-  }
-}
 
 /**
  * Panel del BLOQUE DEALS. Queda casi vacío a propósito: todo lo editable vive
@@ -84,18 +68,18 @@ function TogglableTextField({
   onToggle,
   text,
   onText,
+  colors,
+  showColors,
   hint,
-  maxLength,
-  placeholder,
 }: {
   label: string
   enabled: boolean
   onToggle: (next: boolean) => void
-  text: string
-  onText: (next: string) => void
+  text: RichText
+  onText: (next: RichText) => void
+  colors: RichTextColorMap
+  showColors?: boolean
   hint?: string
-  maxLength?: number
-  placeholder?: string
 }) {
   return (
     <>
@@ -104,24 +88,29 @@ function TogglableTextField({
         <span>{label}</span>
       </label>
       <label className="field">
-        <input
-          type="text"
-          aria-label={label}
-          value={text}
-          disabled={!enabled}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onText(e.target.value)}
-        />
+        <RichTextInput value={text} onChange={onText} colors={colors} showColors={showColors} disabled={!enabled} ariaLabel={label} />
         {hint ? <span className="field-hint">{hint}</span> : null}
       </label>
     </>
   )
 }
 
+/** Contador de la línea 1/2. Con texto enriquecido no se corta al escribir
+ *  (cortar el contentEditable pelearía con el cursor): se avisa al pasarse. */
+function CopyLengthHint({ text, extra = '' }: { text: RichText; extra?: string }) {
+  const length = plainText(text).length
+  return (
+    <span className={`field-hint${length > DEALS_COPY_MAX_LENGTH ? ' field-hint-error' : ''}`}>
+      {length}/{DEALS_COPY_MAX_LENGTH} · vacío = se quita la línea.{extra}
+    </span>
+  )
+}
+
 interface DealCardPropertiesPanelProps {
   value: DealCardFields
   onChange: (next: DealCardFields) => void
+  /** Solo para leer `doc.global.tema` (colores reales de RichTextInput). */
+  doc: EmailDocument
 }
 
 /**
@@ -135,7 +124,8 @@ interface DealCardPropertiesPanelProps {
  * `hiddenItems` en components/banner/PropertiesPanel.tsx. Los campos de cada
  * pieza viven en DealCardPiecePropertiesPanel, más abajo.
  */
-export function DealCardPropertiesPanel({ value, onChange }: DealCardPropertiesPanelProps) {
+export function DealCardPropertiesPanel({ value, onChange, doc }: DealCardPropertiesPanelProps) {
+  const colors = richTextColorsForTema(doc.global.tema)
   const set = <K extends keyof DealCardFields>(key: K, next: DealCardFields[K]) => {
     onChange({ ...value, [key]: next })
   }
@@ -187,6 +177,7 @@ export function DealCardPropertiesPanel({ value, onChange }: DealCardPropertiesP
         onToggle={(legalEnabled) => set('legalEnabled', legalEnabled)}
         text={value.legalText}
         onText={(legalText) => set('legalText', legalText)}
+        colors={colors}
         hint="La fila de legales es compartida con el deal de al lado: si cualquiera de los dos la activa, aparece en ambos."
       />
 
@@ -245,20 +236,16 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
       {pieceType === 'copy1' && (
         <label className="field">
           <span>Línea 1 (en negrita)</span>
-          <input type="text" maxLength={DEALS_COPY_MAX_LENGTH} value={value.copy1} onChange={(e) => set('copy1', e.target.value)} />
-          <span className="field-hint">
-            {value.copy1.length}/{DEALS_COPY_MAX_LENGTH} · vacío = se quita la línea. Máximo 2 líneas en la celda.
-          </span>
+          <RichTextInput value={value.copy1} onChange={(copy1) => set('copy1', copy1)} colors={colors} />
+          <CopyLengthHint text={value.copy1} extra=" Máximo 2 líneas en la celda." />
         </label>
       )}
 
       {pieceType === 'copy2' && (
         <label className="field">
           <span>Línea 2</span>
-          <input type="text" maxLength={DEALS_COPY_MAX_LENGTH} value={value.copy2} onChange={(e) => set('copy2', e.target.value)} />
-          <span className="field-hint">
-            {value.copy2.length}/{DEALS_COPY_MAX_LENGTH} · vacío = se quita la línea.
-          </span>
+          <RichTextInput value={value.copy2} onChange={(copy2) => set('copy2', copy2)} colors={colors} />
+          <CopyLengthHint text={value.copy2} />
         </label>
       )}
 
@@ -270,6 +257,8 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(markdownEnabled) => set('markdownEnabled', markdownEnabled)}
             text={value.markdownText}
             onText={(markdownText) => set('markdownText', markdownText)}
+            colors={colors}
+            showColors={false}
           />
           <label className="field field-checkbox">
             <input
@@ -286,6 +275,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(complemento1Enabled) => set('complemento1Enabled', complemento1Enabled)}
             text={value.complemento1Text}
             onText={(complemento1Text) => set('complemento1Text', complemento1Text)}
+            colors={colors}
           />
           <label className="field field-checkbox">
             <input
@@ -316,6 +306,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(categoriaEnabled) => set('categoriaEnabled', categoriaEnabled)}
             text={value.categoriaText}
             onText={(categoriaText) => set('categoriaText', categoriaText)}
+            colors={colors}
           />
           <TogglableTextField
             label="Mostrar rating"
@@ -323,6 +314,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(ratingEnabled) => set('ratingEnabled', ratingEnabled)}
             text={value.ratingText}
             onText={(ratingText) => set('ratingText', ratingText)}
+            colors={colors}
             hint="La estrella la pone el maestro, no se cambia."
           />
           <TogglableTextField
@@ -331,6 +323,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(tiempoEnabled) => set('tiempoEnabled', tiempoEnabled)}
             text={value.tiempoText}
             onText={(tiempoText) => set('tiempoText', tiempoText)}
+            colors={colors}
             hint="El reloj lo pone el maestro, no se cambia."
           />
         </>
@@ -344,6 +337,8 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(tag1Enabled) => set('tag1Enabled', tag1Enabled)}
             text={value.tag1Text}
             onText={(tag1Text) => set('tag1Text', tag1Text)}
+            colors={colors}
+            showColors={false}
           />
           <label className="field">
             <span>Ícono del tag 1</span>
@@ -370,6 +365,8 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
             onToggle={(tag2Enabled) => set('tag2Enabled', tag2Enabled)}
             text={value.tag2Text}
             onText={(tag2Text) => set('tag2Text', tag2Text)}
+            colors={colors}
+            showColors={false}
           />
           <label className="field">
             <span>Ícono del tag 2</span>
@@ -395,6 +392,7 @@ export function DealCardPiecePropertiesPanel({ pieceType, value, onChange, doc }
           onToggle={(ctaEnabled) => set('ctaEnabled', ctaEnabled)}
           text={value.ctaText}
           onText={(ctaText) => set('ctaText', ctaText)}
+          colors={colors}
         />
       )}
 

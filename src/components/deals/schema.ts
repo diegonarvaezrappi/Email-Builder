@@ -33,7 +33,7 @@
 // ============================================================================
 import { z } from 'zod'
 import { newId } from '../../ids'
-import { richTextSchema } from '../../richText/model'
+import { defaultRichText, plainText, richTextSchema } from '../../richText/model'
 
 /** "los deeals vienen de a dos en celdas" (comentario de apertura del maestro):
  *  cada copia de deal_columnas.html renderiza 2 tarjetas, una por celda — y
@@ -156,20 +156,20 @@ export const dealCardFieldsSchema = z.object({
 
   /** LINEA 1 del maestro — va en `<strong>`, negrita por estructura. Vacío =
    *  se elimina el `<h4>` entero. */
-  copy1: z.string().max(DEALS_COPY_MAX_LENGTH).default('Promo especial'),
+  copy1: richTextSchema.default(defaultRichText('Promo especial')),
   /** LINEA 2 — mismo `<h4>` sin negrita. Vacío = se elimina la etiqueta. */
-  copy2: z.string().max(DEALS_COPY_MAX_LENGTH).default('Descripción del deal'),
+  copy2: richTextSchema.default(defaultRichText('Descripción del deal')),
 
   /** LINEA 3, espacio 1: el badge de descuento (`role="MARKDOWN"`). */
   markdownEnabled: z.boolean().default(true),
-  markdownText: z.string().default('$999'),
+  markdownText: richTextSchema.default(defaultRichText('$999')),
   /** La "Corona Pro" que va pegada al precio dentro del badge — el maestro pide
    *  explícitamente poder activarla y desactivarla sin tocar el resto. */
   coronaProEnabled: z.boolean().default(true),
 
   /** LINEA 3, espacio 2. */
   complemento1Enabled: z.boolean().default(true),
-  complemento1Text: z.string().default('99% OFF'),
+  complemento1Text: richTextSchema.default(defaultRichText('99% OFF')),
   /**
    * LINEA 3, espacio 3. El maestro trae `| Antes <del>$999</del>` — el `| `
    * que lo separa de COMPLEMENTO 1 sigue fijo, pero todo lo demás pasó a ser
@@ -193,11 +193,11 @@ export const dealCardFieldsSchema = z.object({
   /** Fila TEXTOS RATING: categoría, rating (con su estrella) y tiempo (con su
    *  reloj). Los 2 íconos son fijos en el maestro — no hay campo para cambiarlos. */
   categoriaEnabled: z.boolean().default(true),
-  categoriaText: z.string().default('Italiana'),
+  categoriaText: richTextSchema.default(defaultRichText('Italiana')),
   ratingEnabled: z.boolean().default(true),
-  ratingText: z.string().default('4.9'),
+  ratingText: richTextSchema.default(defaultRichText('4.9')),
   tiempoEnabled: z.boolean().default(true),
-  tiempoText: z.string().default('xx min.'),
+  tiempoText: richTextSchema.default(defaultRichText('xx min.')),
 
   /**
    * TAG1 y TAG2 son 2 slots FIJOS, no una lista 0-2 como los TAGS del banner:
@@ -211,16 +211,16 @@ export const dealCardFieldsSchema = z.object({
   tag1IconUrl: z.string().default('https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa'),
   /** Alt del ícono del tag 1 — default reproduce el `alt="Rappi"` de fábrica. */
   tag1IconAlt: z.string().default('Rappi'),
-  tag1Text: z.string().default('tag 1'),
+  tag1Text: richTextSchema.default(defaultRichText('tag 1')),
   tag2Enabled: z.boolean().default(true),
   tag2IconUrl: z.string().default('https://lh3.googleusercontent.com/d/19wcynrgz0OqdDt5S5fVf7yaSx7rAN4Fn'),
   /** Alt del ícono del tag 2 — default reproduce el `alt="Rappi"` de fábrica. */
   tag2IconAlt: z.string().default('Rappi'),
-  tag2Text: z.string().default('tag 2'),
+  tag2Text: richTextSchema.default(defaultRichText('tag 2')),
 
   /** LLAMADO A LA ACCION — texto plano dentro de un `<strong>`, sin botón. */
   ctaEnabled: z.boolean().default(true),
-  ctaText: z.string().default('Pide ahora ⤍'),
+  ctaText: richTextSchema.default(defaultRichText('Pide ahora ⤍')),
 
   /** Orden en que las 7 piezas de arriba se pintan en el lienzo (y en el HTML
    *  exportado) — arranca en el orden literal del maestro (DEAL_CARD_PIECE_TYPES).
@@ -238,7 +238,7 @@ export const dealCardFieldsSchema = z.object({
    * components/deals/render.ts.
    */
   legalEnabled: z.boolean().default(false),
-  legalText: z.string().default('Aplican términos y condiciones |'),
+  legalText: richTextSchema.default(defaultRichText('Aplican términos y condiciones |')),
 })
 export type DealCardFields = z.infer<typeof dealCardFieldsSchema>
 export const defaultDealCardFields: DealCardFields = dealCardFieldsSchema.parse({})
@@ -339,9 +339,9 @@ export const DEAL_CARD_PIECE_LABELS: Record<DealCardPieceType, string> = {
 export function isDealCardPieceHidden(fields: DealCardFields, type: DealCardPieceType): boolean {
   switch (type) {
     case 'copy1':
-      return fields.copy1.trim() === ''
+      return plainText(fields.copy1).trim() === ''
     case 'copy2':
-      return fields.copy2.trim() === ''
+      return plainText(fields.copy2).trim() === ''
     case 'precio':
       return !fields.markdownEnabled && !fields.complemento1Enabled && !fields.complemento2Enabled
     case 'rating':
@@ -361,9 +361,9 @@ export function isDealCardPieceHidden(fields: DealCardFields, type: DealCardPiec
 export function hideDealCardPiece(fields: DealCardFields, type: DealCardPieceType): DealCardFields {
   switch (type) {
     case 'copy1':
-      return { ...fields, copy1: '' }
+      return { ...fields, copy1: [] }
     case 'copy2':
-      return { ...fields, copy2: '' }
+      return { ...fields, copy2: [] }
     case 'precio':
       return { ...fields, markdownEnabled: false, complemento1Enabled: false, complemento2Enabled: false }
     case 'rating':

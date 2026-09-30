@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { DEFAULT_THEME, THEME_SLUGS } from '../themes/themes'
+import { DARK_THEME_SLUGS, DEFAULT_THEME, SELECTABLE_THEME_SLUGS } from '../themes/themes'
 import { BACKGROUND_POSITION_VALUES, BACKGROUND_REPEAT_VALUES, BACKGROUND_SIZE_VALUES } from './background'
 
 /**
@@ -87,11 +87,19 @@ export const CTA_STYLE_SELECT_LABELS: Record<CtaStyleSelect, string> = {
  * `tema` se valida contra los temas que realmente existen en el repo (no una
  * lista fija): así un documento guardado en localStorage que apunte a un tema
  * que David borró se descarta al cargar en vez de generar Liquid roto.
+ *
+ * Los 3 oscuros/invertidos ya no se pueden elegir (ver SELECTABLE_THEME_SLUGS):
+ * un documento guardado o importado con uno de ellos pasa al tema por defecto
+ * en vez de descartarse entero.
  */
+export const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/
+
 export const globalSchema = z.object({
   tema: z
-    .string()
-    .refine((s) => THEME_SLUGS.includes(s), { message: 'Tema desconocido (no existe en head-meta-tags.html)' })
+    .preprocess(
+      (v) => (typeof v === 'string' && DARK_THEME_SLUGS.includes(v) ? DEFAULT_THEME : v),
+      z.string().refine((s) => SELECTABLE_THEME_SLUGS.includes(s), { message: 'Tema desconocido (no existe en head-meta-tags.html)' }),
+    )
     .default(DEFAULT_THEME),
 
   /**
@@ -164,6 +172,10 @@ export const globalSchema = z.object({
   contentsBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
   contentsBgPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
   contentsBgRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('repeat'),
+  /** Color sólido de fondo de CONTENTS-SECTION (`#RRGGBB`), debajo de la imagen
+   *  si también hay una. Vacío = sin color. Un valor inválido guardado cae a
+   *  vacío en vez de invalidar el documento. */
+  contentsBgColor: z.preprocess((v) => (typeof v === 'string' && HEX_COLOR_RE.test(v) ? v.toUpperCase() : ''), z.string()).default(''),
 
   /**
    * `style_Look` del content block CTA-template — GLOBAL a propósito (pedido

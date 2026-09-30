@@ -68,7 +68,7 @@ export function BranchFieldsEditor({ selected, doc, value, onChange, onChangeGlo
     const fields = value as DealCardFields
     return (
       <>
-        <DealCardPropertiesPanel value={fields} onChange={onChange as (next: DealCardFields) => void} />
+        <DealCardPropertiesPanel value={fields} onChange={onChange as (next: DealCardFields) => void} doc={doc} />
         {DEAL_CARD_PIECE_TYPES.map((type) => (
           <div key={type} className="module-area-catalog">
             <p className="field-group-label">{DEAL_CARD_PIECE_LABELS[type]}</p>

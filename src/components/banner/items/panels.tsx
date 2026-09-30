@@ -3,8 +3,7 @@ import type { EmailDocument } from '../../../model'
 import { CTA_STYLE_SELECT_LABELS, CTA_STYLE_SELECT_VALUES } from '../../../global/schema'
 import type { GlobalFields } from '../../../global/schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
-import type { RichTextColorMap } from '../../../richText/model'
-import { themeVars } from '../../../themes/themes'
+import { richTextColorsForTema } from '../../../richText/themeColors'
 import {
   CREDITOS_VARIANT_LABELS,
   CREDITOS_VARIANT_VALUES,
@@ -35,19 +34,6 @@ import type {
   TextoXlFields,
 } from './schemas'
 
-/** Colores reales del tema activo para la vista previa del editor de texto
- *  enriquecido (RichTextInput) — a diferencia del HTML final del banner, que
- *  deja `{{color_x_mail_general}}` sin resolver hasta la pasada de tema de
- *  components/banner/render.ts, acá el usuario necesita ver el color de
- *  verdad mientras escribe. */
-function richTextColorsForTema(tema: string): RichTextColorMap {
-  const vars = themeVars(tema)
-  return {
-    colorBase: vars.color_texto_mail_general ?? '#000000',
-    colorAcento1: vars.color_acento1_mail_general ?? '#000000',
-    colorAcento2: vars.color_acento2_mail_general ?? '#000000',
-  }
-}
 
 /** Props uniformes para todo `BannerItemDef.PropertiesPanel` — mismo shape
  *  que `ContentBlockDef.PropertiesPanel` (CTA de CONTENIDOS): `doc`/`onChangeGlobal`
@@ -292,7 +278,8 @@ export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanel
   )
 }
 
-export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<TagsFields>) {
+export function TagsPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<TagsFields>) {
+  const colors = richTextColorsForTema(doc.global.tema)
   const setTag = (index: number, patch: Partial<TagItem>) => {
     onChange({ tags: value.tags.map((t, i) => (i === index ? { ...t, ...patch } : t)) })
   }
@@ -313,7 +300,7 @@ export function TagsPropertiesPanel({ value, onChange }: BannerItemPanelProps<Ta
           <label className="field">
             <span>Texto</span>
             <div className="field-row">
-              <input type="text" value={tag.text} onChange={(e: ChangeEvent<HTMLInputElement>) => setTag(index, { text: e.target.value })} />
+              <RichTextInput value={tag.text} onChange={(text) => setTag(index, { text })} colors={colors} showColors={false} ariaLabel={`Texto del tag ${index + 1}`} />
               {value.tags.length > 1 && (
                 <button type="button" onClick={() => removeTag(index)} aria-label={`Eliminar tag ${index + 1}`}>
                   ×
@@ -376,16 +363,17 @@ export function SeparadorPropertiesPanel({ value, onChange }: BannerItemPanelPro
   )
 }
 
-export function TextoPastillaPropertiesPanel({ value, onChange }: BannerItemPanelProps<TextoPastillaFields>) {
+export function TextoPastillaPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<TextoPastillaFields>) {
+  const colors = richTextColorsForTema(doc.global.tema)
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Texto</span>
-        <input type="text" value={value.text} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, text: e.target.value })} />
+        <RichTextInput value={value.text} onChange={(text) => onChange({ ...value, text })} colors={colors} />
       </label>
       <label className="field">
         <span>Texto de la pastilla</span>
-        <input type="text" value={value.pillText} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, pillText: e.target.value })} />
+        <RichTextInput value={value.pillText} onChange={(pillText) => onChange({ ...value, pillText })} colors={colors} showColors={false} />
       </label>
       <label className="field">
         <span>Posición de la pastilla</span>
@@ -470,7 +458,9 @@ export function FranjaLogosPropertiesPanel({ value, onChange }: BannerItemPanelP
   )
 }
 
-export function CtaInternoPropertiesPanel({ value, onChange, doc, onChangeGlobal }: BannerItemPanelProps<CtaInternoFields>) {
+/** Texto, enlace y estilo global de un CTA — lo usa el CTA de los módulos, que
+ *  suma su propio tamaño (ver moduleItems/panels.tsx). */
+export function CtaInternoPropertiesPanel<T extends Pick<CtaInternoFields, 'text' | 'deeplink'>>({ value, onChange, doc, onChangeGlobal }: BannerItemPanelProps<T>) {
   return (
     <div className="properties-panel">
       <label className="field">

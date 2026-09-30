@@ -13,7 +13,7 @@
 // ("BOLD: se agrega font-weight: bold; en el style", etc.).
 // ============================================================================
 import { escapeHtmlText } from '../template/htmlText'
-import { SIZE_MARK_PX, SIZE_MARKS, type RichText, type RichTextColorMap, type RichTextRun, type SizeMark } from './model'
+import { asRichText, SIZE_MARK_PX, SIZE_MARKS, type RichText, type RichTextColorMap, type RichTextRun, type SizeMark } from './model'
 
 export const LIQUID_COLOR_TOKENS: RichTextColorMap = {
   colorBase: '{{color_texto_mail_general}}',
@@ -46,5 +46,5 @@ function renderRun(run: RichTextRun, colors: RichTextColorMap): string {
 }
 
 export function renderRichText(runs: RichText, colors: RichTextColorMap): string {
-  return runs.map((run) => renderRun(run, colors)).join('')
+  return asRichText(runs).map((run) => renderRun(run, colors)).join('')
 }
