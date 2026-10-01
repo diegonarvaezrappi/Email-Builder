@@ -33,3 +33,32 @@ describe('fondo de CONTENTS · color sólido', () => {
     expect(heroCell).not.toContain('#123456')
   })
 })
+
+describe('fondo de CONTENTS · color que sobrevive a Braze', () => {
+  const sectionTable = (html: string) => {
+    const i = html.indexOf('<table role="CONTENTS-SECTION"')
+    return html.slice(i, html.indexOf('>', i) + 1)
+  }
+  const withGlobal = (over: Partial<typeof defaultEmailDocument.global>) =>
+    assembleEmailHtml({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, ...over } })
+
+  it('con color y sin imagen no deja el background-image: url() vacío (CSS inválido)', () => {
+    const cell = contentsCell(withGlobal({ contentsBgColor: '#FFFFFF', contentsBgUrl: '' }))
+    expect(cell).not.toContain('url(')
+    expect(cell).toContain('background-color: #FFFFFF;')
+  })
+
+  it('con color e imagen conserva la imagen', () => {
+    expect(contentsCell(withGlobal({ contentsBgColor: '#FFFFFF', contentsBgUrl: 'https://x.test/bg.png' }))).toContain('url(https://x.test/bg.png)')
+  })
+
+  it('la tabla de la sección también lleva el color, en atributo y en CSS', () => {
+    const table = sectionTable(withGlobal({ contentsBgColor: '#ABCDEF' }))
+    expect(table).toContain('bgcolor="#ABCDEF"')
+    expect(table).toContain('background-color: #ABCDEF;')
+  })
+
+  it('sin color, la tabla queda como el maestro', () => {
+    expect(sectionTable(assembleEmailHtml(defaultEmailDocument))).toContain('bgcolor=""')
+  })
+})

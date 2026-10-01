@@ -185,7 +185,27 @@ function applySectionBackground(html: string, commentAnchor: string, bg: Section
     // En CSS y también como `bgcolor`: un hex sólido sí vale en el atributo
     // (CLAUDE.md §4.1), y es lo que respeta Outlook de escritorio.
     openTag = openTag.replace('style="', `bgcolor="${bg.color}" style="background-color: ${bg.color}; `)
+    // Sin imagen, `background-image: url();` es CSS inválido: los inliners y
+    // sanitizadores (el de Braze, Gmail) descartan el style entero al
+    // encontrarlo, y con él el background-color. Con color se quita.
+    if (bg.url.trim() === '') openTag = openTag.replace(/\s*background-image:\s*url\(\s*\);?/, '')
   }
+  html = html.slice(0, bounds.start) + openTag + html.slice(bounds.end)
+  if (bg.color) html = withSectionTableColor(html, tdIdx, bg.color, fileName)
+  return html
+}
+
+/** El color también en la `<table role="…-SECTION">` que contiene la celda (su
+ *  `bgcolor=""` viene vacío): si un cliente limpia el style de la celda, la
+ *  tabla sigue pintando el fondo. */
+function withSectionTableColor(html: string, cellIdx: number, color: string, fileName: string): string {
+  const tableIdx = html.lastIndexOf('<table role="', cellIdx)
+  if (tableIdx === -1) throw new Error(`${fileName}: no se encontró la <table role> de la sección — revisar applySectionBackground`)
+  const bounds = voidElementBounds(html, tableIdx, 'table', fileName)
+  const openTag = html
+    .slice(bounds.start, bounds.end)
+    .replace(/bgcolor="[^"]*"/, `bgcolor="${color}"`)
+    .replace('style="', `style="background-color: ${color}; `)
   return html.slice(0, bounds.start) + openTag + html.slice(bounds.end)
 }
 
