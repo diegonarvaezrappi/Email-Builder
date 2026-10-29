@@ -18,6 +18,7 @@ import {
   migrateLegacyHero,
 } from '../../components/hero/schema'
 import { emailDocumentSchema } from '../../model'
+import { assembleEmailHtml } from '../../template/assemble'
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
   type: 'CTA',
@@ -971,13 +972,22 @@ describe('Hero · lista libre de headers y banners, dentro de cada Hero', () => 
     expect(pieceIds()).toEqual([DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID])
   })
 
-  it('removeHeroPiece no deja a un Hero sin header ni sin banner', () => {
-    useBuilder.getState().removeHeroPiece(DEFAULT_HERO_HEADER_ID)
+  it('removeHeroPiece no deja a un Hero sin banner', () => {
     useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
     expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID])
     const extra = useBuilder.getState().insertHeroPiece(S, 'BANNER', 2)
     useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
     expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, extra])
+  })
+
+  it('removeHeroPiece sí quita el único header, y el Hero sigue renderizando sin él', () => {
+    useBuilder.getState().removeHeroPiece(DEFAULT_HERO_HEADER_ID)
+    expect(pieceIds()).toEqual([DEFAULT_HERO_BANNER_ID])
+    const html = assembleEmailHtml(useBuilder.getState().document)
+    expect(html).toContain(`HERO:BANNER:${DEFAULT_HERO_BANNER_ID}`)
+    expect(html).not.toContain('HERO:HEADER:')
+    const again = useBuilder.getState().insertHeroPiece(S, 'HEADER', 0)
+    expect(pieceIds()).toEqual([again, DEFAULT_HERO_BANNER_ID])
   })
 
   it('las acciones de pieza de banner actúan sobre el banner dueño, no sobre el primero', () => {

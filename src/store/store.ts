@@ -14,7 +14,7 @@ import {
   cloneHeroSection,
   createBannerFields,
   findBannerByItem,
-  isLastOfType,
+  isLastBanner,
   type HeroBackground,
 } from '../components/hero/schema'
 import { headerPatchForTheme, bannerBackgroundEnabledForTheme } from '../themeDefaults'
@@ -418,7 +418,7 @@ export const useBuilder = create<BuilderState>()(
       removeHeroPiece: (id) =>
         set((s) => {
           const section = s.document.heroes.find((h) => h.pieces.some((p) => p.id === id))
-          if (!section || isLastOfType(section.pieces, id)) return s
+          if (!section || isLastBanner(section.pieces, id)) return s
           const document = withSectionPieces(s.document, { pieceId: id }, (pieces) => pieces.filter((p) => p.id !== id))
           return { document: pruneTropicalizations(document) }
         }),

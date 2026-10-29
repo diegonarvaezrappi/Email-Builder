@@ -37,7 +37,7 @@ import {
   findSectionByPiece,
   heroPieceLabels,
   heroSectionLabel,
-  isLastOfType,
+  isLastBanner,
   type HeroBannerPiece,
 } from '../components/hero/schema'
 import {
@@ -263,8 +263,8 @@ function heroRows(doc: EmailDocument, expanded: ReadonlySet<string>): TreeRow[] 
         // El grupo es el Hero: cada uno es su propia lista de piezas.
         reorder: { kind: 'heroPiece', group: section.id, index, id: piece.id },
         actionTarget: { kind: 'heroPiece', id: piece.id },
-        ...(isLastOfType(section.pieces, piece.id)
-          ? { removeBlockedReason: `Cada Hero necesita al menos un ${piece.type === 'HEADER' ? 'header' : 'banner'}` }
+        ...(isLastBanner(section.pieces, piece.id)
+          ? { removeBlockedReason: 'Cada Hero necesita al menos un banner' }
           : {}),
       }
       if (piece.type === 'HEADER') return [base]

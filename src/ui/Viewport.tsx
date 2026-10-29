@@ -49,7 +49,7 @@ import {
   heroBanners,
   heroPieceLabels,
   heroSectionLabel,
-  isLastOfTypeInSection,
+  isLastBannerInSection,
 } from '../components/hero/schema'
 import { getContentBlockDef, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
@@ -1107,7 +1107,7 @@ function EmailFrame({
               {mode === 'edit' && (
                 <HeroPieceActions
                   label={label}
-                  lastOfType={heroes.length < 2}
+                  removeBlocked={heroes.length < 2}
                   blockedReason="El mail necesita al menos un Hero"
                   onDuplicate={() => onDuplicateHeroSection(id)}
                   onRemove={() => onRemoveHeroSection(id)}
@@ -1122,7 +1122,7 @@ function EmailFrame({
           const pieceType = type as HeroPieceType
           const label = heroLabels.get(id) ?? SLOT_LABELS[pieceType]
           const isSelected = isHeroPieceSelected(selected, id)
-          const lastOfType = isLastOfTypeInSection(heroes, id)
+          const removeBlocked = isLastBannerInSection(heroes, id)
           return (
             <div
               key={id}
@@ -1148,7 +1148,7 @@ function EmailFrame({
               {mode === 'edit' && pieceType === 'HEADER' && (
                 <HeroPieceActions
                   label={label}
-                  lastOfType={lastOfType}
+                  removeBlocked={removeBlocked}
                   onDuplicate={() => onDuplicateHeroPiece(id)}
                   onRemove={() => onRemoveHeroPiece(id)}
                 />
@@ -1510,7 +1510,7 @@ function EmailFrame({
                 {mode === 'edit' && (
                   <HeroPieceActions
                     label={label}
-                    lastOfType={isLastOfTypeInSection(heroes, id)}
+                    removeBlocked={isLastBannerInSection(heroes, id)}
                     onDuplicate={() => onDuplicateHeroPiece(id)}
                     onRemove={() => onRemoveHeroPiece(id)}
                   />
@@ -1531,14 +1531,14 @@ function EmailFrame({
  */
 function HeroPieceActions({
   label,
-  lastOfType,
+  removeBlocked,
   blockedReason,
   onDuplicate,
   onRemove,
 }: {
   label: string
-  lastOfType: boolean
-  /** Por qué no se puede eliminar (por defecto, el de header/banner). */
+  removeBlocked: boolean
+  /** Por qué no se puede eliminar (por defecto, el del último banner). */
   blockedReason?: string
   onDuplicate: () => void
   onRemove: () => void
@@ -1562,11 +1562,11 @@ function HeroPieceActions({
         className="slot-delete"
         aria-label={`Eliminar ${label}`}
         title={
-          lastOfType
-            ? (blockedReason ?? `Cada Hero necesita al menos un ${label.toLowerCase().startsWith('header') ? 'header' : 'banner'}`)
+          removeBlocked
+            ? (blockedReason ?? 'Cada Hero necesita al menos un banner')
             : `Eliminar ${label}`
         }
-        disabled={lastOfType}
+        disabled={removeBlocked}
         onClick={(e) => {
           e.stopPropagation()
           onRemove()

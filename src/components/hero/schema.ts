@@ -112,12 +112,14 @@ export function findBannerByItem(hero: HeroPiece[], itemId: string): { piece: He
   return index === -1 ? null : { piece: hero[index] as HeroBannerPiece, index }
 }
 
-/** Si eliminar esta pieza dejaría al Hero sin ningún header o sin ningún
- *  banner — el store no lo permite y la UI desactiva el botón. */
-export function isLastOfType(hero: HeroPiece[], id: string): boolean {
+/** Si eliminar esta pieza dejaría al Hero sin ningún banner — el store no lo
+ *  permite y la UI desactiva el botón. El header SÍ se puede quitar (pedido
+ *  del usuario, 2026-10-29): un Hero sin header es válido, y se vuelve a
+ *  agregar desde "Agregar al hero". */
+export function isLastBanner(hero: HeroPiece[], id: string): boolean {
   const piece = findHeroPiece(hero, id)
-  if (!piece) return false
-  return hero.filter((p) => p.type === piece.type).length <= 1
+  if (!piece || piece.type !== 'BANNER') return false
+  return hero.filter((p) => p.type === 'BANNER').length <= 1
 }
 
 /**
@@ -202,10 +204,10 @@ export function findSectionByBannerItem(heroes: HeroSection[], itemId: string): 
   return heroes.find((h) => h.pieces.some((p) => p.type === 'BANNER' && p.fields.items.some((it) => it.id === itemId)))
 }
 
-/** Si eliminar esta pieza dejaría a SU Hero sin header o sin banner. */
-export function isLastOfTypeInSection(heroes: HeroSection[], pieceId: string): boolean {
+/** Si eliminar esta pieza dejaría a SU Hero sin banner. */
+export function isLastBannerInSection(heroes: HeroSection[], pieceId: string): boolean {
   const section = findSectionByPiece(heroes, pieceId)
-  return section ? isLastOfType(section.pieces, pieceId) : false
+  return section ? isLastBanner(section.pieces, pieceId) : false
 }
 
 /** "Hero" con uno solo; "Hero 1", "Hero 2"… con varios. */

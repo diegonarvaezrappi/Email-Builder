@@ -136,14 +136,16 @@ describe('buildTreeViewModel · Sección Hero', () => {
     expect(nodes(vm.rows).slice(3).every((r) => r.depth === 2)).toBe(true)
   })
 
-  it('numbers repeated types and blocks removing the last one of each', () => {
+  it('numbers repeated types; the header can always be removed, only the last banner is blocked', () => {
     const header = headerPieceOf(defaultEmailDocument)
     const banner = bannerPieceOf(defaultEmailDocument)
     const hero: HeroPiece[] = [header, banner, { ...banner, id: 'b2' }]
     const rows = nodes(buildTreeViewModel(withPieces(defaultEmailDocument, hero), open(heroSectionExpandKey(DEFAULT_HERO_SECTION_ID)), 'hero').rows).slice(1)
     expect(rows.map((r) => r.label)).toEqual(['Header', 'Banner 1', 'Banner 2'])
-    expect(rows[0].removeBlockedReason).toBeDefined()
+    expect(rows[0].removeBlockedReason).toBeUndefined()
     expect(rows[1].removeBlockedReason).toBeUndefined()
+    const single = nodes(buildTreeViewModel(defaultEmailDocument, open(heroSectionExpandKey(DEFAULT_HERO_SECTION_ID)), 'hero').rows).slice(1)
+    expect(single.map((r) => r.removeBlockedReason)).toEqual([undefined, 'Cada Hero necesita al menos un banner'])
     expect(rows.map((r) => r.reorder)).toEqual([
       { kind: 'heroPiece', group: DEFAULT_HERO_SECTION_ID, index: 0, id: header.id },
       { kind: 'heroPiece', group: DEFAULT_HERO_SECTION_ID, index: 1, id: banner.id },
