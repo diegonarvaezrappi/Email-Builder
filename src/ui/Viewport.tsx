@@ -42,7 +42,15 @@ import type { ViewportTab } from './viewportTab'
 import { withoutTropicalizations } from '../tropicalize/doc'
 import { normalizeBranches, type Tropicalizations } from '../tropicalize/schema'
 import { bannerItemKey, blockKey, dealCardKey, heroPieceKey, moduleItemKey, slotKey, type TropicalizeKey } from '../tropicalize/keys'
-import { findBannerByItem, heroBanners, heroPieceLabels, isLastOfType } from '../components/hero/schema'
+import {
+  allHeroPieces,
+  findBannerByItem,
+  findSectionByPiece,
+  heroBanners,
+  heroPieceLabels,
+  heroSectionLabel,
+  isLastOfTypeInSection,
+} from '../components/hero/schema'
 import { getContentBlockDef, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
@@ -58,6 +66,8 @@ import {
   DEAL_CARD_PIECE_OPEN_RE,
   HERO_PIECE_CLOSE_RE,
   HERO_PIECE_OPEN_RE,
+  HERO_SECTION_CLOSE_RE,
+  HERO_SECTION_OPEN_RE,
   MODULE_ITEM_CLOSE_RE,
   MODULE_ITEM_OPEN_RE,
 } from '../template/contentBlocks'
@@ -70,6 +80,7 @@ import {
   isBannerItemSelected,
   isBlockSelected,
   isHeroPieceSelected,
+  isHeroSectionSelected,
   isDealCardPieceSelected,
   isDealCardSelected,
   isModuleItemSelected,
@@ -80,6 +91,7 @@ import {
   selectDealCardPiece,
   selectGlobalBackground,
   selectHeroPiece,
+  selectHeroSection,
   selectModuleItem,
   selectSlot,
   SECTION_LABELS,
@@ -97,6 +109,7 @@ import {
   DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
   HEADER_DRAG_TYPE,
   HERO_PIECE_REORDER_DRAG_TYPE,
+  HERO_SECTION_REORDER_DRAG_TYPE,
   MODULE_ITEM_DRAG_TYPE,
   MODULE_ITEM_REORDER_DRAG_TYPE,
 } from './dragTypes'
@@ -113,8 +126,12 @@ interface ViewportProps {
   onSelect: (next: Selection) => void
   /** Escribe los campos de un slot por su docKey — igual que InspectorPanel.onChange, reutilizado acá para eliminar/restaurar singletons. */
   onChangeSlot: (docKey: 'footer' | 'contenidos', fields: unknown) => void
-  /** Piezas del Hero (headers y banners, lista libre — components/hero/schema.ts). */
-  onInsertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
+  /** Los Heros enteros (duplicar, eliminar, reordenar) y sus piezas (headers
+   *  y banners, lista libre por Hero — components/hero/schema.ts). */
+  onDuplicateHeroSection: (id: string) => void
+  onRemoveHeroSection: (id: string) => void
+  onReorderHeroSection: (id: string, toIndex: number) => void
+  onInsertHeroPiece: (sectionId: string, type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
   onDuplicateHeroPiece: (id: string) => void
   onReorderHeroPiece: (id: string, toIndex: number) => void
   onRemoveHeroPiece: (id: string) => void
@@ -195,6 +212,9 @@ export function Viewport({
   selected,
   onSelect,
   onChangeSlot,
+  onDuplicateHeroSection,
+  onRemoveHeroSection,
+  onReorderHeroSection,
   onInsertHeroPiece,
   onDuplicateHeroPiece,
   onReorderHeroPiece,
@@ -311,7 +331,10 @@ export function Viewport({
             onSelect={onSelect}
             onRemove={handleRemove}
             onRestore={handleRestore}
-            hero={doc.hero}
+            heroes={doc.heroes}
+            onDuplicateHeroSection={onDuplicateHeroSection}
+            onRemoveHeroSection={onRemoveHeroSection}
+            onReorderHeroSection={onReorderHeroSection}
             onInsertHeroPiece={onInsertHeroPiece}
             onDuplicateHeroPiece={onDuplicateHeroPiece}
             onReorderHeroPiece={onReorderHeroPiece}
@@ -379,8 +402,11 @@ interface EmailFrameProps {
   onSelect: (next: Selection) => void
   onRemove: (slot: SlotName) => void
   onRestore: (slot: SlotName) => void
-  hero: EmailDocument['hero']
-  onInsertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
+  heroes: EmailDocument['heroes']
+  onDuplicateHeroSection: (id: string) => void
+  onRemoveHeroSection: (id: string) => void
+  onReorderHeroSection: (id: string, toIndex: number) => void
+  onInsertHeroPiece: (sectionId: string, type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
   onDuplicateHeroPiece: (id: string) => void
   onReorderHeroPiece: (id: string, toIndex: number) => void
   onRemoveHeroPiece: (id: string) => void
@@ -446,7 +472,9 @@ interface MarkedBlockRect extends DropRect {
 const SELECTABLE_SLOTS = ['FOOTER'] as const
 
 /** Las 2 secciones, en el orden en que van en el mail. */
-const SECTION_TARGETS = ['HERO_BG', 'CONTENTS_BG'] as const
+/** Solo CONTENTS: los Heros son varios y se miden por sus marcadores
+ *  HSECTION (ver measureHeroSections). */
+const SECTION_TARGETS = ['CONTENTS_BG'] as const
 
 /** Si ese overlay es una de las 2 secciones (no un slot del registry). */
 const isSectionTarget = (slot: SlotName | GlobalBackgroundTarget): slot is GlobalBackgroundTarget =>
@@ -547,6 +575,9 @@ function measureMarkedBlocks(root: Document, openRe: RegExp, closeRe: RegExp): M
 const measureContentBlocks = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, BLOCK_OPEN_RE, BLOCK_CLOSE_RE)
 /** `type` = HEADER | BANNER, `id` = el id de la pieza del Hero. */
 const measureHeroPieces = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, HERO_PIECE_OPEN_RE, HERO_PIECE_CLOSE_RE)
+/** Cada Hero entero (`id` = el id del Hero). */
+const measureHeroSections = (root: Document): MarkedBlockRect[] =>
+  measureMarkedBlocks(root, HERO_SECTION_OPEN_RE, HERO_SECTION_CLOSE_RE)
 const measureBannerItems = (root: Document): MarkedBlockRect[] =>
   measureMarkedBlocks(root, BANNER_ITEM_OPEN_RE, BANNER_ITEM_CLOSE_RE)
 
@@ -607,7 +638,10 @@ function EmailFrame({
   onSelect,
   onRemove,
   onRestore,
-  hero,
+  heroes,
+  onDuplicateHeroSection,
+  onRemoveHeroSection,
+  onReorderHeroSection,
   onInsertHeroPiece,
   onDuplicateHeroPiece,
   onReorderHeroPiece,
@@ -638,6 +672,8 @@ function EmailFrame({
   const [height, setHeight] = useState(600)
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
   const [heroRects, setHeroRects] = useState<MarkedBlockRect[]>([])
+  const [heroSectionRects, setHeroSectionRects] = useState<MarkedBlockRect[]>([])
+  const hero = allHeroPieces(heroes)
   const [blockRects, setBlockRects] = useState<MarkedBlockRect[]>([])
   const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
   const [dealCardRects, setDealCardRects] = useState<MarkedBlockRect[]>([])
@@ -656,6 +692,7 @@ function EmailFrame({
     setHeight(Math.max(root.body.scrollHeight, 200))
     setSlotRects(measureSlots(root))
     setHeroRects(measureHeroPieces(root))
+    setHeroSectionRects(measureHeroSections(root))
     setBlockRects(measureContentBlocks(root))
     setBannerItemRects(measureBannerItems(root))
     setDealCardRects(measureDealCards(root))
@@ -684,12 +721,29 @@ function EmailFrame({
     return resolveDropIndex(order, rectsById, dropY)
   }
 
-  // Índice de destino dentro de la lista del Hero (headers y banners).
-  const resolveIndexForHeroDrop = (e: React.DragEvent): number => {
-    const order = hero.map((p) => p.id)
-    const rectsById = new Map(heroRects.map((r) => [r.id, r]))
-    const dropY = frameElRef.current ? dropYInFrameSpace(e, frameElRef.current) : 0
-    return resolveDropIndex(order, rectsById, dropY)
+  const dropYOf = (e: React.DragEvent) => (frameElRef.current ? dropYInFrameSpace(e, frameElRef.current) : 0)
+
+  // El Hero sobre el que cae el cursor; si no cae sobre ninguno, el último.
+  const resolveHeroSectionForDrop = (e: React.DragEvent): string => {
+    const dropY = dropYOf(e)
+    const target = heroSectionRects.find((r) => dropY >= r.top && dropY <= r.top + r.height)
+    return target?.id ?? heroes[heroes.length - 1].id
+  }
+
+  // Índice de destino dentro de la lista de piezas de UN Hero.
+  const resolveIndexForHeroDrop = (e: React.DragEvent, sectionId: string): number => {
+    const section = heroes.find((h) => h.id === sectionId)
+    const order = section ? section.pieces.map((p) => p.id) : []
+    const own = new Set(order)
+    const rectsById = new Map(heroRects.filter((r) => own.has(r.id)).map((r) => [r.id, r]))
+    return resolveDropIndex(order, rectsById, dropYOf(e))
+  }
+
+  // Índice de destino entre los Heros (reordenar uno entero).
+  const resolveIndexForHeroSectionDrop = (e: React.DragEvent): number => {
+    const order = heroes.map((h) => h.id)
+    const rectsById = new Map(heroSectionRects.map((r) => [r.id, r]))
+    return resolveDropIndex(order, rectsById, dropYOf(e))
   }
 
   // El banner sobre el que cae el cursor (para soltar una pieza NUEVA desde el
@@ -824,6 +878,7 @@ function EmailFrame({
           if (mode !== 'edit') return
           const types = e.dataTransfer.types
           const reorderTypes = [
+            HERO_SECTION_REORDER_DRAG_TYPE,
             HERO_PIECE_REORDER_DRAG_TYPE,
             CONTENT_BLOCK_REORDER_DRAG_TYPE,
             BANNER_ITEM_REORDER_DRAG_TYPE,
@@ -863,20 +918,32 @@ function EmailFrame({
           const bannerType = e.dataTransfer.getData(BANNER_TYPE_DRAG_TYPE)
           if (bannerType) {
             e.preventDefault()
-            onInsertHeroPiece('BANNER', resolveIndexForHeroDrop(e), bannerType as BannerType)
+            const sectionId = resolveHeroSectionForDrop(e)
+            onInsertHeroPiece(sectionId, 'BANNER', resolveIndexForHeroDrop(e, sectionId), bannerType as BannerType)
             return
           }
 
           if (e.dataTransfer.getData(HEADER_DRAG_TYPE)) {
             e.preventDefault()
-            onInsertHeroPiece('HEADER', resolveIndexForHeroDrop(e))
+            const sectionId = resolveHeroSectionForDrop(e)
+            onInsertHeroPiece(sectionId, 'HEADER', resolveIndexForHeroDrop(e, sectionId))
             return
           }
 
+          // Reordenar un header/banner: dentro de SU Hero (no se mueven
+          // piezas entre Heros por error).
           const reorderHeroId = e.dataTransfer.getData(HERO_PIECE_REORDER_DRAG_TYPE)
           if (reorderHeroId) {
             e.preventDefault()
-            onReorderHeroPiece(reorderHeroId, resolveIndexForHeroDrop(e))
+            const section = findSectionByPiece(heroes, reorderHeroId)
+            if (section) onReorderHeroPiece(reorderHeroId, resolveIndexForHeroDrop(e, section.id))
+            return
+          }
+
+          const reorderSectionId = e.dataTransfer.getData(HERO_SECTION_REORDER_DRAG_TYPE)
+          if (reorderSectionId) {
+            e.preventDefault()
+            onReorderHeroSection(reorderSectionId, resolveIndexForHeroSectionDrop(e))
             return
           }
 
@@ -1008,13 +1075,54 @@ function EmailFrame({
             </div>
           )
         })}
+        {/* Cada Hero entero — lo PRIMERO, debajo de todo lo que contiene
+            (headers, banners y sus piezas se pintan después y quedan encima).
+            Sus botones van arriba a la derecha, en la franja de padding del
+            Hero que queda por encima del primer header. */}
+        {heroSectionRects.map(({ id, top, left, width, height: h }) => {
+          const label = heroSectionLabel(heroes, id)
+          const isSelected = isHeroSectionSelected(selected, id)
+          return (
+            <div
+              key={`hsection-${id}`}
+              className={`slot-hit${isSelected ? ' selected' : ''}`}
+              style={{ top, left, width, height: h }}
+              draggable={mode === 'edit'}
+              onDragStart={
+                mode === 'edit'
+                  ? (e) => {
+                      e.dataTransfer.setData(HERO_SECTION_REORDER_DRAG_TYPE, id)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }
+                  : undefined
+              }
+            >
+              <button
+                type="button"
+                className="slot-select"
+                aria-label={`Seleccionar ${label}`}
+                aria-pressed={isSelected}
+                onClick={() => onSelect(selectHeroSection(id))}
+              />
+              {mode === 'edit' && (
+                <HeroPieceActions
+                  label={label}
+                  lastOfType={heroes.length < 2}
+                  blockedReason="El mail necesita al menos un Hero"
+                  onDuplicate={() => onDuplicateHeroSection(id)}
+                  onRemove={() => onRemoveHeroSection(id)}
+                />
+              )}
+            </div>
+          )
+        })}
         {/* Headers y banners del Hero — ANTES de las piezas de banner, que
             quedan encima (el overlay de un banner las contiene). */}
         {heroRects.map(({ id, type, top, left, width, height: h }) => {
           const pieceType = type as HeroPieceType
           const label = heroLabels.get(id) ?? SLOT_LABELS[pieceType]
           const isSelected = isHeroPieceSelected(selected, id)
-          const lastOfType = isLastOfType(hero, id)
+          const lastOfType = isLastOfTypeInSection(heroes, id)
           return (
             <div
               key={id}
@@ -1402,7 +1510,7 @@ function EmailFrame({
                 {mode === 'edit' && (
                   <HeroPieceActions
                     label={label}
-                    lastOfType={isLastOfType(hero, id)}
+                    lastOfType={isLastOfTypeInSection(heroes, id)}
                     onDuplicate={() => onDuplicateHeroPiece(id)}
                     onRemove={() => onRemoveHeroPiece(id)}
                   />
@@ -1424,11 +1532,14 @@ function EmailFrame({
 function HeroPieceActions({
   label,
   lastOfType,
+  blockedReason,
   onDuplicate,
   onRemove,
 }: {
   label: string
   lastOfType: boolean
+  /** Por qué no se puede eliminar (por defecto, el de header/banner). */
+  blockedReason?: string
   onDuplicate: () => void
   onRemove: () => void
 }) {
@@ -1450,7 +1561,11 @@ function HeroPieceActions({
         type="button"
         className="slot-delete"
         aria-label={`Eliminar ${label}`}
-        title={lastOfType ? `El Hero necesita al menos un ${label.toLowerCase().startsWith('header') ? 'header' : 'banner'}` : `Eliminar ${label}`}
+        title={
+          lastOfType
+            ? (blockedReason ?? `Cada Hero necesita al menos un ${label.toLowerCase().startsWith('header') ? 'header' : 'banner'}`)
+            : `Eliminar ${label}`
+        }
         disabled={lastOfType}
         onClick={(e) => {
           e.stopPropagation()

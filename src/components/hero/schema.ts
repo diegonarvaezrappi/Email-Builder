@@ -16,12 +16,25 @@
 // Siempre queda al menos un header y un banner (el store no deja eliminar el
 // último de cada tipo): el banner ya era "no removible" por decisión de
 // producto (2026-08-03), y el maestro exige un header.
+//
+// 2026-10-29, segundo pedido: "los heros también deben poder duplicarse". El
+// documento pasa a tener una LISTA de Heros (`doc.heroes`), cada uno con su
+// propio fondo (decisión del usuario: "fondo propio por Hero") y su propia
+// lista de piezas. Cada Hero es una copia entera de la sección
+// `role="HERO-SECTION"` del maestro, con su `<a>`; la regla de links de
+// arriba vale DENTRO de cada Hero. La regla "al menos un header y un banner"
+// también es por Hero, y siempre queda al menos un Hero.
 // ============================================================================
 import { z } from 'zod'
 import { defaultHeaderFields, headerSchema, type HeaderFields } from '../header/schema'
 import { bannerSchema, defaultBannerFields, type BannerFields, type BannerType } from '../banner/schema'
 import type { BannerItem } from '../banner/items/schemas'
 import { newId } from '../../ids'
+import {
+  BACKGROUND_POSITION_VALUES,
+  BACKGROUND_REPEAT_VALUES,
+  BACKGROUND_SIZE_VALUES,
+} from '../../global/background'
 
 export interface HeroHeaderPiece {
   id: string
@@ -132,17 +145,123 @@ export function heroPieceLabels(hero: HeroPiece[]): Map<string, string> {
 export const heroPieceLabel = (hero: HeroPiece[], id: string): string =>
   heroPieceLabels(hero).get(id) ?? HERO_PIECE_LABELS[findHeroPiece(hero, id)?.type ?? 'HEADER']
 
+// --- Los Heros (secciones) --------------------------------------------------
+
 /**
- * Documento guardado antes del 2026-10-28 (`header` + `banner` sueltos, sin
- * `hero`): se convierte a la lista con los ids por defecto, y sus
- * tropicalizaciones `slot:HEADER`/`slot:BANNER` pasan a apuntar a esas piezas
- * — así un mail viejo (localStorage o un JSON importado) se abre igual que
- * antes. Corre como `z.preprocess` del schema del documento (model.ts).
+ * El fondo de UN Hero. Mismos nombres de campo que los `heroBg*` de
+ * global/schema.ts (donde vivía cuando había un solo Hero) a propósito: así
+ * los paneles de fondo existentes (ui/BackgroundFields.tsx) se reusan tal
+ * cual, dándoles `{ ...doc.global, ...hero.background }`.
+ */
+export const heroBackgroundSchema = z.object({
+  heroBgUrl: z.string().default(''),
+  heroBgAlt: z.string().default('Imagen de fondo'),
+  heroBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
+  heroBgPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
+  heroBgRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('repeat'),
+})
+export type HeroBackground = z.infer<typeof heroBackgroundSchema>
+export const HERO_BACKGROUND_KEYS = Object.keys(heroBackgroundSchema.shape) as (keyof HeroBackground)[]
+
+/** Solo los 5 campos de fondo de un objeto más grande (ej. el que devuelven
+ *  los paneles de fondo, que trabajan sobre `{ ...global, ...background }`). */
+export function pickHeroBackground(value: Partial<Record<keyof HeroBackground, unknown>>): HeroBackground {
+  return heroBackgroundSchema.parse(Object.fromEntries(HERO_BACKGROUND_KEYS.map((k) => [k, value[k]])))
+}
+
+export interface HeroSection {
+  id: string
+  background: HeroBackground
+  pieces: HeroPiece[]
+}
+
+export const heroSectionSchema = z.object({
+  id: z.string(),
+  background: heroBackgroundSchema.default({}),
+  pieces: z.array(heroPieceSchema),
+})
+
+export const DEFAULT_HERO_SECTION_ID = 'hero-section-default'
+
+export const defaultHeroSections: HeroSection[] = [
+  { id: DEFAULT_HERO_SECTION_ID, background: heroBackgroundSchema.parse({}), pieces: defaultHero },
+]
+
+/** Todas las piezas de todos los Heros, en orden — para buscar por id (los ids
+ *  son únicos en todo el documento) y para numerar ("Banner 3"). */
+export const allHeroPieces = (heroes: HeroSection[]): HeroPiece[] => heroes.flatMap((h) => h.pieces)
+
+export const findHeroSection = (heroes: HeroSection[], id: string): HeroSection | undefined => heroes.find((h) => h.id === id)
+
+/** El Hero que contiene una pieza (header/banner) o una pieza de banner. */
+export function findSectionByPiece(heroes: HeroSection[], pieceId: string): HeroSection | undefined {
+  return heroes.find((h) => h.pieces.some((p) => p.id === pieceId))
+}
+
+export function findSectionByBannerItem(heroes: HeroSection[], itemId: string): HeroSection | undefined {
+  return heroes.find((h) => h.pieces.some((p) => p.type === 'BANNER' && p.fields.items.some((it) => it.id === itemId)))
+}
+
+/** Si eliminar esta pieza dejaría a SU Hero sin header o sin banner. */
+export function isLastOfTypeInSection(heroes: HeroSection[], pieceId: string): boolean {
+  const section = findSectionByPiece(heroes, pieceId)
+  return section ? isLastOfType(section.pieces, pieceId) : false
+}
+
+/** "Hero" con uno solo; "Hero 1", "Hero 2"… con varios. */
+export function heroSectionLabel(heroes: HeroSection[], id: string): string {
+  if (heroes.length < 2) return 'Hero'
+  return `Hero ${heroes.findIndex((h) => h.id === id) + 1}`
+}
+
+/**
+ * Copia profunda de un Hero con ids nuevos para él, sus piezas y las piezas
+ * de sus banners (todos únicos en el documento). Devuelve los pares viejo →
+ * nuevo de cada nivel, para copiar sus tropicalizaciones.
+ */
+export function cloneHeroSection(section: HeroSection): {
+  section: HeroSection
+  pieceIds: Map<string, string>
+  itemIds: Map<string, string>
+} {
+  const pieceIds = new Map<string, string>()
+  const itemIds = new Map<string, string>()
+  const pieces = section.pieces.map((piece): HeroPiece => {
+    const id = newId()
+    pieceIds.set(piece.id, id)
+    if (piece.type === 'HEADER') return { ...piece, id }
+    const cloned = cloneBannerFields(piece.fields)
+    for (const [from, to] of cloned.idMap) itemIds.set(from, to)
+    return { id, type: 'BANNER', fields: cloned.fields }
+  })
+  return { section: { id: newId(), background: { ...section.background }, pieces }, pieceIds, itemIds }
+}
+
+/**
+ * Documentos guardados con una forma anterior del Hero (localStorage o un JSON
+ * importado) — corre como `z.preprocess` del schema del documento (model.ts):
+ *
+ *  - antes del 2026-10-28: `header` + `banner` sueltos. Pasan a ser las
+ *    piezas por defecto, y sus tropicalizaciones `slot:HEADER`/`slot:BANNER`
+ *    apuntan a esas piezas;
+ *  - 2026-10-28: `hero` (una sola lista de piezas). Pasa a ser el único Hero.
+ *
+ * En los 2 casos el fondo del Hero sale de los `heroBg*` de `global`, donde
+ * vivía cuando había un solo Hero. El mail se abre igual que antes.
  */
 export function migrateLegacyHero(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') return raw
   const doc = raw as Record<string, unknown>
-  if ('hero' in doc) return raw
+  if ('heroes' in doc) return raw
+  const asSection = (pieces: unknown, rest: Record<string, unknown>) => {
+    const global = (rest.global && typeof rest.global === 'object' ? rest.global : {}) as Record<string, unknown>
+    const background = Object.fromEntries(HERO_BACKGROUND_KEYS.filter((k) => k in global).map((k) => [k, global[k]]))
+    return [{ id: DEFAULT_HERO_SECTION_ID, background, pieces }]
+  }
+  if ('hero' in doc) {
+    const { hero, ...rest } = doc
+    return { ...rest, heroes: asSection(hero, rest) }
+  }
   if (!('header' in doc) && !('banner' in doc)) return raw
 
   const { header, banner, ...rest } = doc
@@ -161,5 +280,23 @@ export function migrateLegacyHero(raw: unknown): unknown {
     }
     rest.tropicalizations = renamed
   }
-  return { ...rest, hero }
+  return { ...rest, heroes: asSection(hero, rest) }
+}
+
+/**
+ * El Hero "activo" para lo que se agrega o edita desde la pestaña Hero (las
+ * cards de agregar, la tarjeta de fondo): el que contiene lo seleccionado —el
+ * Hero mismo, uno de sus headers/banners o una pieza de sus banners—; si la
+ * selección no está en ningún Hero, el último.
+ */
+export function activeHeroSectionId(
+  heroes: HeroSection[],
+  selected: { heroSectionId?: string; heroId?: string; bannerItemId?: string } | null,
+): string {
+  const fromSelection =
+    (selected?.heroSectionId && findHeroSection(heroes, selected.heroSectionId)) ||
+    (selected?.heroId && findSectionByPiece(heroes, selected.heroId)) ||
+    (selected?.bannerItemId && findSectionByBannerItem(heroes, selected.bannerItemId)) ||
+    undefined
+  return (fromSelection || heroes[heroes.length - 1]).id
 }

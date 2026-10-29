@@ -10,7 +10,7 @@ import { col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
 import { logosFieldsSchema, type LogosFields } from './components/logos/schema'
 import { cuponesFieldsSchema, type CuponesFields } from './components/cupones/schema'
-import { defaultHero, heroPieceSchema, migrateLegacyHero, type HeroPiece } from './components/hero/schema'
+import { defaultHeroSections, heroSectionSchema, migrateLegacyHero, type HeroSection } from './components/hero/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 import { tropicalizationsSchema, type Tropicalizations } from './tropicalize/schema'
 
@@ -23,7 +23,7 @@ export type { BannerItem, BannerItemType } from './components/banner/items/schem
  *  es a un bloque DEALS lo que una pieza de banner es al banner. */
 export type { DealCard, DealCardFields } from './components/deals/schema'
 
-export type { HeroPiece, HeroPieceType, HeroHeaderPiece, HeroBannerPiece } from './components/hero/schema'
+export type { HeroPiece, HeroPieceType, HeroHeaderPiece, HeroBannerPiece, HeroSection, HeroBackground } from './components/hero/schema'
 
 /** Nombres de los marcadores de slot presentes en template_base.html.
  *  HEADER y BANNER siguen siendo nombres de slot (registry, selección, lienzo)
@@ -261,8 +261,9 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
  * (donde un diseño ES un solo tipo discriminado), acá un email tiene TODOS los
  * slots a la vez — por eso este es un mapa, no una unión discriminada.
  *
- * `hero` y `contenidos` son listas libres y repetibles: el Hero, de headers y
- * banners (cada banner con su propia lista de piezas, ver components/banner/);
+ * `heroes` y `contenidos` son listas libres y repetibles: los Heros, cada uno
+ * con su fondo y su lista de headers y banners (cada banner con su propia
+ * lista de piezas, ver components/banner/);
  * contenidos, de bloques de body — ver components/hero/schema.ts y
  * components/contenidos/render.ts. Solo `footer` sigue siendo un singleton.
  *
@@ -276,11 +277,13 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
 export interface EmailDocument {
   global: GlobalFields
   /**
-   * Las piezas del HERO, en orden: headers y banners mezclados, cada uno con id
-   * propio (ver components/hero/schema.ts). Siempre al menos uno de cada tipo.
-   * Reemplaza a los viejos singletons `header` y `banner` (2026-10-28).
+   * Los HEROS, en orden: cada uno es una copia de la sección HERO del maestro,
+   * con su propio fondo y su lista de headers y banners mezclados (ver
+   * components/hero/schema.ts). Siempre al menos un Hero, y cada Hero con al
+   * menos un header y un banner. Reemplaza a los viejos singletons `header` y
+   * `banner` (2026-10-28) y a la lista única `hero` (2026-10-29).
    */
-  hero: HeroPiece[]
+  heroes: HeroSection[]
   footer: FooterFields
   contenidos: ContentBlock[]
   /**
@@ -296,13 +299,13 @@ export interface EmailDocument {
 }
 
 /** Usado por store/persistence.ts para validar lo que viene de localStorage, y
- *  por la pestaña Importar. Un documento anterior a la lista del Hero (con
- *  `header` + `banner` sueltos) se convierte en el preprocess — ver
- *  components/hero/schema.ts#migrateLegacyHero. Sin ninguno de los dos, carga
- *  con el Hero por defecto. */
+ *  por la pestaña Importar. Un documento con una forma anterior del Hero
+ *  (`header` + `banner` sueltos, o una sola lista `hero`) se convierte en el
+ *  preprocess — ver components/hero/schema.ts#migrateLegacyHero. Sin nada de
+ *  eso, carga con el Hero por defecto. */
 const emailDocumentObjectSchema = z.object({
   global: globalSchema,
-  hero: z.array(heroPieceSchema).default(defaultHero),
+  heroes: z.array(heroSectionSchema).min(1).default(defaultHeroSections),
   footer: footerSchema,
   contenidos: z.array(contentBlockSchema).default([]),
   tropicalizations: tropicalizationsSchema,

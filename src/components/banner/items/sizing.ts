@@ -43,6 +43,21 @@ export function liveTextSizing(text: string, bannerType: BannerType): LiveTextSi
     : { className: 'bnr-xl', fontSize: '80px', lineHeight: '80px' }
 }
 
+/** Lo que el maestro aplica en móvil a cada clase de texto vivo (las 2
+ *  media queries de global-styles.html, iguales). */
+export function liveTextMobileSizing(className: string): { fontSize: number; lineHeight: number } {
+  return className === 'bnr-xl' ? { fontSize: 110, lineHeight: 111 } : { fontSize: 63, lineHeight: 64 }
+}
+
+/** Clase propia del Texto XL con tamaño personalizado: lleva los valores de
+ *  móvil en el nombre, así 2 piezas con el mismo tamaño comparten la regla y
+ *  assemble.ts arma las reglas leyendo el HTML final (incluidas las ramas
+ *  tropicalizadas), sin conocer el documento. */
+export const textoXlCustomClass = (mobileFontSize: number, mobileLineHeight: number): string =>
+  `bnr-txl-m${mobileFontSize}-${mobileLineHeight}`
+
+export const TEXTOXL_CUSTOM_CLASS_RE = /bnr-txl-m(\d+)-(\d+)/g
+
 /** El label "Ahora" que acompaña a PROMO usa el MISMO umbral que promoText,
  *  con su propia escala de clase/tamaño (más chica cuanto más grande es el
  *  monto, para que el conjunto siga cabiendo). */

@@ -9,7 +9,14 @@ import type { ModuleItem } from '../../moduleItems/schemas'
 import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, EmailDocument, TitleBlock } from '../../model'
 
 import { bannerOf, legacy } from '../../components/hero/testUtils'
-import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, defaultHero, migrateLegacyHero } from '../../components/hero/schema'
+import {
+  allHeroPieces,
+  DEFAULT_HERO_BANNER_ID,
+  DEFAULT_HERO_HEADER_ID,
+  DEFAULT_HERO_SECTION_ID,
+  defaultHeroSections,
+  migrateLegacyHero,
+} from '../../components/hero/schema'
 import { emailDocumentSchema } from '../../model'
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
@@ -66,7 +73,7 @@ const promoItem = (id: string): BannerItem => ({
 beforeEach(() => {
   // El Hero vuelve a su forma por defecto (1 header + 1 banner, ids fijos):
   // los tests de la lista del Hero agregan/quitan/reordenan piezas.
-  useBuilder.setState((s) => ({ document: { ...s.document, hero: defaultHero } }))
+  useBuilder.setState((s) => ({ document: { ...s.document, heroes: defaultHeroSections } }))
   setContenidos([])
   setBannerItems([])
   setBannerType('vertical')
@@ -914,30 +921,31 @@ describe('poda de tropicalizaciones al eliminar / copia al duplicar', () => {
   })
 })
 
-describe('Hero · lista libre de headers y banners', () => {
-  const hero = () => useBuilder.getState().document.hero
-  const heroIds = () => hero().map((p) => p.id)
+describe('Hero · lista libre de headers y banners, dentro de cada Hero', () => {
+  const S = DEFAULT_HERO_SECTION_ID
+  const heroes = () => useBuilder.getState().document.heroes
+  const pieces = () => allHeroPieces(heroes())
+  const pieceIds = (sectionIndex = 0) => heroes()[sectionIndex].pieces.map((p) => p.id)
 
-  it('insertHeroPiece agrega un header o un banner en la posición pedida y devuelve su id', () => {
-    const bannerId = useBuilder.getState().insertHeroPiece('BANNER', 1, 'horizontal')
-    const headerId = useBuilder.getState().insertHeroPiece('HEADER', 99)
-    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, bannerId, DEFAULT_HERO_BANNER_ID, headerId])
-    const banner = hero()[1]
+  it('insertHeroPiece agrega un header o un banner en la posición pedida de ese Hero y devuelve su id', () => {
+    const bannerId = useBuilder.getState().insertHeroPiece(S, 'BANNER', 1, 'horizontal')
+    const headerId = useBuilder.getState().insertHeroPiece(S, 'HEADER', 99)
+    expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, bannerId, DEFAULT_HERO_BANNER_ID, headerId])
+    const banner = pieces()[1]
     expect(banner.type === 'BANNER' && banner.fields.bannerType).toBe('horizontal')
   })
 
   it('un banner nuevo trae piezas con ids propios, distintos de los del banner por defecto', () => {
-    const id = useBuilder.getState().insertHeroPiece('BANNER', 2)
-    const added = hero().find((p) => p.id === id)!
-    const original = hero().find((p) => p.id === DEFAULT_HERO_BANNER_ID)!
+    const id = useBuilder.getState().insertHeroPiece(S, 'BANNER', 2)
+    const added = pieces().find((p) => p.id === id)!
+    const original = pieces().find((p) => p.id === DEFAULT_HERO_BANNER_ID)!
     const addedIds = added.type === 'BANNER' ? added.fields.items.map((it) => it.id) : []
     const originalIds = original.type === 'BANNER' ? original.fields.items.map((it) => it.id) : []
     expect(addedIds.length).toBeGreaterThan(0)
     expect(addedIds.some((i) => originalIds.includes(i))).toBe(false)
   })
 
-  it('duplicateHeroPiece copia el banner justo después, con ids nuevos para él y sus piezas, y se lleva sus tropicalizaciones', () => {
-    const itemId = bannerOf(useBuilder.getState().document).items[0]?.id
+  it('duplicateHeroPiece copia el banner justo después, con ids nuevos, y se lleva sus tropicalizaciones', () => {
     setBannerItems([tagsItem('t1')])
     useBuilder.setState((s) => ({
       document: {
@@ -949,50 +957,114 @@ describe('Hero · lista libre de headers y banners', () => {
       },
     }))
     const copyId = useBuilder.getState().duplicateHeroPiece(DEFAULT_HERO_BANNER_ID)!
-    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID, copyId])
-    const copy = hero()[2]
-    expect(copy.type).toBe('BANNER')
+    expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID, copyId])
+    const copy = pieces()[2]
     const copyItemId = copy.type === 'BANNER' ? copy.fields.items[0].id : ''
     expect(copyItemId).not.toBe('t1')
     const trop = useBuilder.getState().document.tropicalizations
     expect(trop[`banner:${copyId}`]).toEqual(trop[`banner:${DEFAULT_HERO_BANNER_ID}`])
     expect(trop[`bitem:${copyItemId}`]).toEqual(trop['bitem:t1'])
-    expect(itemId).toBeUndefined() // setBannerItems([]) del beforeEach
   })
 
-  it('reorderHeroPiece mueve una pieza (toIndex contra la lista antes de sacarla)', () => {
+  it('reorderHeroPiece mueve una pieza dentro de su Hero (toIndex contra la lista antes de sacarla)', () => {
     useBuilder.getState().reorderHeroPiece(DEFAULT_HERO_HEADER_ID, 2)
-    expect(heroIds()).toEqual([DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID])
+    expect(pieceIds()).toEqual([DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID])
   })
 
-  it('removeHeroPiece no deja eliminar el último header ni el último banner', () => {
+  it('removeHeroPiece no deja a un Hero sin header ni sin banner', () => {
     useBuilder.getState().removeHeroPiece(DEFAULT_HERO_HEADER_ID)
     useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
-    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID])
-    const extra = useBuilder.getState().insertHeroPiece('BANNER', 2)
+    expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID])
+    const extra = useBuilder.getState().insertHeroPiece(S, 'BANNER', 2)
     useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
-    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, extra])
+    expect(pieceIds()).toEqual([DEFAULT_HERO_HEADER_ID, extra])
   })
 
   it('las acciones de pieza de banner actúan sobre el banner dueño, no sobre el primero', () => {
-    const second = useBuilder.getState().insertHeroPiece('BANNER', 2)
+    const second = useBuilder.getState().insertHeroPiece(S, 'BANNER', 2)
     useBuilder.getState().insertBannerItem(second, 'TAGS', 0)
-    const secondBanner = hero().find((p) => p.id === second)!
+    const secondBanner = pieces().find((p) => p.id === second)!
     const newItem = secondBanner.type === 'BANNER' ? secondBanner.fields.items[0] : undefined
     expect(newItem?.type).toBe('TAGS')
     useBuilder.getState().removeBannerItem(newItem!.id)
-    const after = hero().find((p) => p.id === second)!
+    const after = pieces().find((p) => p.id === second)!
     expect(after.type === 'BANNER' && after.fields.items.some((it) => it.id === newItem!.id)).toBe(false)
-    // El primer banner no se tocó.
     expect(bannerIds()).toEqual([])
   })
 })
 
-describe('migración de documentos guardados antes de la lista del Hero', () => {
-  it('convierte header + banner sueltos en la lista, y renombra sus tropicalizaciones', () => {
-    const banner = bannerOf({ hero: defaultHero })
+describe('Heros completos (duplicar, eliminar, reordenar, fondo propio)', () => {
+  const heroes = () => useBuilder.getState().document.heroes
+
+  it('duplicateHeroSection copia el Hero justo después, con ids nuevos en todos los niveles y sus tropicalizaciones', () => {
+    setBannerItems([tagsItem('t1')])
+    useBuilder.getState().updateHeroBackground(DEFAULT_HERO_SECTION_ID, { ...heroes()[0].background, heroBgUrl: 'https://fondo.test' })
+    useBuilder.setState((s) => ({
+      document: {
+        ...s.document,
+        tropicalizations: {
+          [`header:${DEFAULT_HERO_HEADER_ID}`]: { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] },
+          'bitem:t1': { branches: [{ countries: ['BR'], hidden: false, overrides: {} }] },
+        },
+      },
+    }))
+    const copyId = useBuilder.getState().duplicateHeroSection(DEFAULT_HERO_SECTION_ID)!
+    expect(heroes().map((h) => h.id)).toEqual([DEFAULT_HERO_SECTION_ID, copyId])
+    const [original, copy] = heroes()
+    expect(copy.background.heroBgUrl).toBe('https://fondo.test')
+    expect(copy.pieces.map((p) => p.type)).toEqual(original.pieces.map((p) => p.type))
+    const allIds = allHeroPieces(heroes()).map((p) => p.id)
+    expect(new Set(allIds).size).toBe(allIds.length)
+    const copyHeader = copy.pieces[0]
+    const copyBanner = copy.pieces[1]
+    const copyItem = copyBanner.type === 'BANNER' ? copyBanner.fields.items[0].id : ''
+    expect(copyItem).not.toBe('t1')
+    const trop = useBuilder.getState().document.tropicalizations
+    expect(trop[`header:${copyHeader.id}`]).toEqual(trop[`header:${DEFAULT_HERO_HEADER_ID}`])
+    expect(trop[`bitem:${copyItem}`]).toEqual(trop['bitem:t1'])
+  })
+
+  it('el fondo de cada Hero es independiente', () => {
+    const copyId = useBuilder.getState().duplicateHeroSection(DEFAULT_HERO_SECTION_ID)!
+    useBuilder.getState().updateHeroBackground(copyId, { ...heroes()[1].background, heroBgUrl: 'https://otro.test' })
+    expect(heroes()[0].background.heroBgUrl).toBe('')
+    expect(heroes()[1].background.heroBgUrl).toBe('https://otro.test')
+  })
+
+  it('removeHeroSection no elimina el último Hero; con 2 sí, y poda sus tropicalizaciones', () => {
+    useBuilder.getState().removeHeroSection(DEFAULT_HERO_SECTION_ID)
+    expect(heroes()).toHaveLength(1)
+    const copyId = useBuilder.getState().duplicateHeroSection(DEFAULT_HERO_SECTION_ID)!
+    const copyHeader = heroes()[1].pieces[0].id
+    useBuilder.setState((s) => ({
+      document: { ...s.document, tropicalizations: { [`header:${copyHeader}`]: { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } } },
+    }))
+    useBuilder.getState().removeHeroSection(copyId)
+    expect(heroes().map((h) => h.id)).toEqual([DEFAULT_HERO_SECTION_ID])
+    expect(useBuilder.getState().document.tropicalizations).toEqual({})
+  })
+
+  it('reorderHeroSection mueve un Hero entero', () => {
+    const copyId = useBuilder.getState().duplicateHeroSection(DEFAULT_HERO_SECTION_ID)!
+    useBuilder.getState().reorderHeroSection(copyId, 0)
+    expect(heroes().map((h) => h.id)).toEqual([copyId, DEFAULT_HERO_SECTION_ID])
+  })
+
+  it('insertHeroPiece en el segundo Hero no toca el primero', () => {
+    const copyId = useBuilder.getState().duplicateHeroSection(DEFAULT_HERO_SECTION_ID)!
+    const before = heroes()[0].pieces.length
+    useBuilder.getState().insertHeroPiece(copyId, 'HEADER', 0)
+    expect(heroes()[0].pieces).toHaveLength(before)
+    expect(heroes()[1].pieces[0].type).toBe('HEADER')
+    expect(heroes()[1].pieces).toHaveLength(before + 1)
+  })
+})
+
+describe('migración de documentos guardados con una forma anterior del Hero', () => {
+  it('header + banner sueltos → un Hero con sus piezas, fondo de global y tropicalizaciones renombradas', () => {
+    const banner = bannerOf({ heroes: defaultHeroSections })
     const raw = {
-      global: { tema: 'beige100' },
+      global: { tema: 'beige100', heroBgUrl: 'https://viejo-fondo.test' },
       header: { brand: 'rappi-turbo' },
       banner: { ...banner, link: 'https://viejo.test' },
       footer: {},
@@ -1004,12 +1076,13 @@ describe('migración de documentos guardados antes de la lista del Hero', () => 
       },
     }
     const parsed = emailDocumentSchema.parse(raw) as EmailDocument
-    expect(parsed.hero.map((p) => [p.type, p.id])).toEqual([
-      ['HEADER', DEFAULT_HERO_HEADER_ID],
-      ['BANNER', DEFAULT_HERO_BANNER_ID],
-    ])
-    expect(parsed.hero[0].type === 'HEADER' && parsed.hero[0].fields.brand).toBe('rappi-turbo')
-    expect(parsed.hero[1].type === 'BANNER' && parsed.hero[1].fields.link).toBe('https://viejo.test')
+    expect(parsed.heroes).toHaveLength(1)
+    expect(parsed.heroes[0].id).toBe(DEFAULT_HERO_SECTION_ID)
+    expect(parsed.heroes[0].background.heroBgUrl).toBe('https://viejo-fondo.test')
+    const [header, bannerPiece] = parsed.heroes[0].pieces
+    expect([header.type, header.id, bannerPiece.type, bannerPiece.id]).toEqual(['HEADER', DEFAULT_HERO_HEADER_ID, 'BANNER', DEFAULT_HERO_BANNER_ID])
+    expect(header.type === 'HEADER' && header.fields.brand).toBe('rappi-turbo')
+    expect(bannerPiece.type === 'BANNER' && bannerPiece.fields.link).toBe('https://viejo.test')
     expect(Object.keys(parsed.tropicalizations).sort()).toEqual([
       `banner:${DEFAULT_HERO_BANNER_ID}`,
       `header:${DEFAULT_HERO_HEADER_ID}`,
@@ -1019,8 +1092,16 @@ describe('migración de documentos guardados antes de la lista del Hero', () => 
     expect('banner' in parsed).toBe(false)
   })
 
-  it('no toca un documento que ya tiene hero', () => {
-    const doc = { hero: defaultHero, global: {}, footer: {} }
+  it('la lista `hero` del 2026-10-28 → un solo Hero con esas piezas', () => {
+    const pieces = defaultHeroSections[0].pieces
+    const raw = { global: { tema: 'beige100' }, hero: pieces, footer: {}, contenidos: [], tropicalizations: {} }
+    const parsed = emailDocumentSchema.parse(raw) as EmailDocument
+    expect(parsed.heroes.map((h) => h.pieces.map((p) => p.id))).toEqual([pieces.map((p) => p.id)])
+    expect('hero' in parsed).toBe(false)
+  })
+
+  it('no toca un documento que ya tiene heroes', () => {
+    const doc = { heroes: defaultHeroSections, global: {}, footer: {} }
     expect(migrateLegacyHero(doc)).toBe(doc)
   })
 })

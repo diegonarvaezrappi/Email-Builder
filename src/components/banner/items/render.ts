@@ -49,7 +49,7 @@ import type {
   TextoPastillaFields,
   TextoXlFields,
 } from './schemas'
-import { ahoraSizing, liveTextSizing, sizingVars } from './sizing'
+import { ahoraSizing, liveTextSizing, sizingVars, textoXlCustomClass } from './sizing'
 import { resolveBannerVars, substituteAll, substituteOnce } from './vars'
 
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
@@ -246,8 +246,24 @@ function withDarkThemeAccentOverride(html: string, tema: string, fileName: strin
 
 export function renderTextoXlSnippet(fields: TextoXlFields, doc: EmailDocument, ctx: BannerItemRenderCtx): string {
   const fileName = `molecula_textoxl_${ctx.bannerType}.html`
-  const raw = withDarkThemeAccentOverride(stripComments(loadBannerMoleculaFile(fileName)), doc.global.tema, fileName)
-  const size = liveTextSizing(plainText(fields.text), ctx.bannerType)
+  // El HERO del maestro lleva `word-break: break-all` (se hereda): un texto
+  // de varias líneas se cortaba a mitad de palabra ("MONT/AR"). Esta pieza
+  // corta por palabras; `overflow-wrap: break-word` solo parte una palabra
+  // que sola no entra en el ancho.
+  const raw = substituteOnce(
+    withDarkThemeAccentOverride(stripComments(loadBannerMoleculaFile(fileName)), doc.global.tema, fileName),
+    'letter-spacing: -2px;',
+    'letter-spacing: -2px; word-break: normal; overflow-wrap: break-word;',
+    fileName,
+  )
+  const size =
+    fields.sizeMode === 'custom'
+      ? {
+          className: textoXlCustomClass(fields.mobileFontSize, fields.mobileLineHeight),
+          fontSize: `${fields.fontSize}px`,
+          lineHeight: `${fields.lineHeight}px`,
+        }
+      : liveTextSizing(plainText(fields.text), ctx.bannerType)
   const vars: Record<string, string> = {
     banner_copy_modulo_textoxl: renderRichText(fields.text, LIQUID_COLOR_TOKENS),
     ...sizingVars(

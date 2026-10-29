@@ -45,6 +45,9 @@ export interface Selection {
    *  lleva: su id es único en todo el documento y el banner dueño se busca
    *  (findBannerByItem). */
   heroId?: string
+  /** Con `slot === 'HERO_BG'`: QUÉ Hero (hay varios desde 2026-10-29, cada
+   *  uno con su fondo). Sin él, no hay ningún Hero seleccionado. */
+  heroSectionId?: string
   blockId?: string
   bannerItemId?: string
   /** Solo tiene sentido con `slot === 'CONTENIDOS'` — identifica una tarjeta
@@ -78,8 +81,15 @@ export const selectDealCardPiece = (dealCardId: string, dealCardPieceType: DealC
 })
 export const selectModuleItem = (moduleItemId: string): Selection => ({ slot: 'CONTENIDOS', moduleItemId })
 
-/** Los 2 fondos de sección — ver GlobalBackgroundTarget arriba. */
+/** Los 2 fondos de sección — ver GlobalBackgroundTarget arriba. El de Hero
+ *  necesita además el id del Hero: usar selectHeroSection. */
 export const selectGlobalBackground = (target: GlobalBackgroundTarget): Selection => ({ slot: target })
+/** Un Hero completo (su fondo, y duplicarlo/eliminarlo/reordenarlo). */
+export const selectHeroSection = (heroSectionId: string): Selection => ({ slot: 'HERO_BG', heroSectionId })
+
+export function isHeroSectionSelected(selected: Selection | null, heroSectionId: string): boolean {
+  return selected?.slot === 'HERO_BG' && selected.heroSectionId === heroSectionId
+}
 
 export function isSlotSelected(selected: Selection | null, slot: SlotName | GlobalBackgroundTarget): boolean {
   return (

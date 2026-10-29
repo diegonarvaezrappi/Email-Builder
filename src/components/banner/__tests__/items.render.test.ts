@@ -4,7 +4,7 @@ import type { EmailDocument } from '../../../model'
 import { plainText, richTextFromPlain } from '../../../richText/model'
 import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
-import { defaultFranjaLogoItem, defaultTagItem, tagsFieldsSchema } from '../items/schemas'
+import { defaultFranjaLogoItem, defaultTagItem, defaultTextoXlFields, tagsFieldsSchema } from '../items/schemas'
 import {
   renderCreditosSnippet,
   renderCtaInternoSnippet,
@@ -239,8 +239,8 @@ describe('renderCreditosSnippet', () => {
 
 describe('renderTextoXlSnippet', () => {
   it.each(['horizontal', 'vertical'] as const)('%s: short -> bnr-xl, long -> bnr-lg', (bannerType) => {
-    expect(renderTextoXlSnippet({ text: richTextFromPlain('120') }, doc(), ctx(bannerType))).toContain('bnr-xl')
-    expect(renderTextoXlSnippet({ text: richTextFromPlain('120 créditos') }, doc(), ctx(bannerType))).toContain('bnr-lg')
+    expect(renderTextoXlSnippet({ ...defaultTextoXlFields, text: richTextFromPlain('120') }, doc(), ctx(bannerType))).toContain('bnr-xl')
+    expect(renderTextoXlSnippet({ ...defaultTextoXlFields, text: richTextFromPlain('120 créditos') }, doc(), ctx(bannerType))).toContain('bnr-lg')
   })
 
   describe('accent color by theme', () => {
@@ -248,7 +248,7 @@ describe('renderTextoXlSnippet', () => {
 
     it.each(nonDarkThemes)('%s (not a dark theme): keeps color_acento2_mail_general', (tema) => {
       const html = renderTextoXlSnippet(
-        { text: richTextFromPlain('x') },
+        { ...defaultTextoXlFields, text: richTextFromPlain('x') },
         doc({ global: { ...defaultEmailDocument.global, tema } }),
         ctx('vertical'),
       )
@@ -258,7 +258,7 @@ describe('renderTextoXlSnippet', () => {
 
     it.each(DARK_THEME_SLUGS)('%s (dark theme): switches to color_acento1_mail_general', (tema) => {
       const html = renderTextoXlSnippet(
-        { text: richTextFromPlain('x') },
+        { ...defaultTextoXlFields, text: richTextFromPlain('x') },
         doc({ global: { ...defaultEmailDocument.global, tema } }),
         ctx('vertical'),
       )
@@ -707,5 +707,30 @@ describe('renderCtaInternoSnippet', () => {
     const html = renderCtaInternoSnippet(cta(), withDefault, ctx('horizontal'))
     expect(html).toContain("style_Look = 'problack'")
     expect(html).not.toContain("style_Look = 'default'")
+  })
+})
+
+describe('renderTextoXlSnippet · corte por palabras y tamaño personalizado (2026-10-29)', () => {
+  it.each(['horizontal', 'vertical'] as const)('%s: corta por palabras, no a mitad de palabra', (bannerType) => {
+    const html = renderTextoXlSnippet({ ...defaultTextoXlFields, text: richTextFromPlain('¡Puedes montar un bigbanner!') }, doc(), ctx(bannerType))
+    expect(html).toContain('word-break: normal; overflow-wrap: break-word;')
+  })
+
+  it.each(['horizontal', 'vertical'] as const)('%s: en personalizado usa el tamaño y line-height elegidos, y la clase de móvil', (bannerType) => {
+    const html = renderTextoXlSnippet(
+      { ...defaultTextoXlFields, text: richTextFromPlain('Hola'), sizeMode: 'custom', fontSize: 42, lineHeight: 46, mobileFontSize: 30, mobileLineHeight: 33 },
+      doc(),
+      ctx(bannerType),
+    )
+    expect(html).toContain('font-size: 42px')
+    expect(html).toContain('line-height: 46px')
+    expect(html).toContain('class="bnr-txl-m30-33"')
+    expect(html).not.toContain('bnr-xl')
+  })
+
+  it('en automático ignora los campos de tamaño', () => {
+    const html = renderTextoXlSnippet({ ...defaultTextoXlFields, text: richTextFromPlain('120'), fontSize: 42 }, doc(), ctx('vertical'))
+    expect(html).toContain('bnr-xl')
+    expect(html).not.toContain('42px')
   })
 })

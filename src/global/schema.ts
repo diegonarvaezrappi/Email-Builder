@@ -160,6 +160,10 @@ export const globalSchema = z.object({
    * `background-repeat`, así que el valor real vigente hoy es el inicial de
    * CSS — `repeat` en los 2 ejes — no lo que uno intuitivamente asumiría.
    */
+  // Desde 2026-10-29 cada Hero tiene su propio fondo (components/hero/schema.ts,
+  // `heroes[i].background`, mismos nombres de campo). Estos 5 ya no se
+  // renderizan: se conservan para migrar el fondo de documentos guardados
+  // antes (migrateLegacyHero los copia al primer Hero).
   heroBgUrl: z.string().default(''),
   heroBgAlt: z.string().default('Imagen de fondo'),
   heroBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),

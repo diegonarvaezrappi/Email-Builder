@@ -6,23 +6,39 @@ import { contentBlockRegistry } from './contentBlockRegistry'
 import type { Col3Fields } from './components/col3/schema'
 import type { ContentBlock, ContentBlockType, HeroPieceType } from './model'
 import type { BannerType } from './components/banner/schema'
-import { heroBanners } from './components/hero/schema'
+import { activeHeroSectionId, allHeroPieces, heroBanners, type HeroBackground, type HeroSection } from './components/hero/schema'
 import { LeftPanel } from './ui/LeftPanel'
 import { Viewport } from './ui/Viewport'
 import { InspectorPanel } from './ui/InspectorPanel'
-import { normalizeTropicalizationTarget, selectBlock, selectHeroPiece, type Selection } from './ui/selection'
-import { expandedKeysForSelection, heroExpandKey, type TreeActionTarget, type TreeReorder } from './ui/componentTreeModel'
+import { normalizeTropicalizationTarget, selectBlock, selectHeroPiece, selectHeroSection, type Selection } from './ui/selection'
+import {
+  expandedKeysForSelection,
+  heroExpandKey,
+  heroSectionExpandKey,
+  type TreeActionTarget,
+  type TreeReorder,
+} from './ui/componentTreeModel'
 import { leftTabForSelection, type LeftTab } from './ui/leftTab'
 import type { ViewportTab } from './ui/viewportTab'
 import type { PreviewCountry } from './preview/countries'
 import { TropicalizationPanel } from './ui/tropicalize/TropicalizationPanel'
 import { TropicalizationIndexPanel } from './ui/tropicalize/TropicalizationIndexPanel'
 
+/** Las claves de árbol de un Hero desplegado entero: él y sus banners. */
+const heroExpandKeys = (section: HeroSection): string[] => [
+  heroSectionExpandKey(section.id),
+  ...heroBanners(section.pieces).map((b) => heroExpandKey(b.id)),
+]
+
 function App() {
   const doc = useBuilder((s) => s.document)
   const setSlotFields = useBuilder((s) => s.setSlotFields)
   const setGlobalFields = useBuilder((s) => s.setGlobalFields)
   const insertHeroPiece = useBuilder((s) => s.insertHeroPiece)
+  const duplicateHeroSection = useBuilder((s) => s.duplicateHeroSection)
+  const removeHeroSection = useBuilder((s) => s.removeHeroSection)
+  const reorderHeroSection = useBuilder((s) => s.reorderHeroSection)
+  const updateHeroBackground = useBuilder((s) => s.updateHeroBackground)
   const duplicateHeroPiece = useBuilder((s) => s.duplicateHeroPiece)
   const reorderHeroPiece = useBuilder((s) => s.reorderHeroPiece)
   const removeHeroPiece = useBuilder((s) => s.removeHeroPiece)
@@ -66,13 +82,14 @@ function App() {
   // ui/ComponentTree.tsx). Vive acá y no dentro del árbol porque una selección
   // hecha en el LIENZO también abre los suyos: es la mitad "lienzo → árbol"
   // del resaltado bidireccional.
-  // Los banners del Hero arrancan desplegados: antes de que el Hero fuera una
-  // lista, sus piezas se veían siempre en el árbol, sin desplegar nada.
+  // Los Heros y sus banners arrancan desplegados: antes de que el Hero fuera
+  // una lista, las piezas del banner se veían siempre en el árbol.
   const [treeExpanded, setTreeExpanded] = useState<ReadonlySet<string>>(
-    () => new Set(heroBanners(useBuilder.getState().document.hero).map((b) => heroExpandKey(b.id))),
+    () => new Set(useBuilder.getState().document.heroes.flatMap(heroExpandKeys)),
   )
 
-  const expandTreeKey = (key: string) => setTreeExpanded((prev) => (prev.has(key) ? prev : new Set([...prev, key])))
+  const expandTreeKeys = (keys: string[]) => setTreeExpanded((prev) => new Set([...prev, ...keys]))
+  const expandTreeKey = (key: string) => expandTreeKeys([key])
 
   const toggleTreeExpanded = (key: string) =>
     setTreeExpanded((prev) => {
@@ -112,40 +129,66 @@ function App() {
     if (added) applySelection(selectBlock(added.id))
   }
 
-  /** Agregar un header o un banner al final del Hero (grid del panel
-   *  izquierdo): queda seleccionado y, si es banner, desplegado en el árbol. */
+  /** Agregar un header o un banner al final del Hero activo (el de la
+   *  selección, o el último): queda seleccionado y, si es banner, desplegado. */
   const handleAddHeroPiece = (type: HeroPieceType, bannerType?: BannerType) => {
-    const id = insertHeroPiece(type, doc.hero.length, bannerType)
-    if (type === 'BANNER') expandTreeKey(heroExpandKey(id))
-    applySelection(selectHeroPiece(type, id))
+    const sectionId = activeHeroSectionId(doc.heroes, selected)
+    const section = doc.heroes.find((h) => h.id === sectionId)!
+    handleInsertHeroPiece(sectionId, type, section.pieces.length, bannerType)
   }
 
-  /** Insertar en una posición (soltar en el lienzo). */
-  const handleInsertHeroPiece = (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => {
-    const id = insertHeroPiece(type, atIndex, bannerType)
-    if (type === 'BANNER') expandTreeKey(heroExpandKey(id))
+  /** Insertar en un Hero y una posición (soltar en el lienzo). */
+  const handleInsertHeroPiece = (sectionId: string, type: HeroPieceType, atIndex: number, bannerType?: BannerType) => {
+    const id = insertHeroPiece(sectionId, type, atIndex, bannerType)
+    expandTreeKeys([heroSectionExpandKey(sectionId), ...(type === 'BANNER' ? [heroExpandKey(id)] : [])])
     applySelection(selectHeroPiece(type, id))
   }
 
   const handleDuplicateHeroPiece = (id: string) => {
     const copyId = duplicateHeroPiece(id)
-    const copy = copyId ? useBuilder.getState().document.hero.find((p) => p.id === copyId) : undefined
+    const copy = copyId ? allHeroPieces(useBuilder.getState().document.heroes).find((p) => p.id === copyId) : undefined
     if (copy?.type === 'BANNER') expandTreeKey(heroExpandKey(copy.id))
+  }
+
+  /** Si lo eliminado era lo seleccionado (o lo contenía), se limpia la selección. */
+  const clearSelectionIfGone = () => {
+    if (!selected) return
+    const heroes = useBuilder.getState().document.heroes
+    const pieces = allHeroPieces(heroes)
+    const gone =
+      (selected.heroSectionId && !heroes.some((h) => h.id === selected.heroSectionId)) ||
+      (selected.heroId && !pieces.some((p) => p.id === selected.heroId)) ||
+      (selected.bannerItemId &&
+        (selected.slot === 'BANNER') &&
+        !pieces.some((p) => p.type === 'BANNER' && p.fields.items.some((it) => it.id === selected.bannerItemId)))
+    if (gone) setSelected(null)
   }
 
   const handleRemoveHeroPiece = (id: string) => {
     removeHeroPiece(id)
-    const stillThere = useBuilder.getState().document.hero.some((p) => p.id === id)
-    if (stillThere || !selected) return
-    // Lo eliminado era lo seleccionado, o contenía la pieza seleccionada.
-    const ownedItem = selected.bannerItemId && !useBuilder.getState().document.hero.some(
-      (p) => p.type === 'BANNER' && p.fields.items.some((it) => it.id === selected.bannerItemId),
-    )
-    if (selected.heroId === id || ownedItem) setSelected(null)
+    clearSelectionIfGone()
   }
+
+  /** Duplicar un Hero entero: la copia queda justo después, desplegada y seleccionada. */
+  const handleDuplicateHeroSection = (id: string) => {
+    const copyId = duplicateHeroSection(id)
+    const copy = copyId ? useBuilder.getState().document.heroes.find((h) => h.id === copyId) : undefined
+    if (!copy) return
+    expandTreeKeys(heroExpandKeys(copy))
+    applySelection(selectHeroSection(copy.id))
+  }
+
+  const handleRemoveHeroSection = (id: string) => {
+    removeHeroSection(id)
+    clearSelectionIfGone()
+  }
+
+  const handleChangeHeroBackground = (id: string, background: HeroBackground) => updateHeroBackground(id, background)
 
   const handleTreeDuplicate = (target: TreeActionTarget) => {
     switch (target.kind) {
+      case 'heroSection':
+        return handleDuplicateHeroSection(target.id)
       case 'heroPiece':
         return handleDuplicateHeroPiece(target.id)
       case 'block':
@@ -162,6 +205,7 @@ function App() {
   /** Si lo eliminado era lo seleccionado (o lo contenía), el panel derecho no
    *  debe quedarse mostrando algo que ya no existe. */
   const handleTreeRemove = (target: TreeActionTarget) => {
+    if (target.kind === 'heroSection') return handleRemoveHeroSection(target.id)
     if (target.kind === 'heroPiece') return handleRemoveHeroPiece(target.id)
     const holdsSelection =
       selected !== null &&
@@ -195,6 +239,8 @@ function App() {
    */
   const handleTreeReorder = (reorder: TreeReorder, toIndex: number) => {
     switch (reorder.kind) {
+      case 'heroSection':
+        return reorderHeroSection(reorder.id, toIndex)
       case 'heroPiece':
         return reorderHeroPiece(reorder.id, toIndex)
       case 'block':
@@ -256,7 +302,7 @@ function App() {
 
     // Cada header y cada banner del Hero, con su propio criterio de "no tocado
     // desde el tema anterior" (son instancias independientes).
-    for (const piece of doc.hero) {
+    for (const piece of allHeroPieces(doc.heroes)) {
       if (piece.type === 'HEADER') {
         const headerPatch = headerPatchForTheme(piece.fields, doc.global.tema, prevTema)
         if (headerPatch) updateHeroPieceFields(piece.id, { ...piece.fields, ...headerPatch })
@@ -331,6 +377,7 @@ function App() {
             onChangeGlobal={setGlobalFields}
             onAddBlock={handleAddBlock}
             onAddHeroPiece={handleAddHeroPiece}
+            onChangeHeroBackground={handleChangeHeroBackground}
             treeExpanded={treeExpanded}
             onToggleTreeExpanded={toggleTreeExpanded}
             onTreeReorder={handleTreeReorder}
@@ -345,6 +392,9 @@ function App() {
           onChangeSlot={setSlotFields}
           onInsertHeroPiece={handleInsertHeroPiece}
           onDuplicateHeroPiece={handleDuplicateHeroPiece}
+          onDuplicateHeroSection={handleDuplicateHeroSection}
+          onRemoveHeroSection={handleRemoveHeroSection}
+          onReorderHeroSection={reorderHeroSection}
           onReorderHeroPiece={reorderHeroPiece}
           onRemoveHeroPiece={handleRemoveHeroPiece}
           onInsertBlock={insertContentBlock}
@@ -393,6 +443,7 @@ function App() {
             onSelect={applySelection}
             onChange={setSlotFields}
             onChangeHeroPiece={updateHeroPieceFields}
+            onChangeHeroBackground={handleChangeHeroBackground}
             onChangeBlock={updateContentBlockFields}
             onChangeBannerItem={updateBannerItemFields}
             onChangeGlobal={setGlobalFields}

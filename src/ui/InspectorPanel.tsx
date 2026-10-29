@@ -30,7 +30,16 @@ import { contentBlockRegistry, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
 import { GLOBAL_BACKGROUND_LABELS, selectBlock, selectDealCard, selectHeroPiece, type Selection } from './selection'
-import { findBannerByItem, findHeroPiece, heroPieceLabel } from '../components/hero/schema'
+import {
+  allHeroPieces,
+  findBannerByItem,
+  findHeroPiece,
+  findHeroSection,
+  heroPieceLabel,
+  heroSectionLabel,
+  pickHeroBackground,
+  type HeroBackground,
+} from '../components/hero/schema'
 import { HeroContentsBackgroundPanel } from './BackgroundFields'
 import { BannerImageTypeSelector } from '../components/banner/ImageTypeSelector'
 import { BannerItemCatalog } from '../components/banner/ItemCatalog'
@@ -49,6 +58,7 @@ interface InspectorPanelProps {
   onSelect: (next: Selection) => void
   onChange: (docKey: 'footer' | 'contenidos', fields: unknown) => void
   onChangeHeroPiece: (heroId: string, fields: unknown) => void
+  onChangeHeroBackground: (heroSectionId: string, background: HeroBackground) => void
   onChangeBlock: (blockId: string, fields: unknown) => void
   onChangeBannerItem: (bannerItemId: string, fields: unknown) => void
   onChangeGlobal: (fields: GlobalFields) => void
@@ -78,6 +88,7 @@ export function InspectorPanel({
   onSelect,
   onChange,
   onChangeHeroPiece,
+  onChangeHeroBackground,
   onChangeBlock,
   onChangeBannerItem,
   onChangeGlobal,
@@ -94,18 +105,36 @@ export function InspectorPanel({
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
   }
 
-  // Fondo de HERO-SECTION o CONTENTS-SECTION — pedido explícito del usuario
-  // (2026-09-21): antes eran popovers de la barra superior, ahora
-  // se seleccionan acá como cualquier otro componente. No tienen pieza puntual
-  // ni bloque dueño (son singletons de doc.global, ver
+  // Un Hero completo: su propio fondo (cada Hero tiene el suyo desde
+  // 2026-10-29). El panel de fondo trabaja sobre los nombres de campo de
+  // global (heroBg*), así que se le da el global con el fondo del Hero encima
+  // y se recorta lo que devuelve. No es tropicalizable (tropicalize/keys.ts).
+  if (selected.slot === 'HERO_BG') {
+    const section = selected.heroSectionId ? findHeroSection(doc.heroes, selected.heroSectionId) : undefined
+    if (!section) return <EmptyHint text="Selecciona un Hero para ver su fondo." />
+    return (
+      <aside className="panel-inspector">
+        <h2>Fondo · {heroSectionLabel(doc.heroes, section.id)}</h2>
+        <HeroContentsBackgroundPanel
+          prefix="hero"
+          value={{ ...doc.global, ...section.background }}
+          onChange={(next) => onChangeHeroBackground(section.id, pickHeroBackground(next))}
+        />
+      </aside>
+    )
+  }
+
+  // Fondo de CONTENTS-SECTION — pedido explícito del usuario (2026-09-21):
+  // antes era un popover de la barra superior, ahora se selecciona acá como
+  // cualquier otro componente. Es un singleton de doc.global (ver
   // ui/selection.ts#GlobalBackgroundTarget), así que no hace falta
-  // TropicalizationNotice: no son tropicalizables (tropicalize/keys.ts).
-  if (selected.slot === 'HERO_BG' || selected.slot === 'CONTENTS_BG') {
+  // TropicalizationNotice: no es tropicalizable (tropicalize/keys.ts).
+  if (selected.slot === 'CONTENTS_BG') {
     return (
       <aside className="panel-inspector">
         <h2>{GLOBAL_BACKGROUND_LABELS[selected.slot]}</h2>
         <HeroContentsBackgroundPanel
-          prefix={selected.slot === 'HERO_BG' ? 'hero' : 'contents'}
+          prefix="contents"
           value={doc.global}
           onChange={onChangeGlobal}
         />
@@ -246,7 +275,7 @@ export function InspectorPanel({
   }
 
   if (selected.slot === 'BANNER' && selected.bannerItemId) {
-    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    const owner = findBannerByItem(allHeroPieces(doc.heroes), selected.bannerItemId)
     const item = owner?.piece.fields.items.find((it) => it.id === selected.bannerItemId)
     if (!owner || !item) {
       return <EmptyHint text="Selecciona una pieza del Banner para ver sus opciones." />
@@ -258,7 +287,7 @@ export function InspectorPanel({
     return (
       <aside className="panel-inspector">
         <button type="button" className="inspector-back" onClick={() => onSelect(selectHeroPiece('BANNER', owner.piece.id))}>
-          ← Volver a {heroPieceLabel(doc.hero, owner.piece.id)}
+          ← Volver a {heroPieceLabel(allHeroPieces(doc.heroes), owner.piece.id)}
         </button>
         <h2>{def.label}</h2>
         <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
@@ -278,7 +307,7 @@ export function InspectorPanel({
   // no tiene elección, ver ImageTypeSelector.tsx) y el catálogo completo de
   // piezas, que inserta en ESTE banner.
   if (selected.slot === 'HEADER' || selected.slot === 'BANNER') {
-    const piece = selected.heroId ? findHeroPiece(doc.hero, selected.heroId) : undefined
+    const piece = selected.heroId ? findHeroPiece(allHeroPieces(doc.heroes), selected.heroId) : undefined
     const def = registry[selected.slot]
     if (!piece || piece.type !== selected.slot || !def?.PropertiesPanel) {
       return <EmptyHint text="Selecciona un header o un banner del Hero para ver sus opciones." />
@@ -286,7 +315,7 @@ export function InspectorPanel({
     const { PropertiesPanel } = def
     return (
       <aside className="panel-inspector">
-        <h2>{heroPieceLabel(doc.hero, piece.id)}</h2>
+        <h2>{heroPieceLabel(allHeroPieces(doc.heroes), piece.id)}</h2>
         <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
         <PropertiesPanel value={piece.fields} onChange={(next) => onChangeHeroPiece(piece.id, next)} />
         {piece.type === 'BANNER' && (

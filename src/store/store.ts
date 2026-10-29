@@ -4,11 +4,19 @@
 // ============================================================================
 import { create, useStore as useZustandStore } from 'zustand'
 import { temporal } from 'zundo'
-import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument, HeroPiece, HeroPieceType } from '../model'
+import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument, HeroPiece, HeroPieceType, HeroSection } from '../model'
 import type { BannerFields, BannerType } from '../components/banner/schema'
 import type { HeaderFields } from '../components/header/schema'
 import { defaultHeaderFields } from '../components/header/schema'
-import { cloneBannerFields, createBannerFields, findBannerByItem, isLastOfType } from '../components/hero/schema'
+import {
+  allHeroPieces,
+  cloneBannerFields,
+  cloneHeroSection,
+  createBannerFields,
+  findBannerByItem,
+  isLastOfType,
+  type HeroBackground,
+} from '../components/hero/schema'
 import { headerPatchForTheme, bannerBackgroundEnabledForTheme } from '../themeDefaults'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
@@ -42,16 +50,28 @@ interface BuilderState {
   setGlobalFields: (fields: GlobalFields) => void
 
   /**
-   * Operaciones sobre doc.hero, la lista libre de headers y banners
-   * (components/hero/schema.ts). Mismo espíritu que las de contenidos. Siempre
-   * queda al menos un header y un banner: `removeHeroPiece` no hace nada si
-   * la pieza es la última de su tipo (la regla vive acá, no solo en el botón,
-   * mismo criterio que DEALS_MAX_CARDS).
+   * Operaciones sobre los Heros (doc.heroes, components/hero/schema.ts). Un
+   * Hero entero se duplica, elimina y reordena, y tiene su propio fondo.
+   * Siempre queda al menos uno: `removeHeroSection` no hace nada con el
+   * último. `duplicateHeroSection` devuelve el id de la copia.
+   */
+  duplicateHeroSection: (id: string) => string | null
+  removeHeroSection: (id: string) => void
+  reorderHeroSection: (id: string, toIndex: number) => void
+  updateHeroBackground: (id: string, background: HeroBackground) => void
+
+  /**
+   * Operaciones sobre las piezas de UN Hero (headers y banners, lista libre).
+   * Mismo espíritu que las de contenidos. Cada Hero conserva al menos un
+   * header y un banner: `removeHeroPiece` no hace nada si la pieza es la
+   * última de su tipo en su Hero (la regla vive acá, no solo en el botón,
+   * mismo criterio que DEALS_MAX_CARDS). Solo insertar recibe el Hero: las
+   * demás lo buscan por el id de la pieza (único en todo el documento).
    *
    * `insertHeroPiece` devuelve el id de la pieza nueva, para seleccionarla.
    * Un banner nuevo lleva `bannerType` (default 'vertical').
    */
-  insertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => string
+  insertHeroPiece: (sectionId: string, type: HeroPieceType, atIndex: number, bannerType?: BannerType) => string
   /** Devuelve el id de la copia (o null si no existe el original). */
   duplicateHeroPiece: (id: string) => string | null
   reorderHeroPiece: (id: string, toIndex: number) => void
@@ -220,19 +240,34 @@ function withTropicalizationBranches(document: EmailDocument, key: string, branc
   return { ...document, tropicalizations }
 }
 
-/** Reescribe los campos de UN banner del Hero dejando el resto intacto — el
- *  patrón se repite en todas las acciones de piezas de banner. */
-function withBannerFields(document: EmailDocument, heroIndex: number, fields: BannerFields): EmailDocument {
-  const hero = [...document.hero]
-  hero[heroIndex] = { ...hero[heroIndex], fields } as HeroPiece
-  return { ...document, hero }
+/** Reescribe la lista de piezas del Hero que contiene `pieceId` (o el Hero
+ *  `sectionId`) con `fn`, dejando el resto del documento intacto. */
+function withSectionPieces(
+  document: EmailDocument,
+  match: { sectionId?: string; pieceId?: string },
+  fn: (pieces: HeroPiece[]) => HeroPiece[],
+): EmailDocument {
+  const heroes = document.heroes.map((section): HeroSection => {
+    const hit = match.sectionId ? section.id === match.sectionId : section.pieces.some((p) => p.id === match.pieceId)
+    return hit ? { ...section, pieces: fn(section.pieces) } : section
+  })
+  return { ...document, heroes }
 }
 
-/** Índice + campos del banner `bannerId` (null si no es un banner). */
-function bannerAt(document: EmailDocument, bannerId: string): { index: number; fields: BannerFields } | null {
-  const index = document.hero.findIndex((p) => p.id === bannerId && p.type === 'BANNER')
-  if (index === -1) return null
-  return { index, fields: document.hero[index].fields as BannerFields }
+/** Reescribe los campos de UN banner (o header) por su id, en el Hero que sea. */
+function withPieceFields(document: EmailDocument, pieceId: string, fields: unknown): EmailDocument {
+  return withSectionPieces(document, { pieceId }, (pieces) =>
+    pieces.map((p) => (p.id === pieceId ? ({ ...p, fields } as HeroPiece) : p)),
+  )
+}
+
+const withBannerFields = (document: EmailDocument, bannerId: string, fields: BannerFields) =>
+  withPieceFields(document, bannerId, fields)
+
+/** Campos del banner `bannerId` (null si no es un banner). */
+function bannerAt(document: EmailDocument, bannerId: string): { fields: BannerFields } | null {
+  const piece = allHeroPieces(document.heroes).find((p) => p.id === bannerId && p.type === 'BANNER')
+  return piece ? { fields: piece.fields as BannerFields } : null
 }
 
 /** Cambios más cercanos que esto entre sí se deshacen juntos (ver handleSet). */
@@ -261,9 +296,52 @@ export const useBuilder = create<BuilderState>()(
         set((s) => ({ document: { ...s.document, [docKey]: fields } as EmailDocument })),
       setGlobalFields: (fields) => set((s) => ({ document: { ...s.document, global: fields } })),
 
-      insertHeroPiece: (type, atIndex, bannerType = 'vertical') => {
+      duplicateHeroSection: (id) => {
+        let copyId: string | null = null
+        set((s) => {
+          const idx = s.document.heroes.findIndex((h) => h.id === id)
+          if (idx === -1) return s
+          const { section, pieceIds, itemIds } = cloneHeroSection(s.document.heroes[idx])
+          // Cada pieza y cada pieza de banner se lleva la tropicalización de su original.
+          let tropicalizations = s.document.tropicalizations
+          for (const piece of s.document.heroes[idx].pieces) {
+            tropicalizations = copyTropicalization(tropicalizations, heroPieceKey(piece.type, piece.id), heroPieceKey(piece.type, pieceIds.get(piece.id)!))
+          }
+          for (const [from, to] of itemIds) tropicalizations = copyTropicalization(tropicalizations, bannerItemKey(from), bannerItemKey(to))
+          const heroes = [...s.document.heroes]
+          heroes.splice(idx + 1, 0, section)
+          copyId = section.id
+          return { document: { ...s.document, heroes, tropicalizations } }
+        })
+        return copyId
+      },
+
+      removeHeroSection: (id) =>
+        set((s) => {
+          if (s.document.heroes.length <= 1 || !s.document.heroes.some((h) => h.id === id)) return s
+          return { document: pruneTropicalizations({ ...s.document, heroes: s.document.heroes.filter((h) => h.id !== id) }) }
+        }),
+
+      reorderHeroSection: (id, toIndex) =>
+        set((s) => {
+          const from = s.document.heroes.findIndex((h) => h.id === id)
+          if (from === -1) return s
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const heroes = [...s.document.heroes]
+          const [moved] = heroes.splice(from, 1)
+          heroes.splice(Math.max(0, Math.min(adjusted, heroes.length)), 0, moved)
+          return { document: { ...s.document, heroes } }
+        }),
+
+      updateHeroBackground: (id, background) =>
+        set((s) => ({
+          document: { ...s.document, heroes: s.document.heroes.map((h) => (h.id === id ? { ...h, background } : h)) },
+        })),
+
+      insertHeroPiece: (sectionId, type, atIndex, bannerType = 'vertical') => {
         const id = newId()
         set((s) => {
+          if (!s.document.heroes.some((h) => h.id === sectionId)) return s
           const tema = s.document.global.tema
           // Una pieza nueva arranca ajustada al tema activo, igual que la que
           // ya estaba cuando se eligió el tema (App.tsx aplica estas mismas
@@ -277,9 +355,12 @@ export const useBuilder = create<BuilderState>()(
             const backgroundEnabled = bannerBackgroundEnabledForTheme(fields, tema, null)
             piece = { id, type, fields: backgroundEnabled === null ? fields : { ...fields, backgroundEnabled } }
           }
-          const hero = [...s.document.hero]
-          hero.splice(Math.max(0, Math.min(atIndex, hero.length)), 0, piece)
-          return { document: { ...s.document, hero } }
+          const document = withSectionPieces(s.document, { sectionId }, (pieces) => {
+            const next = [...pieces]
+            next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, piece)
+            return next
+          })
+          return { document }
         })
         return id
       },
@@ -288,9 +369,8 @@ export const useBuilder = create<BuilderState>()(
         const copyId = newId()
         let done = false
         set((s) => {
-          const idx = s.document.hero.findIndex((p) => p.id === id)
-          if (idx === -1) return s
-          const original = s.document.hero[idx]
+          const original = allHeroPieces(s.document.heroes).find((p) => p.id === id)
+          if (!original) return s
           let tropicalizations = copyTropicalization(
             s.document.tropicalizations,
             heroPieceKey(original.type, id),
@@ -308,41 +388,42 @@ export const useBuilder = create<BuilderState>()(
           } else {
             copy = { ...original, id: copyId }
           }
-          const hero = [...s.document.hero]
-          hero.splice(idx + 1, 0, copy)
+          const document = withSectionPieces(s.document, { pieceId: id }, (pieces) => {
+            const next = [...pieces]
+            next.splice(pieces.findIndex((p) => p.id === id) + 1, 0, copy)
+            return next
+          })
           done = true
-          return { document: { ...s.document, hero, tropicalizations } }
+          return { document: { ...document, tropicalizations } }
         })
         return done ? copyId : null
       },
 
-      /** `toIndex` se interpreta contra la lista ANTES de sacar la pieza
-       *  arrastrada — misma convención que reorderContentBlock. */
+      /** `toIndex` se interpreta contra la lista de SU Hero, ANTES de sacar la
+       *  pieza arrastrada — misma convención que reorderContentBlock. */
       reorderHeroPiece: (id, toIndex) =>
         set((s) => {
-          const from = s.document.hero.findIndex((p) => p.id === id)
-          if (from === -1) return s
-          const adjusted = toIndex > from ? toIndex - 1 : toIndex
-          const hero = [...s.document.hero]
-          const [moved] = hero.splice(from, 1)
-          hero.splice(Math.max(0, Math.min(adjusted, hero.length)), 0, moved)
-          return { document: { ...s.document, hero } }
+          if (!allHeroPieces(s.document.heroes).some((p) => p.id === id)) return s
+          const document = withSectionPieces(s.document, { pieceId: id }, (pieces) => {
+            const from = pieces.findIndex((p) => p.id === id)
+            const adjusted = toIndex > from ? toIndex - 1 : toIndex
+            const next = [...pieces]
+            const [moved] = next.splice(from, 1)
+            next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, moved)
+            return next
+          })
+          return { document }
         }),
 
       removeHeroPiece: (id) =>
         set((s) => {
-          if (isLastOfType(s.document.hero, id)) return s
-          if (!s.document.hero.some((p) => p.id === id)) return s
-          return { document: pruneTropicalizations({ ...s.document, hero: s.document.hero.filter((p) => p.id !== id) }) }
+          const section = s.document.heroes.find((h) => h.pieces.some((p) => p.id === id))
+          if (!section || isLastOfType(section.pieces, id)) return s
+          const document = withSectionPieces(s.document, { pieceId: id }, (pieces) => pieces.filter((p) => p.id !== id))
+          return { document: pruneTropicalizations(document) }
         }),
 
-      updateHeroPieceFields: (id, fields) =>
-        set((s) => ({
-          document: {
-            ...s.document,
-            hero: s.document.hero.map((p) => (p.id === id ? ({ ...p, fields } as HeroPiece) : p)),
-          },
-        })),
+      updateHeroPieceFields: (id, fields) => set((s) => ({ document: withPieceFields(s.document, id, fields) })),
 
       insertContentBlock: (type, atIndex) =>
         set((s) => {
@@ -425,12 +506,12 @@ export const useBuilder = create<BuilderState>()(
           const next = [...filtered]
           next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, item)
           const ordered = enforceHorizontalItemOrder(next, banner.fields.bannerType)
-          return { document: withBannerFields(s.document, banner.index, { ...banner.fields, items: ordered }) }
+          return { document: withBannerFields(s.document, bannerId, { ...banner.fields, items: ordered }) }
         }),
 
       duplicateBannerItem: (id) =>
         set((s) => {
-          const owner = findBannerByItem(s.document.hero, id)
+          const owner = findBannerByItem(allHeroPieces(s.document.heroes), id)
           if (!owner) return s
           const banner = owner.piece.fields
           const idx = banner.items.findIndex((it) => it.id === id)
@@ -450,14 +531,14 @@ export const useBuilder = create<BuilderState>()(
           const next = [...filtered]
           next.splice(insertAt, 0, copy)
           const ordered = enforceHorizontalItemOrder(next, banner.bannerType)
-          const document = withBannerFields(s.document, owner.index, { ...banner, items: ordered })
+          const document = withBannerFields(s.document, owner.piece.id, { ...banner, items: ordered })
           const tropicalizations = copyTropicalization(document.tropicalizations, bannerItemKey(id), bannerItemKey(copy.id))
           return { document: { ...document, tropicalizations } }
         }),
 
       reorderBannerItem: (id, toIndex) =>
         set((s) => {
-          const owner = findBannerByItem(s.document.hero, id)
+          const owner = findBannerByItem(allHeroPieces(s.document.heroes), id)
           if (!owner) return s
           const banner = owner.piece.fields
           const from = banner.items.findIndex((it) => it.id === id)
@@ -466,25 +547,25 @@ export const useBuilder = create<BuilderState>()(
           const [moved] = next.splice(from, 1)
           next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, moved)
           const ordered = enforceHorizontalItemOrder(next, banner.bannerType)
-          return { document: withBannerFields(s.document, owner.index, { ...banner, items: ordered }) }
+          return { document: withBannerFields(s.document, owner.piece.id, { ...banner, items: ordered }) }
         }),
 
       removeBannerItem: (id) =>
         set((s) => {
-          const owner = findBannerByItem(s.document.hero, id)
+          const owner = findBannerByItem(allHeroPieces(s.document.heroes), id)
           if (!owner) return s
           const banner = owner.piece.fields
           const items = banner.items.filter((it) => it.id !== id)
-          return { document: pruneTropicalizations(withBannerFields(s.document, owner.index, { ...banner, items })) }
+          return { document: pruneTropicalizations(withBannerFields(s.document, owner.piece.id, { ...banner, items })) }
         }),
 
       updateBannerItemFields: (id, fields) =>
         set((s) => {
-          const owner = findBannerByItem(s.document.hero, id)
+          const owner = findBannerByItem(allHeroPieces(s.document.heroes), id)
           if (!owner) return s
           const banner = owner.piece.fields
           const items = banner.items.map((it) => (it.id === id ? ({ ...it, fields } as BannerItem) : it))
-          return { document: withBannerFields(s.document, owner.index, { ...banner, items }) }
+          return { document: withBannerFields(s.document, owner.piece.id, { ...banner, items }) }
         }),
 
       setBannerImageModule: (bannerId, type) =>
@@ -499,7 +580,7 @@ export const useBuilder = create<BuilderState>()(
           if (idx === -1) next.push(newItem)
           else next[idx] = newItem
           const ordered = enforceHorizontalItemOrder(next, banner.fields.bannerType)
-          return { document: withBannerFields(s.document, banner.index, { ...banner.fields, items: ordered }) }
+          return { document: withBannerFields(s.document, bannerId, { ...banner.fields, items: ordered }) }
         }),
 
       insertDealCard: (blockId, atIndex) =>

@@ -77,3 +77,7 @@ export const HEADER_DRAG_TYPE = 'application/x-email-hero-header'
 
 /** Reordenar un header/banner del Hero arrastrándolo en el lienzo. */
 export const HERO_PIECE_REORDER_DRAG_TYPE = 'application/x-email-hero-piece-reorder'
+
+/** Reordenar un Hero entero arrastrándolo en el lienzo (hay varios desde
+ *  2026-10-29, ver components/hero/schema.ts). */
+export const HERO_SECTION_REORDER_DRAG_TYPE = 'application/x-email-hero-section-reorder'

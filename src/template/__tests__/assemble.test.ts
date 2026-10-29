@@ -13,8 +13,10 @@ import { elementBounds, indexOfOrThrow } from '../htmlEdits'
 import { escapeHtmlAttr } from '../htmlText'
 import type { CtaBlock, EmailDocument } from '../../model'
 
-import { bannerOf, bannerPieceOf, headerOf, headerPieceOf, legacy } from '../../components/hero/testUtils'
-import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, type HeroPiece } from '../../components/hero/schema'
+import { bannerOf, bannerPieceOf, headerOf, headerPieceOf, legacy, withPieces } from '../../components/hero/testUtils'
+import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_SECTION_ID, type HeroPiece } from '../../components/hero/schema'
+import { defaultTextoXlFields } from '../../components/banner/items/schemas'
+import { richTextFromPlain } from '../../richText/model'
 
 const ctaBlock = (id: string, text: string): CtaBlock => ({
   id,
@@ -48,7 +50,15 @@ function replaceHeroInTest(html: string, headerTr: string, bannerHtml: string): 
   const header = `<!-- HERO:HEADER:${DEFAULT_HERO_HEADER_ID} -->\n${html.slice(tableStart, hStart)}${headerTr}${html.slice(hEnd, tableEnd)}\n<!-- /HERO:HEADER:${DEFAULT_HERO_HEADER_ID} -->`
   const banner = `<!-- HERO:BANNER:${DEFAULT_HERO_BANNER_ID} -->\n${bannerHtml}\n<!-- /HERO:BANNER:${DEFAULT_HERO_BANNER_ID} -->`
   const withoutBannerComment = replaceCommentPlaceholder(html, 'AQUÍ VA EL BANNER', '')
-  return withoutBannerComment.slice(0, tableStart) + header + '\n' + banner + withoutBannerComment.slice(tableEnd)
+  const replaced = withoutBannerComment.slice(0, tableStart) + header + '\n' + banner + withoutBannerComment.slice(tableEnd)
+  // Y el bloque entero del Hero (su <a>) entre sus marcadores HSECTION.
+  const aStart = replaced.indexOf('<a role="horizontal"')
+  const aEnd = elementBounds(replaced, aStart + 1, 'a', 'test').end
+  return (
+    replaced.slice(0, aStart) +
+    `<!-- HSECTION:HERO:${DEFAULT_HERO_SECTION_ID} -->\n${replaced.slice(aStart, aEnd)}\n<!-- /HSECTION:HERO:${DEFAULT_HERO_SECTION_ID} -->` +
+    replaced.slice(aEnd)
+  )
 }
 
 function replaceContenidosWrapperInTest(html: string, rendered: string): string {
@@ -367,6 +377,11 @@ describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => 
   }
   const heroTag = (html: string) => sectionTag(html, 'el background-image es reemplazable')
   const contentsTag = (html: string) => sectionTag(html, 'mismo fondo que el HERO')
+  // El fondo del Hero vive en el propio Hero desde 2026-10-29 (cada uno tiene el suyo).
+  const withHeroBg = (doc: EmailDocument, bg: Partial<EmailDocument['heroes'][number]['background']>): EmailDocument => ({
+    ...doc,
+    heroes: doc.heroes.map((h, i) => (i === 0 ? { ...h, background: { ...h.background, ...bg } } : h)),
+  })
 
   it('defaults to an empty URL (pedido explícito del usuario 2026-09-18) — the master\'s own placeholder is no longer the default', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
@@ -383,31 +398,30 @@ describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => 
 
   it('can still be set to the master\'s own placeholder image by hand', () => {
     const placeholderUrl = 'https://lh3.googleusercontent.com/d/1neHPofSevbcNLyO2pymbZk6QHZSrJO5-'
-    const html = assembleEmailHtml({
-      ...defaultEmailDocument,
-      global: { ...defaultEmailDocument.global, heroBgUrl: placeholderUrl, contentsBgUrl: placeholderUrl },
-    })
+    const html = assembleEmailHtml(
+      withHeroBg({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, contentsBgUrl: placeholderUrl } }, { heroBgUrl: placeholderUrl }),
+    )
     expect(heroTag(html)).toContain(`background-image: url(${placeholderUrl})`)
     expect(contentsTag(html)).toContain(`background-image: url(${placeholderUrl})`)
   })
 
   it('lets HERO and CONTENTS diverge independently from each other', () => {
-    const html = assembleEmailHtml({
-      ...defaultEmailDocument,
-      global: {
-        ...defaultEmailDocument.global,
-        heroBgUrl: 'https://x.test/hero.png',
-        heroBgSize: 'cover',
-        heroBgPosition: 'left top',
-        heroBgRepeat: 'no-repeat',
-        heroBgAlt: 'Fondo del hero',
-        contentsBgUrl: 'https://x.test/contents.png',
-        contentsBgSize: '100% 100%',
-        contentsBgPosition: 'right bottom',
-        contentsBgRepeat: 'repeat-y',
-        contentsBgAlt: 'Fondo de contenidos',
-      },
-    })
+    const html = assembleEmailHtml(
+      withHeroBg(
+        {
+          ...defaultEmailDocument,
+          global: {
+            ...defaultEmailDocument.global,
+            contentsBgUrl: 'https://x.test/contents.png',
+            contentsBgSize: '100% 100%',
+            contentsBgPosition: 'right bottom',
+            contentsBgRepeat: 'repeat-y',
+            contentsBgAlt: 'Fondo de contenidos',
+          },
+        },
+        { heroBgUrl: 'https://x.test/hero.png', heroBgSize: 'cover', heroBgPosition: 'left top', heroBgRepeat: 'no-repeat', heroBgAlt: 'Fondo del hero' },
+      ),
+    )
 
     const hero = heroTag(html)
     expect(hero).toContain('background-image: url(https://x.test/hero.png)')
@@ -425,21 +439,32 @@ describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => 
   })
 
   it('removes the background entirely (empty url(), no alt) when the URL is cleared, same convention as fondoUrl', () => {
-    const html = assembleEmailHtml({
-      ...defaultEmailDocument,
-      global: { ...defaultEmailDocument.global, heroBgUrl: '', contentsBgUrl: '' },
-    })
+    const html = assembleEmailHtml(
+      withHeroBg({ ...defaultEmailDocument, global: { ...defaultEmailDocument.global, contentsBgUrl: '' } }, { heroBgUrl: '' }),
+    )
     expect(heroTag(html)).toContain('background-image: url();')
     expect(heroTag(html)).not.toContain('role="img"')
     expect(contentsTag(html)).toContain('background-image: url();')
     expect(contentsTag(html)).not.toContain('role="img"')
   })
 
-  it('escapes what would break out of the url(...), same as fondoUrl', () => {
-    const html = assembleEmailHtml({
+  it('cada Hero lleva su propio fondo', () => {
+    const [first] = defaultEmailDocument.heroes
+    const doc: EmailDocument = {
       ...defaultEmailDocument,
-      global: { ...defaultEmailDocument.global, heroBgUrl: 'https://x.test/a(b).png' },
-    })
+      heroes: [
+        { ...first, background: { ...first.background, heroBgUrl: 'https://x.test/uno.png' } },
+        { ...first, id: 'h2', background: { ...first.background, heroBgUrl: 'https://x.test/dos.png' }, pieces: first.pieces.map((p) => ({ ...p, id: `${p.id}-2` })) },
+      ],
+    }
+    const html = assembleEmailHtml(doc)
+    const second = html.slice(html.indexOf('<!-- HSECTION:HERO:h2 -->'))
+    expect(heroTag(html)).toContain('url(https://x.test/uno.png)')
+    expect(heroTag(second)).toContain('url(https://x.test/dos.png)')
+  })
+
+  it('escapes what would break out of the url(...), same as fondoUrl', () => {
+    const html = assembleEmailHtml(withHeroBg(defaultEmailDocument, { heroBgUrl: 'https://x.test/a(b).png' }))
     expect(heroTag(html)).toContain('background-image: url(https://x.test/a%28b%29.png)')
   })
 })
@@ -605,7 +630,7 @@ describe('assembleEmailHtml · tropicalización de slots', () => {
 describe('assembleEmailHtml · Hero con varias piezas (lista libre, 2026-10-28)', () => {
   const header = headerPieceOf(defaultEmailDocument)
   const banner = bannerPieceOf(defaultEmailDocument)
-  const withHero = (hero: HeroPiece[]): EmailDocument => ({ ...defaultEmailDocument, hero })
+  const withHero = (hero: HeroPiece[]): EmailDocument => withPieces(defaultEmailDocument, hero)
 
   it('con un solo banner, su link va en el <a> que envuelve todo el Hero (como el maestro)', () => {
     const html = assembleEmailHtml(withHero([header, { ...banner, fields: { ...banner.fields, link: 'https://uno.test' } }]))
@@ -674,5 +699,29 @@ describe('assembleEmailHtml · Hero con varias piezas (lista libre, 2026-10-28)'
     expect(second).toContain("contains 'AR'")
     const first = html.slice(html.indexOf(`HERO:BANNER:${banner.id}`), html.indexOf(`/HERO:BANNER:${banner.id}`))
     expect(first).not.toContain("contains 'AR'")
+  })
+})
+
+describe('assembleEmailHtml · Texto XL con tamaño de móvil propio', () => {
+  it('agrega la regla de móvil en las 2 media queries, una vez por clase, y nada si no hay ninguna', () => {
+    const banner = bannerPieceOf(defaultEmailDocument)
+    const custom = { ...defaultTextoXlFields, text: richTextFromPlain('Hola'), sizeMode: 'custom' as const, fontSize: 42, lineHeight: 46, mobileFontSize: 30, mobileLineHeight: 33 }
+    const doc: EmailDocument = withPieces(defaultEmailDocument, [
+        headerPieceOf(defaultEmailDocument),
+        {
+          ...banner,
+          fields: {
+            ...banner.fields,
+            items: [
+              { id: 'x1', type: 'TEXTOXL', fields: custom },
+              { id: 'x2', type: 'TEXTOXL', fields: custom },
+            ],
+          },
+        },
+      ])
+    const html = assembleEmailHtml(doc)
+    const rule = '#BANNER_HORIZONTAL .bnr-txl-m30-33, #BANNER_VERTICAL .bnr-txl-m30-33 {\n    font-size: 30px!important;\n    line-height: 33px!important;\n}'
+    expect(html.split(rule).length - 1).toBe(2)
+    expect(assembleEmailHtml(defaultEmailDocument)).not.toContain('bnr-txl-m')
   })
 })

@@ -19,7 +19,7 @@ import { contentBlockRegistry } from '../../contentBlockRegistry'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 import { getModuleItemDef } from '../../bodyMoleculeRegistry'
 import { registry } from '../../registry'
-import { findBannerByItem } from '../../components/hero/schema'
+import { allHeroPieces, findBannerByItem } from '../../components/hero/schema'
 import { findDealsBlockByCard } from '../../components/deals/blocks'
 import { findModuleBlockByItem } from '../../components/contentModules/blocks'
 import { DEAL_CARD_PIECE_LABELS, DEAL_CARD_PIECE_TYPES, type DealCardFields } from '../../components/deals/schema'
@@ -98,7 +98,7 @@ export function BranchFieldsEditor({ selected, doc, value, onChange, onChangeGlo
   }
 
   if (selected.slot === 'BANNER' && selected.bannerItemId) {
-    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    const owner = findBannerByItem(allHeroPieces(doc.heroes), selected.bannerItemId)
     const item = owner?.piece.fields.items.find((it) => it.id === selected.bannerItemId)
     const def = item ? getBannerItemDef(item.type) : undefined
     if (!owner || !item || !def) return null

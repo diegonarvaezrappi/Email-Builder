@@ -14,7 +14,7 @@ import { findDealsBlockByCard } from '../../components/deals/blocks'
 import { findModuleBlockByItem } from '../../components/contentModules/blocks'
 import type { Selection } from '../selection'
 import { selectionFromTargetKey, type TropicalizeKey } from '../../tropicalize/keys'
-import { findBannerByItem, heroPieceLabel } from '../../components/hero/schema'
+import { allHeroPieces, findBannerByItem, heroPieceLabel } from '../../components/hero/schema'
 
 export function targetLabel(doc: EmailDocument, selected: Selection): string {
   // No debería llegar hasta acá (normalizeTropicalizationTarget los limpia al
@@ -39,16 +39,16 @@ export function targetLabel(doc: EmailDocument, selected: Selection): string {
     return block ? (contentBlockRegistry[block.type]?.label ?? block.type) : 'Bloque'
   }
   if (selected.slot === 'BANNER' && selected.bannerItemId) {
-    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    const owner = findBannerByItem(allHeroPieces(doc.heroes), selected.bannerItemId)
     const item = owner?.piece.fields.items.find((it) => it.id === selected.bannerItemId)
     if (!owner || !item) return 'Pieza de banner'
     const label = getBannerItemDef(item.type)?.label ?? item.type
     // Con varios banners, la pieza dice de cuál es.
-    const banners = doc.hero.filter((p) => p.type === 'BANNER').length
-    return banners > 1 ? `${label} · ${heroPieceLabel(doc.hero, owner.piece.id)}` : label
+    const banners = allHeroPieces(doc.heroes).filter((p) => p.type === 'BANNER').length
+    return banners > 1 ? `${label} · ${heroPieceLabel(allHeroPieces(doc.heroes), owner.piece.id)}` : label
   }
   if ((selected.slot === 'HEADER' || selected.slot === 'BANNER') && selected.heroId) {
-    return heroPieceLabel(doc.hero, selected.heroId)
+    return heroPieceLabel(allHeroPieces(doc.heroes), selected.heroId)
   }
   return SLOT_LABELS[selected.slot]
 }

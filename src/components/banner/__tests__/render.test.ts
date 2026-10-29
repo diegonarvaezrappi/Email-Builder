@@ -4,7 +4,7 @@ import { renderBannerSnippet } from '../render'
 import { THEME_SLUGS } from '../../../themes/themes'
 import { richTextFromPlain } from '../../../richText/model'
 import type { EmailDocument } from '../../../model'
-import { defaultTagItem } from '../items/schemas'
+import { defaultTagItem, defaultTextoXlFields } from '../items/schemas'
 import type { BannerItem } from '../items/schemas'
 
 import type { BannerFields } from '../schema'
@@ -106,7 +106,7 @@ describe('renderBannerSnippet', () => {
         type: 'CREDITOS',
         fields: { creditosText: richTextFromPlain('120'), variant: 'generica', deReintegroEnabled: true, deReintegroText: richTextFromPlain('DE REINTEGRO') },
       },
-      { id: '3', type: 'TEXTOXL', fields: { text: richTextFromPlain('x') } },
+      { id: '3', type: 'TEXTOXL', fields: { ...defaultTextoXlFields, text: richTextFromPlain('x') } },
       { id: '4', type: 'TEXTOM', fields: { text: richTextFromPlain('x') } },
       { id: '5', type: 'IMG_AUTOMATICA_MOLECULA', fields: { imageUrl: 'x', imageAlt: 'x', widthPercent: 80, borderRadiusEnabled: false } },
       { id: '6', type: 'IMG_FIJA', fields: { heroImageUrl: 'x', heroImageAlt: 'x', logoImageUrl: 'x', logoImageAlt: 'x', logoLink: '' } },

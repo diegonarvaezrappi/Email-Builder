@@ -12,6 +12,7 @@
 // ============================================================================
 import type { ContentBlockType, EmailDocument, HeroPieceType } from '../model'
 import type { BannerType } from '../components/banner/schema'
+import { activeHeroSectionId, heroSectionLabel, pickHeroBackground, type HeroBackground } from '../components/hero/schema'
 import type { GlobalFields } from '../global/schema'
 import { SLOT_LABELS } from '../registry'
 import { contentBlockRegistry } from '../contentBlockRegistry'
@@ -49,6 +50,7 @@ interface LeftPanelProps {
   onAddBlock: (type: ContentBlockType) => void
   /** Agrega un header o un banner (de ese tipo) al final del Hero y lo selecciona. */
   onAddHeroPiece: (type: HeroPieceType, bannerType?: BannerType) => void
+  onChangeHeroBackground: (heroSectionId: string, background: HeroBackground) => void
   treeExpanded: ReadonlySet<string>
   onToggleTreeExpanded: (key: string) => void
   onTreeReorder: (reorder: TreeReorder, toIndex: number) => void
@@ -115,13 +117,24 @@ function GeneralTab({ document: doc, onChangeGlobal }: LeftPanelProps) {
  * tipo de un banner ya existente se hace en su panel de la derecha.
  */
 function HeroTab(props: LeftPanelProps) {
-  const { document: doc, onChangeGlobal, onAddHeroPiece } = props
+  const { document: doc, selected, onAddHeroPiece, onChangeHeroBackground } = props
+  // Con varios Heros (2026-10-29), el fondo y lo que se agrega van al Hero
+  // activo: el de la selección, o el último. Cada Hero tiene su propio fondo.
+  const activeId = activeHeroSectionId(doc.heroes, selected)
+  const active = doc.heroes.find((h) => h.id === activeId)!
+  const label = heroSectionLabel(doc.heroes, activeId)
+  const several = doc.heroes.length > 1
   return (
     <>
-      <BackgroundCard scope="hero" title="Fondo hero" value={doc.global} onChange={onChangeGlobal} />
+      <BackgroundCard
+        scope="hero"
+        title={several ? `Fondo · ${label}` : 'Fondo hero'}
+        value={{ ...doc.global, ...active.background }}
+        onChange={(next) => onChangeHeroBackground(activeId, pickHeroBackground(next))}
+      />
 
       <div className="left-card">
-        <span className="left-card-title">Agregar al hero</span>
+        <span className="left-card-title">{several ? `Agregar a ${label}` : 'Agregar al hero'}</span>
         <ul className="banner-type-grid hero-add-grid">
           <li>
             <button

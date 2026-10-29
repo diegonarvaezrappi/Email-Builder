@@ -116,3 +116,15 @@ export function wrapWithHeroMarkers(type: string, id: string, innerHtml: string)
 
 export const HERO_PIECE_OPEN_RE = /^\s*HERO:([^:]+):(.+?)\s*$/
 export const HERO_PIECE_CLOSE_RE = /^\s*\/HERO:([^:]+):(.+?)\s*$/
+
+/**
+ * Séptimo prefijo ("HSECTION") — cada Hero completo (la copia entera de la
+ * sección HERO del maestro con su <a>), repetible desde 2026-10-29. Mismo
+ * shape que HERO (tipo fijo 'HERO' + id) para medirlo con measureMarkedBlocks.
+ */
+export function wrapWithHeroSectionMarkers(id: string, innerHtml: string): string {
+  return `<!-- HSECTION:HERO:${id} -->\n${innerHtml}\n<!-- /HSECTION:HERO:${id} -->`
+}
+
+export const HERO_SECTION_OPEN_RE = /^\s*HSECTION:([^:]+):(.+?)\s*$/
+export const HERO_SECTION_CLOSE_RE = /^\s*\/HSECTION:([^:]+):(.+?)\s*$/

@@ -15,7 +15,7 @@ import { renderContenidosSnippet } from './components/contenidos/render'
 import { defaultCtaFields } from './components/cta/schema'
 import { defaultDealCardFields } from './components/deals/schema'
 import { defaultGlobalFields } from './global/schema'
-import { defaultHero } from './components/hero/schema'
+import { defaultHeroSections } from './components/hero/schema'
 import { z } from 'zod'
 
 /**
@@ -33,7 +33,7 @@ export interface SlotDef<TFields> {
   slot: SlotName
   /**
    * Dónde viven sus campos en el documento. Ausente en HEADER y BANNER: desde
-   * el 2026-10-28 son piezas repetibles de `doc.hero` (ver
+   * el 2026-10-28 son piezas repetibles de los Heros (`doc.heroes`) (ver
    * components/hero/schema.ts), no una key del documento — cada instancia se
    * edita por su id (updateHeroPieceFields en store/store.ts).
    */
@@ -152,7 +152,7 @@ function defaultDealsBlock(row: 1 | 2 | 3): DealsBlock {
 
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
-  hero: defaultHero,
+  heroes: defaultHeroSections,
   footer: defaultFooterFields,
   contenidos: [defaultContenidosCtaBlock, defaultDealsBlock(1), defaultDealsBlock(2), defaultDealsBlock(3)],
   tropicalizations: {},

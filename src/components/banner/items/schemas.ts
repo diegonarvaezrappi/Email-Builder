@@ -109,7 +109,27 @@ export const defaultCreditosFields: CreditosFields = creditosFieldsSchema.parse(
  *  esta pieza (items/panels.tsx, RichTextInput). `richTextSchema` migra solo
  *  un string viejo (documento guardado antes de este cambio) a un run sin
  *  marcas, así no se pierde ni se invalida el documento completo al cargar. */
-export const textoXlFieldsSchema = z.object({ text: richTextSchema.default(defaultRichText('120 créditos')) })
+/** 'auto' = el tamaño del maestro (por largo del texto, ver sizing.ts);
+ *  'custom' = el que elija el usuario, con valores propios para móvil. */
+export const TEXTOXL_SIZE_MODES = ['auto', 'custom'] as const
+
+const pxSchema = (fallback: number) => z.number().int().min(6).max(250).default(fallback)
+
+export const textoXlFieldsSchema = z.object({
+  text: richTextSchema.default(defaultRichText('120 créditos')),
+  /**
+   * Pedido del usuario (2026-10-29): un tamaño y line-height a mano, aparte
+   * del automático. En 'custom', escritorio va inline y móvil sale de una
+   * regla propia en las 2 media queries del maestro (ver
+   * template/assemble.ts#injectTextoXlMobileRules). Los valores por defecto
+   * son los del maestro para un texto corto (bnr-xl).
+   */
+  sizeMode: z.enum(TEXTOXL_SIZE_MODES).default('auto'),
+  fontSize: pxSchema(80),
+  lineHeight: pxSchema(80),
+  mobileFontSize: pxSchema(110),
+  mobileLineHeight: pxSchema(111),
+})
 export type TextoXlFields = z.infer<typeof textoXlFieldsSchema>
 export const defaultTextoXlFields: TextoXlFields = textoXlFieldsSchema.parse({})
 

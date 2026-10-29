@@ -5,14 +5,15 @@ import { inlineTheme } from '../themes/inlineTheme'
 import { cssUrlValue, resolveGlobalVars } from '../global/vars'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import { stripBannerFieldAssigns } from '../components/banner/render'
+import { TEXTOXL_CUSTOM_CLASS_RE } from '../components/banner/items/sizing'
 import { stripDealsFieldAssigns } from '../components/deals/render'
 import { applyEdits, elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
 import { escapeHtmlAttr, insertBackgroundImageAltAtStart } from './htmlText'
 import { HERO_LINK_PLACEHOLDER, linkOrPlaceholder, numberLinkPlaceholders } from './linkPlaceholders'
 import { heroPieceKey, slotKey } from '../tropicalize/keys'
 import { renderTropicalized } from '../tropicalize/render'
-import { heroBanners } from '../components/hero/schema'
-import { wrapWithHeroMarkers } from './contentBlocks'
+import { allHeroPieces, heroBanners, type HeroSection } from '../components/hero/schema'
+import { wrapWithHeroMarkers, wrapWithHeroSectionMarkers } from './contentBlocks'
 
 /**
  * El refactor HERO/CONTENTS/FOOTER del repo raíz (iniciado 2026-09-12,
@@ -65,6 +66,33 @@ const FOOTER_EXAMPLE_END = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
 // de un href="" — ver template/linkPlaceholders.ts. Con varios banners, cada
 // uno lleva su propio <a> (ver renderHero).
 
+/**
+ * El Texto XL con tamaño personalizado (components/banner/items/schemas.ts)
+ * lleva una clase `bnr-txl-m<tamaño>-<line-height>` con sus valores de MÓVIL
+ * en el nombre. Acá se agrega su regla en las 2 media queries del maestro,
+ * justo antes de la de `.bnr-xl` y con el mismo selector por banner — mismo
+ * mecanismo que el maestro usa para su propio tamaño de móvil. Se lee del HTML
+ * ya armado (no del documento) para cubrir también las ramas tropicalizadas.
+ * Sin ninguna, el HTML queda intacto.
+ */
+const BNR_XL_MOBILE_RULE = '#BANNER_HORIZONTAL .bnr-xl, #BANNER_VERTICAL .bnr-xl {'
+
+function injectTextoXlMobileRules(html: string): string {
+  const pairs = new Map<string, [string, string]>()
+  for (const m of html.matchAll(TEXTOXL_CUSTOM_CLASS_RE)) pairs.set(m[0], [m[1], m[2]])
+  if (pairs.size === 0) return html
+  const rules = [...pairs]
+    .map(
+      ([cls, [size, line]]) =>
+        `#BANNER_HORIZONTAL .${cls}, #BANNER_VERTICAL .${cls} {\n    font-size: ${size}px!important;\n    line-height: ${line}px!important;\n}\n`,
+    )
+    .join('')
+  if (!html.includes(BNR_XL_MOBILE_RULE)) {
+    throw new Error(`template_base.html: ya no contiene "${BNR_XL_MOBILE_RULE}" — revisar injectTextoXlMobileRules`)
+  }
+  return html.split(BNR_XL_MOBILE_RULE).join(rules + BNR_XL_MOBILE_RULE)
+}
+
 /** Límites del comentario `<!-- ... -->` que contiene `anchor`. */
 function commentBounds(html: string, anchor: string, fileName: string): { start: number; end: number } {
   const anchorIdx = indexOfOrThrow(html, anchor, fileName)
@@ -102,14 +130,44 @@ function renderHero(html: string, doc: EmailDocument): string {
     throw new Error(`Se encontraron ${linkCount} ocurrencias de ${HERO_LINK_PLACEHOLDER} en ${fileName} (se esperaban 2: href + originalsrc)`)
   }
 
-  // El <a> exterior del HERO: se mide ANTES de insertar nada, cuando todo lo
-  // que contiene es estructura del maestro (sin otros <a> adentro).
+  // El bloque entero del HERO del maestro: su <a> (que envuelve el
+  // display:contents y la tabla role="HERO-SECTION"). Cada Hero del documento
+  // es una copia de este bloque (2026-10-29, "los heros también deben poder
+  // duplicarse"), con su propio fondo.
   const linkIdx = html.indexOf(HERO_LINK_PLACEHOLDER)
   const anchorStart = html.lastIndexOf('<a ', linkIdx)
   if (anchorStart === -1) throw new Error(`${fileName}: no se encontró el <a> que envuelve el HERO`)
+  const anchorBounds = elementBounds(html, anchorStart + 1, 'a', fileName)
+  const block = html.slice(anchorStart, anchorBounds.end)
+
+  // Los marcadores de link sin link se numeran en todo el mail en cuanto hay
+  // más de un banner, en uno o en varios Heros.
+  const numbered = allHeroPieces(doc.heroes).filter((p) => p.type === 'BANNER').length > 1
+  let bannerNumber = 0
+  const nextPlaceholder = () => (numbered ? `${HERO_LINK_PLACEHOLDER}${++bannerNumber}` : HERO_LINK_PLACEHOLDER)
+
+  const sections = doc.heroes.map((section) => {
+    const bg = section.background
+    const withBg = applySectionBackground(
+      block,
+      HERO_BG_ANCHOR,
+      { url: bg.heroBgUrl, alt: bg.heroBgAlt, size: bg.heroBgSize, position: bg.heroBgPosition, repeat: bg.heroBgRepeat },
+      fileName,
+    )
+    return wrapWithHeroSectionMarkers(section.id, renderHeroSection(withBg, section, doc, nextPlaceholder))
+  })
+  return html.slice(0, anchorStart) + sections.join('\n') + html.slice(anchorBounds.end)
+}
+
+/** UN Hero, sobre su copia del bloque del maestro (`block` empieza en su `<a>`). */
+function renderHeroSection(block: string, section: HeroSection, doc: EmailDocument, nextPlaceholder: () => string): string {
+  const fileName = 'template_base.html'
+  const html = block
+  const linkIdx = html.indexOf(HERO_LINK_PLACEHOLDER)
+  const anchorStart = 0
   const anchorOpenEnd = html.indexOf('>', linkIdx) + 1
   const anchorOpen = html.slice(anchorStart, anchorOpenEnd)
-  const anchorBounds = elementBounds(html, anchorStart + 1, 'a', fileName)
+  const anchorBounds = { start: 0, end: html.length }
 
   const headerComment = commentBounds(html, HEADER_PLACEHOLDER_ANCHOR, fileName)
   const containerStart = html.lastIndexOf('<table', headerComment.start)
@@ -119,8 +177,9 @@ function renderHero(html: string, doc: EmailDocument): string {
   const containerAfter = html.slice(headerComment.end, container.end)
   const bannerComment = commentBounds(html, BANNER_PLACEHOLDER_ANCHOR, fileName)
 
-  const banners = heroBanners(doc.hero)
+  const banners = heroBanners(section.pieces)
   const linkPerBanner = banners.length > 1
+  const placeholders = new Map(banners.map((b) => [b.id, nextPlaceholder()]))
   const withLink = (link: string, inner: string) =>
     `${anchorOpen.replaceAll(HERO_LINK_PLACEHOLDER, () => escapeHtmlAttr(link))}\n${inner}\n</a>`
 
@@ -128,13 +187,12 @@ function renderHero(html: string, doc: EmailDocument): string {
   const bannerDef = registry.BANNER
   if (!headerDef || !bannerDef) throw new Error('registry: faltan HEADER/BANNER')
 
-  const pieces = doc.hero.map((piece) => {
+  const pieces = section.pieces.map((piece) => {
     if (piece.type === 'HEADER') {
       const tr = renderTropicalized(doc, heroPieceKey('HEADER', piece.id), piece.fields, (f) => headerDef.render(f, doc))
       return wrapWithHeroMarkers('HEADER', piece.id, containerBefore + tr + containerAfter)
     }
-    const position = banners.indexOf(piece) + 1
-    const placeholder = linkPerBanner ? `${HERO_LINK_PLACEHOLDER}${position}` : HERO_LINK_PLACEHOLDER
+    const placeholder = placeholders.get(piece.id) ?? HERO_LINK_PLACEHOLDER
     // Con un link por banner, el <a> va DENTRO de cada rama tropicalizada: así
     // una rama que cambia el link lo lleva, y una rama oculta no deja un <a> vacío.
     const render = (f: typeof piece.fields) => {
@@ -152,7 +210,7 @@ function renderHero(html: string, doc: EmailDocument): string {
     edits.push({ start: anchorStart, end: anchorOpenEnd, replacement: '' })
     edits.push({ start: anchorBounds.end - '</a>'.length, end: anchorBounds.end, replacement: '' })
   } else {
-    const link = linkOrPlaceholder(banners[0]?.fields.link ?? '', HERO_LINK_PLACEHOLDER)
+    const link = linkOrPlaceholder(banners[0]?.fields.link ?? '', (banners[0] && placeholders.get(banners[0].id)) ?? HERO_LINK_PLACEHOLDER)
     edits.push({
       start: anchorStart,
       end: anchorOpenEnd,
@@ -336,18 +394,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     html = html.slice(0, fondoBounds.start) + fondoOpenTag + html.slice(fondoBounds.end)
   }
 
-  html = applySectionBackground(
-    html,
-    HERO_BG_ANCHOR,
-    {
-      url: doc.global.heroBgUrl,
-      alt: doc.global.heroBgAlt,
-      size: doc.global.heroBgSize,
-      position: doc.global.heroBgPosition,
-      repeat: doc.global.heroBgRepeat,
-    },
-    'template_base.html',
-  )
+  // El fondo de cada Hero se aplica en renderHero, sobre su propia copia.
 
   html = applySectionBackground(
     html,
@@ -389,5 +436,7 @@ export function assembleEmailHtml(doc: EmailDocument): string {
   // link que quedaron sin link real (AQUIELLINKDELCTA1, LINKDEAL2, …). Va acá
   // y no en cada render porque el número sale del ORDEN en el mail entero, que
   // una pieza suelta no conoce — ver template/linkPlaceholders.ts.
+  html = injectTextoXlMobileRules(html)
+
   return numberLinkPlaceholders(html)
 }

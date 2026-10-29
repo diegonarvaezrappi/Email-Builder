@@ -5,6 +5,8 @@ import type { GlobalFields } from '../../../global/schema'
 import type { BannerType } from '../schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import { richTextColorsForTema } from '../../../richText/themeColors'
+import { plainText } from '../../../richText/model'
+import { liveTextMobileSizing, liveTextSizing } from './sizing'
 import {
   CREDITOS_VARIANT_LABELS,
   CREDITOS_VARIANT_VALUES,
@@ -125,13 +127,60 @@ export function CreditosPropertiesPanel({ value, onChange, doc }: BannerItemPane
   )
 }
 
-export function TextoXlPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<TextoXlFields>) {
+export function TextoXlPropertiesPanel({ value, onChange, doc, bannerType }: BannerItemPanelProps<TextoXlFields>) {
+  const custom = value.sizeMode === 'custom'
+  // Al pasar a personalizado, los campos arrancan con el tamaño que el texto
+  // tiene AHORA en automático, para ajustar desde ahí y no desde un salto.
+  const toggleCustom = (on: boolean) => {
+    if (!on) return onChange({ ...value, sizeMode: 'auto' })
+    const auto = liveTextSizing(plainText(value.text), bannerType ?? 'vertical')
+    const mobile = liveTextMobileSizing(auto.className)
+    onChange({
+      ...value,
+      sizeMode: 'custom',
+      fontSize: parseInt(auto.fontSize, 10),
+      lineHeight: parseInt(auto.lineHeight, 10),
+      mobileFontSize: mobile.fontSize,
+      mobileLineHeight: mobile.lineHeight,
+    })
+  }
+  const px = (key: 'fontSize' | 'lineHeight' | 'mobileFontSize' | 'mobileLineHeight', label: string) => (
+    <label className="field">
+      <span>{label}</span>
+      <input
+        type="number"
+        min={6}
+        max={250}
+        value={value[key]}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => {
+          const n = Number(e.target.value)
+          if (Number.isFinite(n) && n >= 6 && n <= 250) onChange({ ...value, [key]: Math.round(n) })
+        }}
+      />
+    </label>
+  )
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Texto XL</span>
-        <RichTextInput value={value.text} onChange={(text) => onChange({ text })} colors={richTextColorsForTema(doc.global.tema)} />
+        <RichTextInput value={value.text} onChange={(text) => onChange({ ...value, text })} colors={richTextColorsForTema(doc.global.tema)} />
       </label>
+      <label className="field field-checkbox">
+        <input type="checkbox" checked={custom} onChange={(e: ChangeEvent<HTMLInputElement>) => toggleCustom(e.target.checked)} />
+        <span>Tamaño personalizado</span>
+      </label>
+      {custom ? (
+        <>
+          <p className="field-group-label">Escritorio (px)</p>
+          {px('fontSize', 'Tamaño de letra')}
+          {px('lineHeight', 'Line-height')}
+          <p className="field-group-label">Móvil (px)</p>
+          {px('mobileFontSize', 'Tamaño de letra')}
+          {px('mobileLineHeight', 'Line-height')}
+        </>
+      ) : (
+        <span className="field-hint">Automático: el tamaño se ajusta solo según el largo del texto.</span>
+      )}
     </div>
   )
 }

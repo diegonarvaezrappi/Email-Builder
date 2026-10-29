@@ -31,10 +31,19 @@ import {
 } from '../components/deals/schema'
 import type { ModuleItem } from '../moduleItems/schemas'
 import type { DealCard } from '../components/deals/schema'
-import { findBannerByItem, heroPieceLabels, isLastOfType, type HeroBannerPiece } from '../components/hero/schema'
+import {
+  allHeroPieces,
+  findSectionByBannerItem,
+  findSectionByPiece,
+  heroPieceLabels,
+  heroSectionLabel,
+  isLastOfType,
+  type HeroBannerPiece,
+} from '../components/hero/schema'
 import {
   selectBannerItem,
   selectHeroPiece,
+  selectHeroSection,
   selectBlock,
   selectDealCard,
   selectDealCardPiece,
@@ -50,6 +59,8 @@ export const blockExpandKey = (blockId: string): string => `block:${blockId}`
 export const dealCardExpandKey = (dealCardId: string): string => `dealCard:${dealCardId}`
 /** Clave de un banner del Hero desplegable (sus piezas son las filas hijas). */
 export const heroExpandKey = (heroId: string): string => `hero:${heroId}`
+/** Clave de un Hero desplegable (sus headers y banners son las filas hijas). */
+export const heroSectionExpandKey = (heroSectionId: string): string => `heroSection:${heroSectionId}`
 
 /**
  * Cómo se arrastra una fila para reordenarla — pedido explícito del usuario
@@ -66,6 +77,7 @@ export const heroExpandKey = (heroId: string): string => `hero:${heroId}`
  * lista del elemento arrastrado.
  */
 export type TreeReorder =
+  | { kind: 'heroSection'; group: string; index: number; id: string }
   | { kind: 'heroPiece'; group: string; index: number; id: string }
   | { kind: 'block'; group: string; index: number; id: string }
   | { kind: 'bannerItem'; group: string; index: number; id: string }
@@ -76,6 +88,7 @@ export type TreeReorder =
 /** Sobre qué elemento actúan los botones duplicar/eliminar de una fila. Las
  *  líneas de un deal no tienen: son slots fijos de la tarjeta. */
 export type TreeActionTarget =
+  | { kind: 'heroSection'; id: string }
   | { kind: 'heroPiece'; id: string }
   | { kind: 'block'; id: string }
   | { kind: 'bannerItem'; id: string }
@@ -216,35 +229,57 @@ function bannerRows(banner: HeroBannerPiece, depth: number): TreeRow[] {
 const BANNER_TYPE_TAGS = { vertical: 'vertical', horizontal: 'horizontal' } as const
 
 /**
- * El árbol del Hero: headers y banners en su orden real (lista libre, ver
+ * El árbol del Hero: cada Hero (desplegable; se duplica, elimina y reordena
+ * entero) y adentro sus headers y banners en su orden real (lista libre, ver
  * components/hero/schema.ts), cada banner seguido de sus piezas si está
- * desplegado. Ni el último header ni el último banner se pueden eliminar.
+ * desplegado. Ni el último Hero, ni el último header o banner de un Hero, se
+ * pueden eliminar. La numeración de headers y banners es de todo el mail.
  */
 function heroRows(doc: EmailDocument, expanded: ReadonlySet<string>): TreeRow[] {
-  const labels = heroPieceLabels(doc.hero)
-  return doc.hero.flatMap((piece, index): TreeRow[] => {
-    const base: TreeNodeRow = {
+  const labels = heroPieceLabels(allHeroPieces(doc.heroes))
+  const onlyOne = doc.heroes.length < 2
+  return doc.heroes.flatMap((section, sectionIndex): TreeRow[] => {
+    const sectionKey = heroSectionExpandKey(section.id)
+    const sectionOpen = expanded.has(sectionKey)
+    const sectionRow: TreeNodeRow = {
       kind: 'node',
-      selection: selectHeroPiece(piece.type, piece.id),
-      label: labels.get(piece.id) ?? piece.type,
+      selection: selectHeroSection(section.id),
+      label: heroSectionLabel(doc.heroes, section.id),
       depth: 0,
-      reorder: { kind: 'heroPiece', group: 'hero', index, id: piece.id },
-      actionTarget: { kind: 'heroPiece', id: piece.id },
-      ...(isLastOfType(doc.hero, piece.id)
-        ? { removeBlockedReason: `El Hero necesita al menos un ${piece.type === 'HEADER' ? 'header' : 'banner'}` }
-        : {}),
+      childCount: section.pieces.length,
+      expandKey: sectionKey,
+      expanded: sectionOpen,
+      reorder: { kind: 'heroSection', group: 'heroes', index: sectionIndex, id: section.id },
+      actionTarget: { kind: 'heroSection', id: section.id },
+      ...(onlyOne ? { removeBlockedReason: 'El mail necesita al menos un Hero' } : {}),
     }
-    if (piece.type === 'HEADER') return [base]
-    const expandKey = heroExpandKey(piece.id)
-    const isOpen = expanded.has(expandKey)
-    const row: TreeNodeRow = {
-      ...base,
-      tag: BANNER_TYPE_TAGS[piece.fields.bannerType],
-      childCount: piece.fields.items.length,
-      expandKey,
-      expanded: isOpen,
-    }
-    return isOpen ? [row, ...bannerRows(piece, 1)] : [row]
+    if (!sectionOpen) return [sectionRow]
+    const pieceRows = section.pieces.flatMap((piece, index): TreeRow[] => {
+      const base: TreeNodeRow = {
+        kind: 'node',
+        selection: selectHeroPiece(piece.type, piece.id),
+        label: labels.get(piece.id) ?? piece.type,
+        depth: 1,
+        // El grupo es el Hero: cada uno es su propia lista de piezas.
+        reorder: { kind: 'heroPiece', group: section.id, index, id: piece.id },
+        actionTarget: { kind: 'heroPiece', id: piece.id },
+        ...(isLastOfType(section.pieces, piece.id)
+          ? { removeBlockedReason: `Cada Hero necesita al menos un ${piece.type === 'HEADER' ? 'header' : 'banner'}` }
+          : {}),
+      }
+      if (piece.type === 'HEADER') return [base]
+      const expandKey = heroExpandKey(piece.id)
+      const isOpen = expanded.has(expandKey)
+      const row: TreeNodeRow = {
+        ...base,
+        tag: BANNER_TYPE_TAGS[piece.fields.bannerType],
+        childCount: piece.fields.items.length,
+        expandKey,
+        expanded: isOpen,
+      }
+      return isOpen ? [row, ...bannerRows(piece, 2)] : [row]
+    })
+    return [sectionRow, ...pieceRows]
   })
 }
 
@@ -345,8 +380,13 @@ export function buildTreeViewModel(doc: EmailDocument, expanded: ReadonlySet<str
  */
 export function expandedKeysForSelection(doc: EmailDocument, selected: Selection | null): string[] {
   if (selected?.slot === 'BANNER' && selected.bannerItemId) {
-    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
-    return owner ? [heroExpandKey(owner.piece.id)] : []
+    const section = findSectionByBannerItem(doc.heroes, selected.bannerItemId)
+    const owner = section?.pieces.find((p) => p.type === 'BANNER' && p.fields.items.some((it) => it.id === selected.bannerItemId))
+    return section && owner ? [heroSectionExpandKey(section.id), heroExpandKey(owner.id)] : []
+  }
+  if ((selected?.slot === 'HEADER' || selected?.slot === 'BANNER') && selected.heroId) {
+    const section = findSectionByPiece(doc.heroes, selected.heroId)
+    return section ? [heroSectionExpandKey(section.id)] : []
   }
   if (!selected || selected.slot !== 'CONTENIDOS') return []
 
@@ -375,6 +415,7 @@ export function isSameSelection(a: Selection | null, b: Selection | null): boole
   return (
     a.slot === b.slot &&
     a.heroId === b.heroId &&
+    a.heroSectionId === b.heroSectionId &&
     a.blockId === b.blockId &&
     a.bannerItemId === b.bannerItemId &&
     a.dealCardId === b.dealCardId &&

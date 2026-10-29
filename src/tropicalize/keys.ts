@@ -15,7 +15,7 @@ import type { EmailDocument, SlotName } from '../model'
 import { registry } from '../registry'
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { findModuleBlockByItem } from '../components/contentModules/blocks'
-import { findBannerByItem, findHeroPiece } from '../components/hero/schema'
+import { allHeroPieces, findBannerByItem, findHeroPiece } from '../components/hero/schema'
 import {
   selectBannerItem,
   selectHeroPiece,
@@ -133,7 +133,7 @@ export function baseFieldsForKey(doc: EmailDocument, key: TropicalizeKey): unkno
     }
     case 'header':
     case 'banner': {
-      const piece = findHeroPiece(doc.hero, parsed.id)
+      const piece = findHeroPiece(allHeroPieces(doc.heroes), parsed.id)
       return piece && piece.type === (parsed.kind === 'header' ? 'HEADER' : 'BANNER') ? piece.fields : null
     }
     case 'block': {
@@ -141,7 +141,7 @@ export function baseFieldsForKey(doc: EmailDocument, key: TropicalizeKey): unkno
       return block ? block.fields : null
     }
     case 'bitem': {
-      const found = findBannerByItem(doc.hero, parsed.id)
+      const found = findBannerByItem(allHeroPieces(doc.heroes), parsed.id)
       const item = found?.piece.fields.items.find((it) => it.id === parsed.id)
       return item ? item.fields : null
     }
