@@ -7,7 +7,7 @@
 // sanitizador de HTML arbitrario.
 // ============================================================================
 import { mergeAdjacentRuns } from './edit'
-import { sizeMarkForPx, type RichText, type RichTextColorMap, type RichTextRun, type TextMark } from './model'
+import { COLOR_MARKS, normalizeHexColor, sizeMarkForPx, type RichText, type RichTextColorMap, type RichTextRun, type TextMark } from './model'
 
 /** Delega en el propio parser de color del navegador (vía CSSOM) para que
  *  "#FF441F" y el "rgb(255, 68, 31)" que el DOM devuelve al releer ese mismo
@@ -48,25 +48,36 @@ function marksFromSpanStyle(style: CSSStyleDeclaration, colors: RichTextColorMap
 export function domToRichText(root: Node, colors: RichTextColorMap): RichText {
   const runs: RichTextRun[] = []
 
-  function walk(node: Node, marks: TextMark[]) {
+  function walk(node: Node, marks: TextMark[], color: string | undefined) {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent ?? ''
-      if (text) runs.push({ text, marks })
+      if (text) runs.push(color ? { text, marks, color } : { text, marks })
       return
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return
     const el = node as HTMLElement
     let nextMarks = marks
+    let nextColor = color
     if (el.tagName === 'SUP') {
       nextMarks = [...marks, 'superscript']
     } else if (el.tagName === 'SPAN') {
-      nextMarks = [...marks, ...marksFromSpanStyle(el.style, colors)]
+      // El color personalizado se reconoce SOLO por el data-rt-color que pone
+      // render.ts en modo editor, nunca por el `color` del style: así un span
+      // que Chrome genere solo (p. ej. al borrar entre fragmentos, copiando el
+      // color heredado del panel) no se convierte en un color propio.
+      const customColor = normalizeHexColor(el.dataset.rtColor ?? '')
+      if (customColor) {
+        nextColor = customColor
+        nextMarks = [...marks, ...marksFromSpanStyle(el.style, colors).filter((m) => !COLOR_MARKS.includes(m))]
+      } else {
+        nextMarks = [...marks, ...marksFromSpanStyle(el.style, colors)]
+      }
     } else if (el.tagName === 'BR') {
       return
     }
-    el.childNodes.forEach((child) => walk(child, nextMarks))
+    el.childNodes.forEach((child) => walk(child, nextMarks, nextColor))
   }
 
-  root.childNodes.forEach((child) => walk(child, []))
+  root.childNodes.forEach((child) => walk(child, [], undefined))
   return mergeAdjacentRuns(runs)
 }

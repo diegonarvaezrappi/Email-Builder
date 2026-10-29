@@ -5,7 +5,7 @@
 // fusiona runs adyacentes que quedaron con el mismo set de marcas. Sin DOM —
 // las coordenadas de selección se resuelven en richText/selection.ts.
 // ============================================================================
-import { COLOR_MARKS, SIZE_MARKS, type RichText, type RichTextRun, type TextMark } from './model'
+import { COLOR_MARKS, normalizeHexColor, SIZE_MARKS, type RichText, type RichTextRun, type TextMark } from './model'
 
 function splitRunsAtOffset(runs: RichText, offset: number): RichText {
   let pos = 0
@@ -14,8 +14,8 @@ function splitRunsAtOffset(runs: RichText, offset: number): RichText {
     const len = run.text.length
     if (offset > pos && offset < pos + len) {
       const cut = offset - pos
-      out.push({ text: run.text.slice(0, cut), marks: run.marks })
-      out.push({ text: run.text.slice(cut), marks: run.marks })
+      out.push({ ...run, text: run.text.slice(0, cut) })
+      out.push({ ...run, text: run.text.slice(cut) })
     } else {
       out.push(run)
     }
@@ -50,15 +50,21 @@ function sameMarks(a: TextMark[], b: TextMark[]): boolean {
   return a.every((m) => setB.has(m))
 }
 
+/** Arma un run sin la clave `color` cuando no hay color personalizado — así
+ *  un run sin color sigue siendo exactamente `{ text, marks }`. */
+function makeRun(text: string, marks: TextMark[], color: string | undefined): RichTextRun {
+  return color ? { text, marks, color } : { text, marks }
+}
+
 export function mergeAdjacentRuns(runs: RichText): RichText {
   const out: RichTextRun[] = []
   for (const run of runs) {
     if (run.text === '') continue
     const last = out[out.length - 1]
-    if (last && sameMarks(last.marks, run.marks)) {
+    if (last && sameMarks(last.marks, run.marks) && last.color === run.color) {
       last.text += run.text
     } else {
-      out.push({ text: run.text, marks: [...run.marks] })
+      out.push(makeRun(run.text, [...run.marks], run.color))
     }
   }
   return out
@@ -100,10 +106,40 @@ function setExclusiveMark(runs: RichText, start: number, end: number, group: rea
 }
 
 /** Los 3 marks de color son excluyentes: fijar uno reemplaza cualquier otro
- *  color que hubiera en el rango. `colorMark: null` limpia el color del rango
- *  sin tocar las demás marcas (bold/italic/etc.). */
+ *  color que hubiera en el rango — incluido un color personalizado.
+ *  `colorMark: null` limpia el color del rango (del tema o personalizado) sin
+ *  tocar las demás marcas (bold/italic/etc.). */
 export function setColorMark(runs: RichText, start: number, end: number, colorMark: TextMark | null): RichText {
-  return setExclusiveMark(runs, start, end, COLOR_MARKS, colorMark)
+  return setExclusiveMark(setCustomColor(runs, start, end, null), start, end, COLOR_MARKS, colorMark)
+}
+
+/** Fija un color personalizado (`#RRGGBB`, ver normalizeHexColor) en el
+ *  rango, quitando cualquier color del tema que tuviera: un fragmento lleva
+ *  uno u otro. `hex: null` (o un hex inválido) quita el color personalizado
+ *  sin tocar las demás marcas. */
+export function setCustomColor(runs: RichText, start: number, end: number, hex: string | null): RichText {
+  if (end <= start) return runs
+  const color = hex ? (normalizeHexColor(hex) ?? undefined) : undefined
+  const split = splitRunsAtOffsets(runs, [start, end])
+  const indices = runsInRange(split, start, end)
+  if (indices.length === 0) return runs
+  const next = split.map((run, i) => {
+    if (!indices.includes(i)) return run
+    const marks = color ? run.marks.filter((m) => !COLOR_MARKS.includes(m)) : run.marks
+    return makeRun(run.text, marks, color)
+  })
+  return mergeAdjacentRuns(next)
+}
+
+/** El color personalizado común a TODO el rango, o null si el rango está
+ *  vacío, no tiene color propio, o mezcla colores distintos — usado por la UI
+ *  para mostrar qué color tiene la selección. */
+export function rangeCustomColor(runs: RichText, start: number, end: number): string | null {
+  if (end <= start) return null
+  const split = splitRunsAtOffsets(runs, [start, end])
+  const indices = runsInRange(split, start, end)
+  const first = indices.length > 0 ? split[indices[0]].color : undefined
+  return first && indices.every((i) => split[i].color === first) ? first : null
 }
 
 /** Los 6 marks de tamaño (h1-h5 + legal) son excluyentes entre sí, mismo
@@ -114,14 +150,14 @@ export function setSizeMark(runs: RichText, start: number, end: number, sizeMark
 }
 
 /** Quita TODAS las marcas del rango (bold/italic/tachado/subrayado/
- *  superíndice/color/tamaño) de una — "resetear formato". No-op si el rango
- *  está vacío o no cubre ningún run real. */
+ *  superíndice/color/tamaño, y el color personalizado) de una — "resetear
+ *  formato". No-op si el rango está vacío o no cubre ningún run real. */
 export function clearMarks(runs: RichText, start: number, end: number): RichText {
   if (end <= start) return runs
   const split = splitRunsAtOffsets(runs, [start, end])
   const indices = runsInRange(split, start, end)
   if (indices.length === 0) return runs
-  const next = split.map((run, i) => (indices.includes(i) ? { ...run, marks: [] } : run))
+  const next = split.map((run, i) => (indices.includes(i) ? makeRun(run.text, [], undefined) : run))
   return mergeAdjacentRuns(next)
 }
 

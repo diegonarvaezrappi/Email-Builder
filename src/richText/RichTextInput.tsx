@@ -15,11 +15,11 @@
 // ============================================================================
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, ClipboardEvent, CSSProperties, KeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
-import { clearMarks, rangeHasMark, setColorMark, setSizeMark, toggleMark } from './edit'
+import { clearMarks, rangeCustomColor, rangeHasMark, setColorMark, setCustomColor, setSizeMark, toggleMark } from './edit'
 import { domToRichText } from './dom'
 import { renderRichText } from './render'
 import { getSelectionOffsets, setSelectionOffsets, type SelectionOffsets } from './selection'
-import { SIZE_MARK_LABELS, type RichText, type RichTextColorMap, type SizeMark, type TextMark } from './model'
+import { normalizeHexColor, SIZE_MARK_LABELS, type RichText, type RichTextColorMap, type SizeMark, type TextMark } from './model'
 
 const SIZE_MARK_OPTIONS = Object.keys(SIZE_MARK_LABELS) as SizeMark[]
 
@@ -55,6 +55,11 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
   const lastValueRef = useRef<RichText | null>(null)
   const lastColorsRef = useRef<RichTextColorMap | null>(null)
   const [selection, setSelection] = useState<SelectionOffsets | null>(null)
+  // Color personalizado: el selector se abre en una fila propia debajo de la
+  // toolbar. Al abrirlo se guarda la selección del editor (ver withSelection),
+  // porque escribir el hex le quita el foco.
+  const [customColorTarget, setCustomColorTarget] = useState<SelectionOffsets | null>(null)
+  const [customColorDraft, setCustomColorDraft] = useState('')
 
   // Repinta el innerHTML SOLO cuando `value` cambió por afuera (otra pieza
   // seleccionada, undo) o cuando cambió el color del tema activo — comparado
@@ -69,10 +74,12 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
     const isColorsChange = !lastColorsRef.current || !colorsEqual(lastColorsRef.current, colors)
     if (!isExternalValueChange && !isColorsChange) return
     const preservedSelection = isColorsChange && !isExternalValueChange ? getSelectionOffsets(el) : null
-    el.innerHTML = renderRichText(value, colors)
+    el.innerHTML = renderRichText(value, colors, { forEditor: true })
     lastValueRef.current = value
     lastColorsRef.current = colors
     if (preservedSelection) setSelectionOffsets(el, preservedSelection.start, preservedSelection.end)
+    // La selección guardada del color personalizado es de otro texto.
+    if (isExternalValueChange) setCustomColorTarget(null)
   }, [value, colors])
 
   const emit = (next: RichText) => {
@@ -115,12 +122,15 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
     handleInput()
   }
 
-  const withSelection = (compute: (runs: RichText, sel: SelectionOffsets) => RichText) => {
+  /** `savedSel`: la selección guardada al abrir el selector de color
+   *  personalizado — para entonces el foco ya está en el campo hex, así que la
+   *  selección viva ya no está dentro del editor. */
+  const withSelection = (compute: (runs: RichText, sel: SelectionOffsets) => RichText, savedSel?: SelectionOffsets) => {
     const el = ref.current
-    const sel = el ? getSelectionOffsets(el) : null
+    const sel = savedSel ?? (el ? getSelectionOffsets(el) : null)
     if (!el || !sel || sel.start === sel.end) return
     const nextRuns = compute(domToRichText(el, colors), sel)
-    el.innerHTML = renderRichText(nextRuns, colors)
+    el.innerHTML = renderRichText(nextRuns, colors, { forEditor: true })
     el.focus()
     setSelectionOffsets(el, sel.start, sel.end)
     emit(nextRuns)
@@ -137,6 +147,30 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
   const selectedRuns = hasSelection && ref.current ? domToRichText(ref.current, colors) : null
   const isActive = (mark: TextMark) => !!selectedRuns && !!selection && rangeHasMark(selectedRuns, selection.start, selection.end, mark)
   const activeSize = SIZE_MARK_OPTIONS.find((mark) => isActive(mark)) ?? ''
+  const activeCustomColor = selectedRuns && selection ? rangeCustomColor(selectedRuns, selection.start, selection.end) : null
+
+  const draftHex = normalizeHexColor(customColorDraft)
+  const openCustomColor = () => {
+    if (!selection || selection.start === selection.end) return
+    setCustomColorTarget(selection)
+    setCustomColorDraft(activeCustomColor ?? '')
+  }
+  const closeCustomColor = () => setCustomColorTarget(null)
+  const applyCustomColor = (hex: string | null) => {
+    if (!customColorTarget) return
+    withSelection((runs, sel) => setCustomColor(runs, sel.start, sel.end, hex), customColorTarget)
+    closeCustomColor()
+  }
+  const handleCustomColorKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (draftHex) applyCustomColor(draftHex)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      closeCustomColor()
+      ref.current?.focus()
+    }
+  }
 
   // Double-clicking a word to select it can, in Chrome, make the native
   // 'click' that's part of that same gesture land on a toolbar button
@@ -229,6 +263,19 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
               style={{ '--swatch-color': colors[mark] } as CSSProperties}
             />
           ))}
+        {showColors && (
+          <button
+            type="button"
+            className={`rich-text-swatch rich-text-custom-swatch${activeCustomColor ? ' active' : ''}${customColorTarget ? ' open' : ''}`}
+            disabled={disabled || !hasSelection}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => (customColorTarget ? closeCustomColor() : openCustomColor())}
+            aria-label="Color personalizado"
+            aria-expanded={!!customColorTarget}
+            title={activeCustomColor ? `Color personalizado · ${activeCustomColor}` : 'Color personalizado (hexadecimal)'}
+            style={activeCustomColor ? ({ '--swatch-color': activeCustomColor } as CSSProperties) : undefined}
+          />
+        )}
         <span className="rich-text-toolbar-sep" />
         <button
           type="button"
@@ -239,6 +286,40 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
         >
           Quitar formato
         </button>
+        {showColors && customColorTarget && !disabled && (
+          <div className="rich-text-custom-color" role="group" aria-label="Color personalizado">
+            <input
+              type="color"
+              value={draftHex ?? activeCustomColor ?? '#000000'}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomColorDraft(e.target.value.toUpperCase())}
+              aria-label="Elegir color"
+              title="Elegir color"
+            />
+            <input
+              type="text"
+              className={`rich-text-custom-color-hex${customColorDraft && !draftHex ? ' invalid' : ''}`}
+              value={customColorDraft}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setCustomColorDraft(e.target.value)}
+              onKeyDown={handleCustomColorKeyDown}
+              placeholder="#FF441F"
+              maxLength={7}
+              spellCheck={false}
+              aria-label="Color hexadecimal"
+              autoFocus
+            />
+            <button type="button" className="rich-text-clear-btn" disabled={!draftHex} onClick={() => draftHex && applyCustomColor(draftHex)}>
+              Aplicar
+            </button>
+            {activeCustomColor && (
+              <button type="button" className="rich-text-clear-btn" onClick={() => applyCustomColor(null)}>
+                Quitar color
+              </button>
+            )}
+            <button type="button" onClick={closeCustomColor} aria-label="Cerrar" title="Cerrar">
+              ✕
+            </button>
+          </div>
+        )}
       </div>
       <div
         ref={ref}
@@ -253,8 +334,9 @@ export function RichTextInput({ value, onChange, colors, disabled = false, showC
         onMouseUp={refreshSelection}
         onKeyUp={refreshSelection}
         onBlur={refreshSelection}
+        onFocus={closeCustomColor}
       />
-      {!disabled && !hasSelection && <span className="field-hint">Seleccioná una palabra o frase para aplicarle un modificador.</span>}
+      {!disabled && !hasSelection && !customColorTarget && <span className="field-hint">Seleccioná una palabra o frase para aplicarle un modificador.</span>}
     </div>
   )
 }

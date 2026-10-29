@@ -13,6 +13,10 @@
 // criterio que el resto de los modificadores: se toma el VALOR de estilo que
 // documenta el maestro, no su estructura de tags).
 //
+// Además de los 3 colores del tema, un fragmento puede llevar un color
+// personalizado en hexadecimal (`run.color`) — no viene del maestro, es un
+// pedido del usuario (2026-10-29) para colores fuera de la paleta del tema.
+//
 // Representación = lista de "runs" (fragmentos de texto + el set de marcas
 // activas en ese fragmento), no HTML crudo: evita tener que sanitizar HTML
 // arbitrario pegado por el usuario, y hace que aplicar/quitar una marca sobre
@@ -86,9 +90,28 @@ export const TEXT_MARK_LABELS: Record<TextMark, string> = {
   sizeLegal: SIZE_MARK_LABELS.sizeLegal,
 }
 
+/** Normaliza un color hexadecimal escrito por el usuario a `#RRGGBB` en
+ *  mayúsculas: acepta con o sin `#`, y la forma corta de 3 dígitos. Cualquier
+ *  otra cosa → null. Es la ÚNICA puerta por la que entra un color
+ *  personalizado al modelo, así que lo que llega a `style="color: …"` ya está
+ *  validado (no hace falta escaparlo en render.ts). Sin alfa a propósito: un
+ *  color con transparencia no sobrevive en todos los clientes de correo (ver
+ *  CLAUDE.md §4.1). */
+export function normalizeHexColor(value: string): string | null {
+  const raw = value.trim().replace(/^#/, '')
+  if (/^[0-9a-f]{3}$/i.test(raw)) return `#${[...raw].map((c) => c + c).join('')}`.toUpperCase()
+  if (/^[0-9a-f]{6}$/i.test(raw)) return `#${raw}`.toUpperCase()
+  return null
+}
+
 export const richTextRunSchema = z.object({
   text: z.string(),
   marks: z.array(z.enum(TEXT_MARK_VALUES)).default([]),
+  /** Color personalizado (`#RRGGBB`), excluyente con los 3 COLOR_MARKS: un
+   *  fragmento lleva un color del tema o uno propio, nunca los dos — ver
+   *  setCustomColor en edit.ts. Un valor inválido se descarta en vez de
+   *  invalidar el documento entero (mismo criterio que richTextSchema). */
+  color: z.preprocess((value) => (typeof value === 'string' ? (normalizeHexColor(value) ?? undefined) : undefined), z.string().optional()),
 })
 export type RichTextRun = z.infer<typeof richTextRunSchema>
 

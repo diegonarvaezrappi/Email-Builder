@@ -13,12 +13,20 @@
 // ("BOLD: se agrega font-weight: bold; en el style", etc.).
 // ============================================================================
 import { escapeHtmlText } from '../template/htmlText'
-import { asRichText, SIZE_MARK_PX, SIZE_MARKS, type RichText, type RichTextColorMap, type RichTextRun, type SizeMark } from './model'
+import { asRichText, normalizeHexColor, SIZE_MARK_PX, SIZE_MARKS, type RichText, type RichTextColorMap, type RichTextRun, type SizeMark } from './model'
 
 export const LIQUID_COLOR_TOKENS: RichTextColorMap = {
   colorBase: '{{color_texto_mail_general}}',
   colorAcento1: '{{color_acento1_mail_general}}',
   colorAcento2: '{{color_acento2_mail_general}}',
+}
+
+export interface RenderRichTextOptions {
+  /** Solo para el editor (RichTextInput): marca los fragmentos con color
+   *  personalizado con `data-rt-color`, para que dom.ts los relea como color
+   *  propio y no los confunda con un color del tema que valga el mismo hex.
+   *  La salida del correo no lo lleva. */
+  forEditor?: boolean
 }
 
 function runStyle(run: RichTextRun, colors: RichTextColorMap): string {
@@ -27,7 +35,11 @@ function runStyle(run: RichTextRun, colors: RichTextColorMap): string {
   if (run.marks.includes('underline')) decorations.push('underline')
   if (run.marks.includes('strike')) decorations.push('line-through')
   if (decorations.length > 0) styles.push(`text-decoration: ${decorations.join(' ')};`)
-  if (run.marks.includes('colorBase')) styles.push(`color: ${colors.colorBase};`)
+  // Re-normalizado acá también: un run que no pasó por el schema (overrides
+  // de tropicalizar, sin tipar) no puede meter nada raro dentro del style.
+  const customColor = run.color ? normalizeHexColor(run.color) : null
+  if (customColor) styles.push(`color: ${customColor};`)
+  else if (run.marks.includes('colorBase')) styles.push(`color: ${colors.colorBase};`)
   else if (run.marks.includes('colorAcento1')) styles.push(`color: ${colors.colorAcento1};`)
   else if (run.marks.includes('colorAcento2')) styles.push(`color: ${colors.colorAcento2};`)
   if (run.marks.includes('bold')) styles.push('font-weight: bold;')
@@ -37,14 +49,16 @@ function runStyle(run: RichTextRun, colors: RichTextColorMap): string {
   return styles.join(' ')
 }
 
-function renderRun(run: RichTextRun, colors: RichTextColorMap): string {
+function renderRun(run: RichTextRun, colors: RichTextColorMap, options: RenderRichTextOptions): string {
   let html = escapeHtmlText(run.text)
   const style = runStyle(run, colors)
-  if (style) html = `<span style="${style}">${html}</span>`
+  const customColor = options.forEditor && run.color ? normalizeHexColor(run.color) : null
+  const dataAttr = customColor ? ` data-rt-color="${customColor}"` : ''
+  if (style) html = `<span${dataAttr} style="${style}">${html}</span>`
   if (run.marks.includes('superscript')) html = `<sup>${html}</sup>`
   return html
 }
 
-export function renderRichText(runs: RichText, colors: RichTextColorMap): string {
-  return asRichText(runs).map((run) => renderRun(run, colors)).join('')
+export function renderRichText(runs: RichText, colors: RichTextColorMap, options: RenderRichTextOptions = {}): string {
+  return asRichText(runs).map((run) => renderRun(run, colors, options)).join('')
 }
