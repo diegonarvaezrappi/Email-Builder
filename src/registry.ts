@@ -15,6 +15,7 @@ import { renderContenidosSnippet } from './components/contenidos/render'
 import { defaultCtaFields } from './components/cta/schema'
 import { defaultDealCardFields } from './components/deals/schema'
 import { defaultGlobalFields } from './global/schema'
+import { defaultHero } from './components/hero/schema'
 import { z } from 'zod'
 
 /**
@@ -30,7 +31,13 @@ import { z } from 'zod'
  */
 export interface SlotDef<TFields> {
   slot: SlotName
-  docKey: keyof EmailDocument
+  /**
+   * Dónde viven sus campos en el documento. Ausente en HEADER y BANNER: desde
+   * el 2026-10-28 son piezas repetibles de `doc.hero` (ver
+   * components/hero/schema.ts), no una key del documento — cada instancia se
+   * edita por su id (updateHeroPieceFields en store/store.ts).
+   */
+  docKey?: 'footer' | 'contenidos'
   schema: ZodType<TFields, ZodTypeDef, any>
   defaultFields: TFields
   render: (fields: TFields, doc: EmailDocument) => string
@@ -62,7 +69,6 @@ const footerSlotDef: SlotDef<FooterFields> = {
 
 const headerSlotDef: SlotDef<HeaderFields> = {
   slot: 'HEADER',
-  docKey: 'header',
   schema: headerSchema,
   defaultFields: defaultHeaderFields,
   render: (fields, doc) => renderHeaderSnippet(fields, doc.global.tema),
@@ -71,13 +77,12 @@ const headerSlotDef: SlotDef<HeaderFields> = {
 
 const bannerSlotDef: SlotDef<BannerFields> = {
   slot: 'BANNER',
-  docKey: 'banner',
   schema: bannerSchema,
   defaultFields: defaultBannerFields,
   render: (fields, doc) => renderBannerSnippet(fields, doc),
   PropertiesPanel: BannerPropertiesPanel,
-  // Sin `removable`: a diferencia de Cierre, el banner (uno de los 2 tipos)
-  // siempre debe estar presente en el email — no tiene sentido "eliminarlo".
+  // Sin `removable`: los banners del Hero se eliminan como piezas de la lista
+  // (removeHeroPiece), siempre dejando al menos uno.
 }
 
 const contenidosSlotDef: SlotDef<ContentBlock[]> = {
@@ -147,8 +152,7 @@ function defaultDealsBlock(row: 1 | 2 | 3): DealsBlock {
 
 export const defaultEmailDocument: EmailDocument = {
   global: defaultGlobalFields,
-  header: defaultHeaderFields,
-  banner: defaultBannerFields,
+  hero: defaultHero,
   footer: defaultFooterFields,
   contenidos: [defaultContenidosCtaBlock, defaultDealsBlock(1), defaultDealsBlock(2), defaultDealsBlock(3)],
   tropicalizations: {},

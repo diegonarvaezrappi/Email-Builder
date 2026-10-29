@@ -8,6 +8,9 @@ import { richTextFromPlain } from '../../richText/model'
 import type { ModuleItem } from '../../moduleItems/schemas'
 import type { BannerItem, ContentBlock, CtaBlock, DealCard, DealsBlock, EmailDocument, TitleBlock } from '../../model'
 
+import { bannerOf, legacy } from '../../components/hero/testUtils'
+import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, defaultHero, migrateLegacyHero } from '../../components/hero/schema'
+import { emailDocumentSchema } from '../../model'
 const ctaBlock = (id: string, text = id): CtaBlock => ({
   id,
   type: 'CTA',
@@ -42,16 +45,16 @@ function setBannerItems(items: BannerItem[]) {
   // Mismo motivo que setContenidos: construye sobre el estado actual, no sobre
   // defaultEmailDocument, para no pisar lo que setContenidos ya haya fijado.
   useBuilder.setState((s) => ({
-    document: { ...s.document, banner: { ...s.document.banner, items } },
+    document: legacy({ ...s.document, banner: { ...bannerOf(s.document), items } }),
   }))
 }
 
 function bannerIds(): string[] {
-  return useBuilder.getState().document.banner.items.map((it) => it.id)
+  return bannerOf(useBuilder.getState().document).items.map((it) => it.id)
 }
 
 function setBannerType(bannerType: 'vertical' | 'horizontal') {
-  useBuilder.setState((s) => ({ document: { ...s.document, banner: { ...s.document.banner, bannerType } } }))
+  useBuilder.setState((s) => ({ document: legacy({ ...s.document, banner: { ...bannerOf(s.document), bannerType } }) }))
 }
 
 const promoItem = (id: string): BannerItem => ({
@@ -61,6 +64,9 @@ const promoItem = (id: string): BannerItem => ({
 })
 
 beforeEach(() => {
+  // El Hero vuelve a su forma por defecto (1 header + 1 banner, ids fijos):
+  // los tests de la lista del Hero agregan/quitan/reordenan piezas.
+  useBuilder.setState((s) => ({ document: { ...s.document, hero: defaultHero } }))
   setContenidos([])
   setBannerItems([])
   setBannerType('vertical')
@@ -225,8 +231,8 @@ describe('updateContentBlockFields', () => {
 
 describe('insertBannerItem', () => {
   it('inserts a new TAGS item with its default fields', () => {
-    useBuilder.getState().insertBannerItem('TAGS', 0)
-    const items = useBuilder.getState().document.banner.items
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'TAGS', 0)
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(1)
     expect(items[0].type).toBe('TAGS')
     expect(items[0].fields).toEqual(defaultTagsFields)
@@ -234,54 +240,54 @@ describe('insertBannerItem', () => {
 
   it('inserts at the start (index 0)', () => {
     setBannerItems([tagsItem('a'), tagsItem('b')])
-    useBuilder.getState().insertBannerItem('TAGS', 0)
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'TAGS', 0)
     expect(bannerIds().slice(1)).toEqual(['a', 'b'])
     expect(bannerIds()[0]).not.toBe('a')
   })
 
   it('inserts at the end (index >= length)', () => {
     setBannerItems([tagsItem('a'), tagsItem('b')])
-    useBuilder.getState().insertBannerItem('TAGS', 99)
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'TAGS', 99)
     expect(bannerIds().slice(0, 2)).toEqual(['a', 'b'])
     expect(bannerIds()).toHaveLength(3)
   })
 
   it('does nothing for an unregistered item type', () => {
     // @ts-expect-error tipo inválido a propósito
-    useBuilder.getState().insertBannerItem('NOPE', 0)
-    expect(useBuilder.getState().document.banner.items).toHaveLength(0)
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'NOPE', 0)
+    expect(bannerOf(useBuilder.getState().document).items).toHaveLength(0)
   })
 
   // Exclusividad de módulo de imagen (la única regla dura del maestro que se
   // conserva en código — ver components/banner/exclusivity.ts).
   it('inserting IMG_FIJA over an existing IMG_AUTOMATICA_MODULO removes the automática one', () => {
     setBannerItems([imgAutomaticaModuloItem('a')])
-    useBuilder.getState().insertBannerItem('IMG_FIJA', 1)
-    const items = useBuilder.getState().document.banner.items
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'IMG_FIJA', 1)
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(1)
     expect(items[0].type).toBe('IMG_FIJA')
   })
 
   it('inserting IMG_AUTOMATICA_MODULO over an existing IMG_FIJA removes the fija one', () => {
     setBannerItems([imgFijaItem('a')])
-    useBuilder.getState().insertBannerItem('IMG_AUTOMATICA_MODULO', 1)
-    const items = useBuilder.getState().document.banner.items
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'IMG_AUTOMATICA_MODULO', 1)
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(1)
     expect(items[0].type).toBe('IMG_AUTOMATICA_MODULO')
   })
 
   it('inserting a non-image-module type (ej. PROMO) never touches an existing image module', () => {
     setBannerItems([imgFijaItem('a')])
-    useBuilder.getState().insertBannerItem('PROMO', 1)
-    const items = useBuilder.getState().document.banner.items
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'PROMO', 1)
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(2)
     expect(items.map((it) => it.type)).toEqual(['IMG_FIJA', 'PROMO'])
   })
 
   it('IMG_AUTOMATICA_MOLECULA (a distinct type) coexists with IMG_FIJA — the exclusivity rule does not apply to it', () => {
     setBannerItems([imgFijaItem('a')])
-    useBuilder.getState().insertBannerItem('IMG_AUTOMATICA_MOLECULA', 1)
-    const items = useBuilder.getState().document.banner.items
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'IMG_AUTOMATICA_MOLECULA', 1)
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(2)
     expect(items.map((it) => it.type)).toEqual(['IMG_FIJA', 'IMG_AUTOMATICA_MOLECULA'])
   })
@@ -291,7 +297,7 @@ describe('duplicateBannerItem', () => {
   it('inserts a copy immediately after the original, with a different id but the same fields', () => {
     setBannerItems([tagsItem('a'), tagsItem('b')])
     useBuilder.getState().duplicateBannerItem('a')
-    const items = useBuilder.getState().document.banner.items
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items.map((it) => it.id)[0]).toBe('a')
     expect(items[1].id).not.toBe('a')
     expect(items[1].fields).toEqual(items[0].fields)
@@ -301,13 +307,13 @@ describe('duplicateBannerItem', () => {
   it('does nothing for an id that does not exist', () => {
     setBannerItems([tagsItem('a')])
     useBuilder.getState().duplicateBannerItem('does-not-exist')
-    expect(useBuilder.getState().document.banner.items).toHaveLength(1)
+    expect(bannerOf(useBuilder.getState().document).items).toHaveLength(1)
   })
 
   it('duplicating an image-module item (subject to exclusivity) still nets exactly 1 image module, replacing the original', () => {
     setBannerItems([tagsItem('before'), imgFijaItem('a'), tagsItem('after')])
     useBuilder.getState().duplicateBannerItem('a')
-    const items = useBuilder.getState().document.banner.items
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items).toHaveLength(3)
     expect(items.map((it) => it.type)).toEqual(['TAGS', 'IMG_FIJA', 'TAGS'])
     expect(items[1].id).not.toBe('a') // el original fue reemplazado por su copia
@@ -362,23 +368,23 @@ describe('horizontal banner item ordering (enforceHorizontalItemOrder)', () => {
   it('insertBannerItem: inserting a molecule-zone piece past the image module snaps it back before it', () => {
     setBannerType('horizontal')
     setBannerItems([imgFijaItem('img')])
-    useBuilder.getState().insertBannerItem('PROMO', 5)
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'PROMO', 5)
     expect(bannerIds().slice(-1)).toEqual(['img'])
-    expect(useBuilder.getState().document.banner.items.map((it) => it.type)).toEqual(['PROMO', 'IMG_FIJA'])
+    expect(bannerOf(useBuilder.getState().document).items.map((it) => it.type)).toEqual(['PROMO', 'IMG_FIJA'])
   })
 
   it('insertBannerItem: inserting TAGS before the image module snaps it back after it', () => {
     setBannerType('horizontal')
     setBannerItems([imgFijaItem('img')])
-    useBuilder.getState().insertBannerItem('TAGS', 0)
-    expect(useBuilder.getState().document.banner.items.map((it) => it.type)).toEqual(['IMG_FIJA', 'TAGS'])
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'TAGS', 0)
+    expect(bannerOf(useBuilder.getState().document).items.map((it) => it.type)).toEqual(['IMG_FIJA', 'TAGS'])
   })
 
   it('duplicateBannerItem: duplicating TAGS to sit right after itself, ahead of the image, still ends up after the image', () => {
     setBannerType('horizontal')
     setBannerItems([tagsItem('tags'), imgFijaItem('img')])
     useBuilder.getState().duplicateBannerItem('tags')
-    const types = useBuilder.getState().document.banner.items.map((it) => it.type)
+    const types = bannerOf(useBuilder.getState().document).items.map((it) => it.type)
     expect(types).toEqual(['IMG_FIJA', 'TAGS', 'TAGS'])
   })
 
@@ -386,21 +392,21 @@ describe('horizontal banner item ordering (enforceHorizontalItemOrder)', () => {
     setBannerType('horizontal')
     setBannerItems([promoItem('a'), imgFijaItem('img'), tagsItem('tags')])
     useBuilder.getState().reorderBannerItem('tags', 0)
-    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
+    expect(bannerOf(useBuilder.getState().document).items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
   })
 
   it('reorderBannerItem: dragging a molecule item past the image module snaps it back before it', () => {
     setBannerType('horizontal')
     setBannerItems([promoItem('a'), imgFijaItem('img'), tagsItem('tags')])
     useBuilder.getState().reorderBannerItem('a', 3)
-    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
+    expect(bannerOf(useBuilder.getState().document).items.map((it) => it.id)).toEqual(['a', 'img', 'tags'])
   })
 
   it('reorderBannerItem: reordering 2 molecule items among themselves works normally (same rank, no snap-back)', () => {
     setBannerType('horizontal')
     setBannerItems([promoItem('a'), { id: 'b', type: 'TEXTOM', fields: { text: [] } }, imgFijaItem('img')])
     useBuilder.getState().reorderBannerItem('b', 0)
-    expect(useBuilder.getState().document.banner.items.map((it) => it.id)).toEqual(['b', 'a', 'img'])
+    expect(bannerOf(useBuilder.getState().document).items.map((it) => it.id)).toEqual(['b', 'a', 'img'])
   })
 
   it('vertical banners are completely unaffected — any order is left as the user made it', () => {
@@ -426,14 +432,14 @@ describe('updateBannerItemFields', () => {
       { id: 'b', type: 'PROMO', fields: { promoText: richTextFromPlain('dos'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') } },
     ])
     useBuilder.getState().updateBannerItemFields('a', { promoText: 'editado' })
-    const items = useBuilder.getState().document.banner.items
+    const items = bannerOf(useBuilder.getState().document).items
     expect(items[0].fields).toEqual({ promoText: 'editado' })
     expect(items[1].fields).toEqual({ promoText: richTextFromPlain('dos'), ahoraEnabled: true, ahoraText: richTextFromPlain('Ahora') })
   })
 })
 
 // --- Tarjetas de un bloque DEALS -------------------------------------------
-// A diferencia de las piezas de banner (doc.banner.items, un singleton), estas
+// A diferencia de las piezas de banner (bannerOf(doc).items, un singleton), estas
 // viven 2 niveles adentro: doc.contenidos → el bloque DEALS → fields.items. Solo
 // insertDealCard recibe el id del bloque; el resto lo deduce del id de tarjeta.
 
@@ -905,5 +911,116 @@ describe('poda de tropicalizaciones al eliminar / copia al duplicar', () => {
     useBuilder.getState().duplicateModuleItem('x')
     const copyId = moduleItemIds()[1]
     expect(useBuilder.getState().document.tropicalizations[`mitem:${copyId}`]).toBeDefined()
+  })
+})
+
+describe('Hero · lista libre de headers y banners', () => {
+  const hero = () => useBuilder.getState().document.hero
+  const heroIds = () => hero().map((p) => p.id)
+
+  it('insertHeroPiece agrega un header o un banner en la posición pedida y devuelve su id', () => {
+    const bannerId = useBuilder.getState().insertHeroPiece('BANNER', 1, 'horizontal')
+    const headerId = useBuilder.getState().insertHeroPiece('HEADER', 99)
+    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, bannerId, DEFAULT_HERO_BANNER_ID, headerId])
+    const banner = hero()[1]
+    expect(banner.type === 'BANNER' && banner.fields.bannerType).toBe('horizontal')
+  })
+
+  it('un banner nuevo trae piezas con ids propios, distintos de los del banner por defecto', () => {
+    const id = useBuilder.getState().insertHeroPiece('BANNER', 2)
+    const added = hero().find((p) => p.id === id)!
+    const original = hero().find((p) => p.id === DEFAULT_HERO_BANNER_ID)!
+    const addedIds = added.type === 'BANNER' ? added.fields.items.map((it) => it.id) : []
+    const originalIds = original.type === 'BANNER' ? original.fields.items.map((it) => it.id) : []
+    expect(addedIds.length).toBeGreaterThan(0)
+    expect(addedIds.some((i) => originalIds.includes(i))).toBe(false)
+  })
+
+  it('duplicateHeroPiece copia el banner justo después, con ids nuevos para él y sus piezas, y se lleva sus tropicalizaciones', () => {
+    const itemId = bannerOf(useBuilder.getState().document).items[0]?.id
+    setBannerItems([tagsItem('t1')])
+    useBuilder.setState((s) => ({
+      document: {
+        ...s.document,
+        tropicalizations: {
+          [`banner:${DEFAULT_HERO_BANNER_ID}`]: { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] },
+          'bitem:t1': { branches: [{ countries: ['BR'], hidden: false, overrides: {} }] },
+        },
+      },
+    }))
+    const copyId = useBuilder.getState().duplicateHeroPiece(DEFAULT_HERO_BANNER_ID)!
+    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID, copyId])
+    const copy = hero()[2]
+    expect(copy.type).toBe('BANNER')
+    const copyItemId = copy.type === 'BANNER' ? copy.fields.items[0].id : ''
+    expect(copyItemId).not.toBe('t1')
+    const trop = useBuilder.getState().document.tropicalizations
+    expect(trop[`banner:${copyId}`]).toEqual(trop[`banner:${DEFAULT_HERO_BANNER_ID}`])
+    expect(trop[`bitem:${copyItemId}`]).toEqual(trop['bitem:t1'])
+    expect(itemId).toBeUndefined() // setBannerItems([]) del beforeEach
+  })
+
+  it('reorderHeroPiece mueve una pieza (toIndex contra la lista antes de sacarla)', () => {
+    useBuilder.getState().reorderHeroPiece(DEFAULT_HERO_HEADER_ID, 2)
+    expect(heroIds()).toEqual([DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID])
+  })
+
+  it('removeHeroPiece no deja eliminar el último header ni el último banner', () => {
+    useBuilder.getState().removeHeroPiece(DEFAULT_HERO_HEADER_ID)
+    useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
+    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_BANNER_ID])
+    const extra = useBuilder.getState().insertHeroPiece('BANNER', 2)
+    useBuilder.getState().removeHeroPiece(DEFAULT_HERO_BANNER_ID)
+    expect(heroIds()).toEqual([DEFAULT_HERO_HEADER_ID, extra])
+  })
+
+  it('las acciones de pieza de banner actúan sobre el banner dueño, no sobre el primero', () => {
+    const second = useBuilder.getState().insertHeroPiece('BANNER', 2)
+    useBuilder.getState().insertBannerItem(second, 'TAGS', 0)
+    const secondBanner = hero().find((p) => p.id === second)!
+    const newItem = secondBanner.type === 'BANNER' ? secondBanner.fields.items[0] : undefined
+    expect(newItem?.type).toBe('TAGS')
+    useBuilder.getState().removeBannerItem(newItem!.id)
+    const after = hero().find((p) => p.id === second)!
+    expect(after.type === 'BANNER' && after.fields.items.some((it) => it.id === newItem!.id)).toBe(false)
+    // El primer banner no se tocó.
+    expect(bannerIds()).toEqual([])
+  })
+})
+
+describe('migración de documentos guardados antes de la lista del Hero', () => {
+  it('convierte header + banner sueltos en la lista, y renombra sus tropicalizaciones', () => {
+    const banner = bannerOf({ hero: defaultHero })
+    const raw = {
+      global: { tema: 'beige100' },
+      header: { brand: 'rappi-turbo' },
+      banner: { ...banner, link: 'https://viejo.test' },
+      footer: {},
+      contenidos: [],
+      tropicalizations: {
+        'slot:HEADER': { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] },
+        'slot:BANNER': { branches: [{ countries: ['BR'], hidden: false, overrides: {} }] },
+        'slot:FOOTER': { branches: [{ countries: ['CO'], hidden: false, overrides: {} }] },
+      },
+    }
+    const parsed = emailDocumentSchema.parse(raw) as EmailDocument
+    expect(parsed.hero.map((p) => [p.type, p.id])).toEqual([
+      ['HEADER', DEFAULT_HERO_HEADER_ID],
+      ['BANNER', DEFAULT_HERO_BANNER_ID],
+    ])
+    expect(parsed.hero[0].type === 'HEADER' && parsed.hero[0].fields.brand).toBe('rappi-turbo')
+    expect(parsed.hero[1].type === 'BANNER' && parsed.hero[1].fields.link).toBe('https://viejo.test')
+    expect(Object.keys(parsed.tropicalizations).sort()).toEqual([
+      `banner:${DEFAULT_HERO_BANNER_ID}`,
+      `header:${DEFAULT_HERO_HEADER_ID}`,
+      'slot:FOOTER',
+    ])
+    expect('header' in parsed).toBe(false)
+    expect('banner' in parsed).toBe(false)
+  })
+
+  it('no toca un documento que ya tiene hero', () => {
+    const doc = { hero: defaultHero, global: {}, footer: {} }
+    expect(migrateLegacyHero(doc)).toBe(doc)
   })
 })

@@ -1,8 +1,9 @@
 // ============================================================================
 // El modelo de vista de los árboles de componentes (ui/ComponentTree.tsx). Hay
 // uno por pestaña del panel izquierdo (ui/LeftPanel.tsx): el de Sección Hero
-// lista las piezas del banner; el de Sección Contents, los bloques de body como
-// acordeón (cada contenedor se despliega en su sitio).
+// lista los headers y banners (cada banner, desplegable con sus piezas); el de
+// Sección Contents, los bloques de body. Los dos son acordeones (cada
+// contenedor se despliega en su sitio).
 //
 // Vive como módulo PURO (sin JSX) por el mismo motivo que themeDefaults.ts o
 // ui/dropIndex.ts: la parte con reglas de verdad —qué filas salen, qué se
@@ -30,8 +31,10 @@ import {
 } from '../components/deals/schema'
 import type { ModuleItem } from '../moduleItems/schemas'
 import type { DealCard } from '../components/deals/schema'
+import { findBannerByItem, heroPieceLabels, isLastOfType, type HeroBannerPiece } from '../components/hero/schema'
 import {
   selectBannerItem,
+  selectHeroPiece,
   selectBlock,
   selectDealCard,
   selectDealCardPiece,
@@ -45,6 +48,8 @@ export type TreeSection = 'hero' | 'contents'
 /** Clave de un contenedor desplegable del árbol de Contents. */
 export const blockExpandKey = (blockId: string): string => `block:${blockId}`
 export const dealCardExpandKey = (dealCardId: string): string => `dealCard:${dealCardId}`
+/** Clave de un banner del Hero desplegable (sus piezas son las filas hijas). */
+export const heroExpandKey = (heroId: string): string => `hero:${heroId}`
 
 /**
  * Cómo se arrastra una fila para reordenarla — pedido explícito del usuario
@@ -61,6 +66,7 @@ export const dealCardExpandKey = (dealCardId: string): string => `dealCard:${dea
  * lista del elemento arrastrado.
  */
 export type TreeReorder =
+  | { kind: 'heroPiece'; group: string; index: number; id: string }
   | { kind: 'block'; group: string; index: number; id: string }
   | { kind: 'bannerItem'; group: string; index: number; id: string }
   | { kind: 'dealCard'; group: string; index: number; id: string }
@@ -70,6 +76,7 @@ export type TreeReorder =
 /** Sobre qué elemento actúan los botones duplicar/eliminar de una fila. Las
  *  líneas de un deal no tienen: son slots fijos de la tarjeta. */
 export type TreeActionTarget =
+  | { kind: 'heroPiece'; id: string }
   | { kind: 'block'; id: string }
   | { kind: 'bannerItem'; id: string }
   | { kind: 'dealCard'; id: string }
@@ -95,6 +102,8 @@ export interface TreeNodeRow {
   actionTarget?: TreeActionTarget
   /** Por qué duplicar no está disponible (ej. la fila de deals ya está llena). */
   duplicateBlockedReason?: string
+  /** Por qué eliminar no está disponible (ej. el último banner del Hero). */
+  removeBlockedReason?: string
   /** Sangría: 0 = raíz, 1 = hijo de un bloque, 2 = nieto (línea de un deal). */
   depth: number
 }
@@ -182,23 +191,60 @@ function contentsRows(doc: EmailDocument, expanded: ReadonlySet<string>): TreeRo
   })
 }
 
-/** Las piezas del banner. Una pieza que el maestro no renderiza en la
+/** Las piezas de UN banner. Una pieza que el maestro no renderiza en la
  *  orientación actual (`def.orientations`) se muestra marcada en vez de
  *  ocultarse: sigue viva en el documento, ver components/banner/render.ts. */
-function bannerRows(doc: EmailDocument): TreeRow[] {
-  if (doc.banner.items.length === 0) return [{ kind: 'hint', label: '(sin piezas)', depth: 0 }]
-  return doc.banner.items.map((item, index): TreeRow => {
+function bannerRows(banner: HeroBannerPiece, depth: number): TreeRow[] {
+  const { items, bannerType } = banner.fields
+  if (items.length === 0) return [{ kind: 'hint', label: '(sin piezas)', depth }]
+  return items.map((item, index): TreeRow => {
     const def = getBannerItemDef(item.type)
-    const applies = def === undefined || def.orientations.includes(doc.banner.bannerType)
+    const applies = def === undefined || def.orientations.includes(bannerType)
     return {
       kind: 'node',
       selection: selectBannerItem(item.id),
       label: def?.label ?? item.type,
-      depth: 0,
-      reorder: { kind: 'bannerItem', group: 'banner', index, id: item.id },
+      depth,
+      // El grupo es el banner: cada uno es su propia lista de piezas.
+      reorder: { kind: 'bannerItem', group: banner.id, index, id: item.id },
       actionTarget: { kind: 'bannerItem', id: item.id },
       ...(applies ? {} : { tag: 'no aplica' }),
     }
+  })
+}
+
+const BANNER_TYPE_TAGS = { vertical: 'vertical', horizontal: 'horizontal' } as const
+
+/**
+ * El árbol del Hero: headers y banners en su orden real (lista libre, ver
+ * components/hero/schema.ts), cada banner seguido de sus piezas si está
+ * desplegado. Ni el último header ni el último banner se pueden eliminar.
+ */
+function heroRows(doc: EmailDocument, expanded: ReadonlySet<string>): TreeRow[] {
+  const labels = heroPieceLabels(doc.hero)
+  return doc.hero.flatMap((piece, index): TreeRow[] => {
+    const base: TreeNodeRow = {
+      kind: 'node',
+      selection: selectHeroPiece(piece.type, piece.id),
+      label: labels.get(piece.id) ?? piece.type,
+      depth: 0,
+      reorder: { kind: 'heroPiece', group: 'hero', index, id: piece.id },
+      actionTarget: { kind: 'heroPiece', id: piece.id },
+      ...(isLastOfType(doc.hero, piece.id)
+        ? { removeBlockedReason: `El Hero necesita al menos un ${piece.type === 'HEADER' ? 'header' : 'banner'}` }
+        : {}),
+    }
+    if (piece.type === 'HEADER') return [base]
+    const expandKey = heroExpandKey(piece.id)
+    const isOpen = expanded.has(expandKey)
+    const row: TreeNodeRow = {
+      ...base,
+      tag: BANNER_TYPE_TAGS[piece.fields.bannerType],
+      childCount: piece.fields.items.length,
+      expandKey,
+      expanded: isOpen,
+    }
+    return isOpen ? [row, ...bannerRows(piece, 1)] : [row]
   })
 }
 
@@ -284,7 +330,7 @@ function blockRows(block: EmailDocument['contenidos'][number], expanded: Readonl
  * Hero no tiene contenedores: sus piezas son hojas.
  */
 export function buildTreeViewModel(doc: EmailDocument, expanded: ReadonlySet<string>, section: TreeSection): TreeViewModel {
-  return { rows: section === 'hero' ? bannerRows(doc) : contentsRows(doc, expanded) }
+  return { rows: section === 'hero' ? heroRows(doc, expanded) : contentsRows(doc, expanded) }
 }
 
 /**
@@ -298,6 +344,10 @@ export function buildTreeViewModel(doc: EmailDocument, expanded: ReadonlySet<str
  * la raíz (un slot, un bloque, una pieza de banner) no abre nada.
  */
 export function expandedKeysForSelection(doc: EmailDocument, selected: Selection | null): string[] {
+  if (selected?.slot === 'BANNER' && selected.bannerItemId) {
+    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    return owner ? [heroExpandKey(owner.piece.id)] : []
+  }
   if (!selected || selected.slot !== 'CONTENIDOS') return []
 
   if (selected.dealCardId) {
@@ -324,6 +374,7 @@ export function isSameSelection(a: Selection | null, b: Selection | null): boole
   if (!a || !b) return a === b
   return (
     a.slot === b.slot &&
+    a.heroId === b.heroId &&
     a.blockId === b.blockId &&
     a.bannerItemId === b.bannerItemId &&
     a.dealCardId === b.dealCardId &&

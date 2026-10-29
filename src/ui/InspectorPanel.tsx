@@ -11,14 +11,14 @@
 // muestra el panel de esa tarjeta (con botón para volver al bloque), y el panel
 // del bloque suma un botón "+ Agregar deal" — el mismo híbrido que BANNER.
 //
-// BANNER es un híbrido: si `selected.bannerItemId` viene presente, se resuelve
-// igual que un bloque de CONTENIDOS (buscando la pieza en doc.banner.items y
-// su PropertiesPanel en bannerItemRegistry) ANTES de llegar a `registry` — con
-// un botón extra para volver a la vista general del banner. Si no viene, es el
-// banner "general": su PropertiesPanel normal del registry (link + limpieza de
-// piezas ocultas — el tipo de banner ahora se elige en el panel izquierdo, ver
-// ui/LeftPanel.tsx) + el selector de tipo de imagen (solo horizontal) +
-// el catálogo completo de piezas para arrastrar.
+// HEADER y BANNER son piezas repetibles del Hero (components/hero/schema.ts):
+// se resuelven por `selected.heroId`, como un bloque de CONTENIDOS por su
+// blockId. BANNER es además un híbrido: si `selected.bannerItemId` viene
+// presente, se muestra el panel de esa pieza (buscando su banner dueño, ver
+// findBannerByItem) con un botón para volver a ese banner. Si no viene, es el
+// banner "general": su PropertiesPanel (tipo, link, fondo, alineado, limpieza
+// de piezas ocultas) + el selector de tipo de imagen (solo horizontal) + el
+// catálogo completo de piezas, que inserta en ESE banner.
 // ============================================================================
 import type { EmailDocument } from '../model'
 import type { GlobalFields } from '../global/schema'
@@ -29,7 +29,8 @@ import { registry, SLOT_LABELS } from '../registry'
 import { contentBlockRegistry, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
-import { GLOBAL_BACKGROUND_LABELS, selectBlock, selectDealCard, selectSlot, type Selection } from './selection'
+import { GLOBAL_BACKGROUND_LABELS, selectBlock, selectDealCard, selectHeroPiece, type Selection } from './selection'
+import { findBannerByItem, findHeroPiece, heroPieceLabel } from '../components/hero/schema'
 import { HeroContentsBackgroundPanel } from './BackgroundFields'
 import { BannerImageTypeSelector } from '../components/banner/ImageTypeSelector'
 import { BannerItemCatalog } from '../components/banner/ItemCatalog'
@@ -46,12 +47,13 @@ interface InspectorPanelProps {
   document: EmailDocument
   selected: Selection | null
   onSelect: (next: Selection) => void
-  onChange: (docKey: keyof EmailDocument, fields: unknown) => void
+  onChange: (docKey: 'footer' | 'contenidos', fields: unknown) => void
+  onChangeHeroPiece: (heroId: string, fields: unknown) => void
   onChangeBlock: (blockId: string, fields: unknown) => void
   onChangeBannerItem: (bannerItemId: string, fields: unknown) => void
   onChangeGlobal: (fields: GlobalFields) => void
-  onInsertBannerItem: (type: BannerItemType, atIndex: number) => void
-  onSetBannerImageModule: (type: ImageModuleType) => void
+  onInsertBannerItem: (bannerId: string, type: BannerItemType, atIndex: number) => void
+  onSetBannerImageModule: (bannerId: string, type: ImageModuleType) => void
   onChangeDealCard: (dealCardId: string, fields: unknown) => void
   onInsertDealCard: (blockId: string, atIndex: number) => void
   onChangeModuleItem: (moduleItemId: string, fields: unknown) => void
@@ -75,6 +77,7 @@ export function InspectorPanel({
   selected,
   onSelect,
   onChange,
+  onChangeHeroPiece,
   onChangeBlock,
   onChangeBannerItem,
   onChangeGlobal,
@@ -243,8 +246,9 @@ export function InspectorPanel({
   }
 
   if (selected.slot === 'BANNER' && selected.bannerItemId) {
-    const item = doc.banner.items.find((it) => it.id === selected.bannerItemId)
-    if (!item) {
+    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    const item = owner?.piece.fields.items.find((it) => it.id === selected.bannerItemId)
+    if (!owner || !item) {
       return <EmptyHint text="Selecciona una pieza del Banner para ver sus opciones." />
     }
     const def = getBannerItemDef(item.type)
@@ -253,8 +257,8 @@ export function InspectorPanel({
     }
     return (
       <aside className="panel-inspector">
-        <button type="button" className="inspector-back" onClick={() => onSelect(selectSlot('BANNER'))}>
-          ← Volver al banner
+        <button type="button" className="inspector-back" onClick={() => onSelect(selectHeroPiece('BANNER', owner.piece.id))}>
+          ← Volver a {heroPieceLabel(doc.hero, owner.piece.id)}
         </button>
         <h2>{def.label}</h2>
         <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
@@ -263,50 +267,55 @@ export function InspectorPanel({
           onChange={(next) => onChangeBannerItem(item.id, next)}
           doc={doc}
           onChangeGlobal={onChangeGlobal}
+          bannerType={owner.piece.fields.bannerType}
         />
       </aside>
     )
   }
 
-  // Banner "general" (sin pieza puntual seleccionada): además de su propio
-  // formulario (link + limpieza de piezas ocultas), muestra el selector de
-  // tipo de imagen (solo horizontal — vertical no tiene elección, ver
-  // ImageTypeSelector.tsx) y el catálogo completo de piezas para arrastrar —
-  // reemplaza a la vieja sublista "Piezas" del panel izquierdo.
-  if (selected.slot === 'BANNER') {
-    const def = registry.BANNER
-    if (!def?.PropertiesPanel) {
-      return <EmptyHint text="Toca un componente del email para ver sus opciones." />
+  // Un header o un banner "general" del Hero. El banner suma, además de su
+  // propio formulario, el selector de tipo de imagen (solo horizontal — vertical
+  // no tiene elección, ver ImageTypeSelector.tsx) y el catálogo completo de
+  // piezas, que inserta en ESTE banner.
+  if (selected.slot === 'HEADER' || selected.slot === 'BANNER') {
+    const piece = selected.heroId ? findHeroPiece(doc.hero, selected.heroId) : undefined
+    const def = registry[selected.slot]
+    if (!piece || piece.type !== selected.slot || !def?.PropertiesPanel) {
+      return <EmptyHint text="Selecciona un header o un banner del Hero para ver sus opciones." />
     }
     const { PropertiesPanel } = def
     return (
       <aside className="panel-inspector">
-        <h2>{SLOT_LABELS.BANNER}</h2>
+        <h2>{heroPieceLabel(doc.hero, piece.id)}</h2>
         <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
-        <PropertiesPanel value={doc.banner} onChange={(next) => onChange('banner', next)} />
-        {doc.banner.bannerType === 'horizontal' && (
-          <BannerImageTypeSelector items={doc.banner.items} onSelect={onSetBannerImageModule} />
+        <PropertiesPanel value={piece.fields} onChange={(next) => onChangeHeroPiece(piece.id, next)} />
+        {piece.type === 'BANNER' && (
+          <>
+            {piece.fields.bannerType === 'horizontal' && (
+              <BannerImageTypeSelector items={piece.fields.items} onSelect={(type) => onSetBannerImageModule(piece.id, type)} />
+            )}
+            <BannerItemCatalog
+              bannerType={piece.fields.bannerType}
+              excludeTypes={piece.fields.bannerType === 'horizontal' ? IMAGE_MODULE_TYPES : []}
+              onInsert={(type) => onInsertBannerItem(piece.id, type, piece.fields.items.length)}
+            />
+          </>
         )}
-        <BannerItemCatalog
-          bannerType={doc.banner.bannerType}
-          excludeTypes={doc.banner.bannerType === 'horizontal' ? IMAGE_MODULE_TYPES : []}
-          onInsert={(type) => onInsertBannerItem(type, doc.banner.items.length)}
-        />
       </aside>
     )
   }
 
   const def = registry[selected.slot]
-  if (!def || !def.PropertiesPanel) {
+  if (!def?.PropertiesPanel || !def.docKey) {
     return <EmptyHint text="Toca un componente del email para ver sus opciones." />
   }
 
-  const { PropertiesPanel } = def
+  const { PropertiesPanel, docKey } = def
   return (
     <aside className="panel-inspector">
       <h2>{SLOT_LABELS[selected.slot]}</h2>
       <TropicalizationNotice document={doc} selected={selected} country={country} onChangeTab={onChangeTab} />
-      <PropertiesPanel value={doc[def.docKey]} onChange={(next) => onChange(def.docKey, next)} />
+      <PropertiesPanel value={doc[docKey]} onChange={(next) => onChange(docKey, next)} />
     </aside>
   )
 }

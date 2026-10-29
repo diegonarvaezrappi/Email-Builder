@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { bannerSchema, bannerMoleculeAlignFor } from '../schema'
 
+import { bannerOf } from '../../hero/testUtils'
+import { DEFAULT_HERO_BANNER_ID } from '../../hero/schema'
 const legacyCta = { id: 'c', type: 'CTA_INTERNO', fields: { text: 'Viejo', deeplink: '' } }
 
 describe('CTA del banner guardado antes de tener alineación y tamaño propios', () => {
@@ -29,13 +31,13 @@ describe('insertBannerItem · CTA_INTERNO nuevo', () => {
   it('starts aligned like the rest of the banner pieces', async () => {
     const { useBuilder } = await import('../../../store/store')
     const s = useBuilder.getState()
-    s.setSlotFields('banner', { ...s.document.banner, bannerType: 'horizontal', items: [] })
-    useBuilder.getState().insertBannerItem('CTA_INTERNO', 0)
-    expect(useBuilder.getState().document.banner.items[0].fields).toMatchObject({ align: 'left', size: 'big' })
+    s.updateHeroPieceFields(DEFAULT_HERO_BANNER_ID, { ...bannerOf(s.document), bannerType: 'horizontal', items: [] })
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'CTA_INTERNO', 0)
+    expect(bannerOf(useBuilder.getState().document).items[0].fields).toMatchObject({ align: 'left', size: 'big' })
 
     const v = useBuilder.getState()
-    v.setSlotFields('banner', { ...v.document.banner, bannerType: 'vertical', moleculeAlign: 'center', items: [] })
-    useBuilder.getState().insertBannerItem('CTA_INTERNO', 0)
-    expect(useBuilder.getState().document.banner.items[0].fields).toMatchObject({ align: 'center' })
+    v.updateHeroPieceFields(DEFAULT_HERO_BANNER_ID, { ...bannerOf(v.document), bannerType: 'vertical', moleculeAlign: 'center', items: [] })
+    useBuilder.getState().insertBannerItem(DEFAULT_HERO_BANNER_ID, 'CTA_INTERNO', 0)
+    expect(bannerOf(useBuilder.getState().document).items[0].fields).toMatchObject({ align: 'center' })
   })
 })

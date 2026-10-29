@@ -3,21 +3,22 @@
 // del repo raíz §1.1):
 //
 //   Contenido general  → tema + fondo general
-//   Sección Hero       → fondo hero, Header, Banner (tipo), árbol de piezas
+//   Sección Hero       → fondo hero, agregar header/banner, árbol del Hero
 //   Sección Contents   → fondo contents, grid de módulos, árbol de módulos, Footer
 //
 // Lo que se selecciona acá se edita en el panel derecho (InspectorPanel), igual
 // que al clickearlo en el lienzo. La pestaña activa vive en App.tsx porque un
 // click en el lienzo también la cambia (ver ui/leftTab.ts).
 // ============================================================================
-import type { ContentBlockType, EmailDocument } from '../model'
+import type { ContentBlockType, EmailDocument, HeroPieceType } from '../model'
+import type { BannerType } from '../components/banner/schema'
 import type { GlobalFields } from '../global/schema'
 import { SLOT_LABELS } from '../registry'
 import { contentBlockRegistry } from '../contentBlockRegistry'
 import { BANNER_TYPE_TITLES, BANNER_TYPE_VALUES } from '../components/banner/schema'
 import { groupedThemes, themeLabel } from '../themes/themes'
 import { isSlotSelected, selectSlot, type Selection } from './selection'
-import { BANNER_TYPE_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE } from './dragTypes'
+import { BANNER_TYPE_DRAG_TYPE, CONTENT_BLOCK_DRAG_TYPE, HEADER_DRAG_TYPE } from './dragTypes'
 import { BANNER_TYPE_ICONS, CONTENT_BLOCK_ICONS, HeaderIcon } from './moleculeIcons'
 import { BackgroundCard } from './BackgroundFields'
 import { ComponentTree } from './ComponentTree'
@@ -44,9 +45,10 @@ interface LeftPanelProps {
   onChangeTab: (next: LeftTab) => void
   selected: Selection | null
   onSelect: (next: Selection) => void
-  onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
   onChangeGlobal: (next: GlobalFields) => void
   onAddBlock: (type: ContentBlockType) => void
+  /** Agrega un header o un banner (de ese tipo) al final del Hero y lo selecciona. */
+  onAddHeroPiece: (type: HeroPieceType, bannerType?: BannerType) => void
   treeExpanded: ReadonlySet<string>
   onToggleTreeExpanded: (key: string) => void
   onTreeReorder: (reorder: TreeReorder, toIndex: number) => void
@@ -106,50 +108,54 @@ function GeneralTab({ document: doc, onChangeGlobal }: LeftPanelProps) {
   )
 }
 
+/**
+ * Desde el 2026-10-28 el Hero es una lista libre de headers y banners (ver
+ * components/hero/schema.ts): esta tarjeta AGREGA piezas (click = al final,
+ * o arrastrar al lienzo para soltarla donde se quiera). Elegir/cambiar el
+ * tipo de un banner ya existente se hace en su panel de la derecha.
+ */
 function HeroTab(props: LeftPanelProps) {
-  const { document: doc, selected, onSelect, onChangeSlot, onChangeGlobal } = props
-  const headerActive = isSlotSelected(selected, 'HEADER')
-  const bannerActive = isSlotSelected(selected, 'BANNER')
+  const { document: doc, onChangeGlobal, onAddHeroPiece } = props
   return (
     <>
       <BackgroundCard scope="hero" title="Fondo hero" value={doc.global} onChange={onChangeGlobal} />
 
-      <button
-        type="button"
-        className={`left-card left-card-button${headerActive ? ' active' : ''}`}
-        aria-pressed={headerActive}
-        onClick={() => onSelect(selectSlot('HEADER'))}
-      >
-        <HeaderIcon className="left-card-icon" />
-        <span className="left-card-title">{SLOT_LABELS.HEADER}</span>
-      </button>
-
-      <div className={`left-card${bannerActive ? ' active' : ''}`}>
-        <button type="button" className="left-card-title left-card-title-button" onClick={() => onSelect(selectSlot('BANNER'))}>
-          {SLOT_LABELS.BANNER}
-        </button>
-        <ul className="banner-type-grid">
+      <div className="left-card">
+        <span className="left-card-title">Agregar al hero</span>
+        <ul className="banner-type-grid hero-add-grid">
+          <li>
+            <button
+              type="button"
+              className="option-card banner-type-card"
+              title={`Agregar ${SLOT_LABELS.HEADER} (o arrástralo al lienzo)`}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(HEADER_DRAG_TYPE, 'HEADER')
+                e.dataTransfer.effectAllowed = 'copy'
+              }}
+              onClick={() => onAddHeroPiece('HEADER')}
+            >
+              <HeaderIcon className="option-card-icon" />
+              <span className="option-card-title">{SLOT_LABELS.HEADER}</span>
+            </button>
+          </li>
           {BANNER_TYPE_VALUES.map((type) => {
-            const active = doc.banner.bannerType === type
             const Icon = BANNER_TYPE_ICONS[type]
             return (
               <li key={type}>
                 <button
                   type="button"
-                  className={`option-card banner-type-card${active ? ' active' : ''}`}
-                  aria-pressed={active}
+                  className="option-card banner-type-card"
+                  title={`Agregar banner ${BANNER_TYPE_TITLES[type].toLowerCase()} (o arrástralo al lienzo)`}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData(BANNER_TYPE_DRAG_TYPE, type)
                     e.dataTransfer.effectAllowed = 'copy'
                   }}
-                  onClick={() => {
-                    onChangeSlot('banner', { ...doc.banner, bannerType: type })
-                    onSelect(selectSlot('BANNER'))
-                  }}
+                  onClick={() => onAddHeroPiece('BANNER', type)}
                 >
                   <Icon className="option-card-icon" />
-                  <span className="option-card-title">{BANNER_TYPE_TITLES[type]}</span>
+                  <span className="option-card-title">Banner {BANNER_TYPE_TITLES[type].toLowerCase()}</span>
                 </button>
               </li>
             )

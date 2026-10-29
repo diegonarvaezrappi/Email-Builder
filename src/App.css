@@ -1775,3 +1775,33 @@
   font-size: 12px;
   color: var(--text-h);
 }
+
+/* Pestaña Hero: 3 cards para agregar (header + los 2 tipos de banner). */
+.hero-add-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Duplicar/eliminar un banner del Hero viven en su capa de controles (encima
+   de sus piezas, que lo tapan entero): se ven con el banner seleccionado o al
+   pasar sobre el propio botón. */
+.slot-hit-controls .slot-duplicate {
+  pointer-events: auto;
+}
+
+.slot-hit-controls.selected .slot-duplicate,
+.slot-hit-controls.selected .slot-delete,
+.slot-hit-controls .slot-duplicate:hover,
+.slot-hit-controls .slot-delete:hover {
+  opacity: 1;
+}
+
+/* El último header o banner del Hero no se puede eliminar. */
+.slot-delete:disabled {
+  cursor: not-allowed;
+}
+
+.slot-hit:hover .slot-delete:disabled,
+.slot-hit.selected .slot-delete:disabled,
+.slot-hit-controls.selected .slot-delete:disabled {
+  opacity: 0.35;
+}

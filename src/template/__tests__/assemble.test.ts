@@ -13,6 +13,9 @@ import { elementBounds, indexOfOrThrow } from '../htmlEdits'
 import { escapeHtmlAttr } from '../htmlText'
 import type { CtaBlock, EmailDocument } from '../../model'
 
+import { bannerOf, bannerPieceOf, headerOf, headerPieceOf, legacy } from '../../components/hero/testUtils'
+import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, type HeroPiece } from '../../components/hero/schema'
+
 const ctaBlock = (id: string, text: string): CtaBlock => ({
   id,
   type: 'CTA',
@@ -28,6 +31,24 @@ function replaceCommentPlaceholder(html: string, anchor: string, rendered: strin
   const commentStart = html.lastIndexOf('<!--', anchorIdx)
   const commentEnd = html.indexOf('-->', anchorIdx) + 3
   return html.slice(0, commentStart) + rendered + html.slice(commentEnd)
+}
+
+/**
+ * El HERO de UN header + UN banner (el documento por defecto): el header va
+ * dentro de su propia copia de la tabla contenedora del maestro, seguido del
+ * banner, cada uno entre sus marcadores HERO; el comentario "AQUÍ VA EL
+ * BANNER" desaparece. (La tabla contenedora no anida otras tablas.)
+ */
+function replaceHeroInTest(html: string, headerTr: string, bannerHtml: string): string {
+  const hAnchor = indexOfOrThrow(html, 'AQUÍ VA EL HEADER', 'test')
+  const hStart = html.lastIndexOf('<!--', hAnchor)
+  const hEnd = html.indexOf('-->', hAnchor) + 3
+  const tableStart = html.lastIndexOf('<table', hStart)
+  const tableEnd = html.indexOf('</table>', hEnd) + '</table>'.length
+  const header = `<!-- HERO:HEADER:${DEFAULT_HERO_HEADER_ID} -->\n${html.slice(tableStart, hStart)}${headerTr}${html.slice(hEnd, tableEnd)}\n<!-- /HERO:HEADER:${DEFAULT_HERO_HEADER_ID} -->`
+  const banner = `<!-- HERO:BANNER:${DEFAULT_HERO_BANNER_ID} -->\n${bannerHtml}\n<!-- /HERO:BANNER:${DEFAULT_HERO_BANNER_ID} -->`
+  const withoutBannerComment = replaceCommentPlaceholder(html, 'AQUÍ VA EL BANNER', '')
+  return withoutBannerComment.slice(0, tableStart) + header + '\n' + banner + withoutBannerComment.slice(tableEnd)
 }
 
 function replaceContenidosWrapperInTest(html: string, rendered: string): string {
@@ -105,7 +126,7 @@ describe('assembleEmailHtml', () => {
 
   it('replaces the "AQUÍ VA EL HEADER" placeholder with the rendered header snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    const expectedSnippet = renderHeaderSnippet(defaultEmailDocument.header, defaultEmailDocument.global.tema)
+    const expectedSnippet = renderHeaderSnippet(headerOf(defaultEmailDocument), defaultEmailDocument.global.tema)
 
     expect(html).not.toContain('AQUÍ VA EL HEADER')
     expect(html.includes(expectedSnippet)).toBe(true)
@@ -119,7 +140,7 @@ describe('assembleEmailHtml', () => {
 
   it('replaces the "AQUÍ VA EL BANNER" placeholder with the rendered banner snippet', () => {
     const html = assembleEmailHtml(defaultEmailDocument)
-    const expectedSnippet = renderBannerSnippet(defaultEmailDocument.banner, defaultEmailDocument)
+    const expectedSnippet = renderBannerSnippet(bannerOf(defaultEmailDocument), defaultEmailDocument)
 
     expect(html).not.toContain('AQUÍ VA EL BANNER')
     expect(html.includes(expectedSnippet)).toBe(true)
@@ -129,12 +150,12 @@ describe('assembleEmailHtml', () => {
     expect(html).toContain('BITEM:TAGS:')
   })
 
-  // Desde el refactor HERO (2026-09-12) el <a> que lleva doc.banner.link ya
+  // Desde el refactor HERO (2026-09-12) el <a> que lleva bannerOf(doc).link ya
   // no vive dentro de cada archivo de banner (components/banner/render.ts) —
   // envuelve TODO el HERO (header + banner + imagen full width) a nivel de
   // estructura_general.html, así que la sustitución pasó a hacerse acá.
-  it('replaces both AQUIELLINKDELBANNER occurrences (the <a> that wraps the whole HERO) with doc.banner.link, HTML-attribute-escaped', () => {
-    const doc = { ...defaultEmailDocument, banner: { ...defaultEmailDocument.banner, link: 'https://x.test/a?b="c"' } }
+  it('replaces both AQUIELLINKDELBANNER occurrences (the <a> that wraps the whole HERO) with bannerOf(doc).link, HTML-attribute-escaped', () => {
+    const doc = legacy({ ...defaultEmailDocument, banner: { ...bannerOf(defaultEmailDocument), link: 'https://x.test/a?b="c"' } })
     const html = assembleEmailHtml(doc)
     expect(html).not.toContain('AQUIELLINKDELBANNER')
     expect((html.match(/https:\/\/x\.test\/a\?b=&quot;c&quot;/g) ?? []).length).toBe(2)
@@ -226,10 +247,9 @@ describe('assembleEmailHtml', () => {
     // Sin link del usuario el token del HERO se conserva (no queda href="") —
     // ver template/linkPlaceholders.ts.
     expected = expected.replaceAll('AQUIELLINKDELBANNER', () =>
-      escapeHtmlAttr(doc.banner.link.trim() === '' ? 'AQUIELLINKDELBANNER' : doc.banner.link),
+      escapeHtmlAttr(bannerOf(doc).link.trim() === '' ? 'AQUIELLINKDELBANNER' : bannerOf(doc).link),
     )
-    expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL HEADER', renderHeaderSnippet(doc.header, 'beige100'))
-    expected = replaceCommentPlaceholder(expected, 'AQUÍ VA EL BANNER', renderBannerSnippet(doc.banner, doc))
+    expected = replaceHeroInTest(expected, renderHeaderSnippet(headerOf(doc), 'beige100'), renderBannerSnippet(bannerOf(doc), doc))
     expected = replaceContenidosWrapperInTest(expected, renderContenidosSnippet(doc.contenidos, doc))
     expected = replaceFooterExampleInTest(expected, renderFooterSnippet(doc.footer, 'beige100'))
     expected = numberLinkPlaceholdersInTest(expected)
@@ -446,10 +466,10 @@ describe('assembleEmailHtml · marcadores de link (banner · CTA · deals)', () 
   })
 
   it('still uses the real link when the banner has one', () => {
-    const html = assembleEmailHtml({
+    const html = assembleEmailHtml(legacy({
       ...defaultEmailDocument,
-      banner: { ...defaultEmailDocument.banner, link: 'https://rappi.test/promo' },
-    })
+      banner: { ...bannerOf(defaultEmailDocument), link: 'https://rappi.test/promo' },
+    }))
     expect(html).toContain('href="https://rappi.test/promo"')
     expect(html).not.toContain('AQUIELLINKDELBANNER')
   })
@@ -543,7 +563,7 @@ describe('assembleEmailHtml · tropicalización de slots', () => {
   it('HEADER tropicalizado envuelve el snippet en {% if %}...{% else %}, una sola vez, con la base en el {% else %}', () => {
     const doc: EmailDocument = {
       ...defaultEmailDocument,
-      tropicalizations: { 'slot:HEADER': { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } },
+      tropicalizations: { [`header:${DEFAULT_HERO_HEADER_ID}`]: { branches: [{ countries: ['AR'], hidden: false, overrides: {} }] } },
     }
     const html = assembleEmailHtml(doc)
     expect(html.match(/\{% if \$\{user_id\} contains 'AR' %\}/g)).toHaveLength(1)
@@ -579,5 +599,80 @@ describe('assembleEmailHtml · tropicalización de slots', () => {
       tropicalizations: { 'slot:HEADER': { branches: [{ countries: [], hidden: false, overrides: {} }] } },
     }
     expect(assembleEmailHtml(withEmpty)).toBe(assembleEmailHtml(defaultEmailDocument))
+  })
+})
+
+describe('assembleEmailHtml · Hero con varias piezas (lista libre, 2026-10-28)', () => {
+  const header = headerPieceOf(defaultEmailDocument)
+  const banner = bannerPieceOf(defaultEmailDocument)
+  const withHero = (hero: HeroPiece[]): EmailDocument => ({ ...defaultEmailDocument, hero })
+
+  it('con un solo banner, su link va en el <a> que envuelve todo el Hero (como el maestro)', () => {
+    const html = assembleEmailHtml(withHero([header, { ...banner, fields: { ...banner.fields, link: 'https://uno.test' } }]))
+    expect(html.match(/href="https:\/\/uno\.test"/g)).toHaveLength(1)
+    expect(html).toContain('originalsrc="https://uno.test"')
+    // El <a> abre ANTES de la tabla del Hero: envuelve header + banner.
+    expect(html.indexOf('href="https://uno.test"')).toBeLessThan(html.indexOf('role="HERO-SECTION"'))
+  })
+
+  it('con varios banners, cada uno lleva su propio <a> y el <a> exterior del Hero desaparece', () => {
+    const b2: HeroPiece = { ...banner, id: 'b2', fields: { ...banner.fields, link: 'https://dos.test', items: [] } }
+    const html = assembleEmailHtml(withHero([header, { ...banner, fields: { ...banner.fields, link: 'https://uno.test' } }, b2]))
+    const heroStart = html.indexOf('role="HERO-SECTION"')
+    // Ningún <a href> antes de la tabla del Hero: el exterior se quitó.
+    expect(html.slice(0, heroStart)).not.toContain('AQUIELLINKDELBANNER')
+    expect(html.slice(0, heroStart)).not.toContain('href="https://uno.test"')
+    // Cada banner, dentro de su marcador, con su propio link.
+    const first = html.slice(html.indexOf(`HERO:BANNER:${banner.id}`), html.indexOf(`/HERO:BANNER:${banner.id}`))
+    const second = html.slice(html.indexOf('HERO:BANNER:b2'), html.indexOf('/HERO:BANNER:b2'))
+    expect(first).toContain('href="https://uno.test"')
+    expect(second).toContain('href="https://dos.test"')
+    // El header queda sin link.
+    const headerHtml = html.slice(html.indexOf(`HERO:HEADER:${header.id}`), html.indexOf(`/HERO:HEADER:${header.id}`))
+    expect(headerHtml).not.toContain('<a role="horizontal"')
+  })
+
+  it('con varios banners sin link, el marcador se numera por banner', () => {
+    const html = assembleEmailHtml(withHero([header, banner, { ...banner, id: 'b2', fields: { ...banner.fields, items: [] } }]))
+    expect(html).toContain('href="AQUIELLINKDELBANNER1"')
+    expect(html).toContain('href="AQUIELLINKDELBANNER2"')
+    expect(html).not.toContain('href="AQUIELLINKDELBANNER"')
+  })
+
+  it('el número de <a> abiertos y cerrados cuadra con 1 y con varios banners', () => {
+    const count = (html: string) => [html.split('<a ').length - 1, html.split('</a>').length - 1]
+    const one = assembleEmailHtml(withHero([header, banner]))
+    const many = assembleEmailHtml(withHero([header, banner, { ...banner, id: 'b2', fields: { ...banner.fields, items: [] } }]))
+    const [o1, c1] = count(one)
+    const [o2, c2] = count(many)
+    // El maestro trae un `<a href="LINKMODULO">` de ejemplo dentro de un
+    // comentario de CONTENTS (sin cierre): la diferencia es la misma en los 2.
+    expect(o2 - c2).toBe(o1 - c1)
+    // un <a> más: se quitó el exterior y se agregó uno por cada uno de los 2 banners.
+    expect(o2 - o1).toBe(1)
+  })
+
+  it('respeta el orden libre: header, banner, header, banner', () => {
+    const h2: HeroPiece = { ...header, id: 'h2' }
+    const b2: HeroPiece = { ...banner, id: 'b2', fields: { ...banner.fields, items: [] } }
+    const html = assembleEmailHtml(withHero([header, banner, h2, b2]))
+    const order = [`HERO:HEADER:${header.id}`, `HERO:BANNER:${banner.id}`, 'HERO:HEADER:h2', 'HERO:BANNER:b2'].map((m) => html.indexOf(`<!-- ${m} -->`))
+    expect(order.every((i) => i > -1)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+    // Cada header lleva su propia tabla contenedora (el <tr> solo vale dentro de una tabla).
+    expect(html.split('AQUÍ VA EL HEADER').length - 1).toBe(0)
+    expect(html.split('AQUÍ VA EL BANNER').length - 1).toBe(0)
+  })
+
+  it('tropicaliza cada pieza por su propia clave', () => {
+    const doc: EmailDocument = {
+      ...withHero([header, banner, { ...banner, id: 'b2', fields: { ...banner.fields, items: [] } }]),
+      tropicalizations: { 'banner:b2': { branches: [{ countries: ['AR'], hidden: true, overrides: {} }] } },
+    }
+    const html = assembleEmailHtml(doc)
+    const second = html.slice(html.indexOf('HERO:BANNER:b2'), html.indexOf('/HERO:BANNER:b2'))
+    expect(second).toContain("contains 'AR'")
+    const first = html.slice(html.indexOf(`HERO:BANNER:${banner.id}`), html.indexOf(`/HERO:BANNER:${banner.id}`))
+    expect(first).not.toContain("contains 'AR'")
   })
 })

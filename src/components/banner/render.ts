@@ -200,12 +200,12 @@ function alignMoleculeCenter(html: string): string {
  * Las piezas cuyo tipo no tiene archivo/comportamiento para la orientación
  * activa (ej. un IMG_AUTOMATICA_MODULO que quedó de cuando el banner era
  * horizontal) se OMITEN acá, no se borran del documento — siguen en
- * doc.banner.items y el panel del Banner las lista para poder eliminarlas.
+ * las piezas de cada banner del Hero y el panel del Banner las lista para poder eliminarlas.
  * Mismo criterio que el filter de components/contenidos/render.ts.
  */
 export function groupBannerItems(items: BannerItem[], doc: EmailDocument, ctx: BannerItemRenderCtx): ItemGroup[] {
   const groups: ItemGroup[] = []
-  // Red de seguridad: store/store.ts ya deja doc.banner.items en el orden
+  // Red de seguridad: store/store.ts ya deja las piezas de cada banner del Hero en el orden
   // válido para horizontal tras cualquier inserción/reordenamiento, pero
   // cambiar bannerType de vertical a horizontal (ui/LeftPanel.tsx) no pasa
   // por esas acciones — ver horizontalOrder.ts.

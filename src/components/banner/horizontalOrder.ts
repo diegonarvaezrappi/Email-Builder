@@ -24,7 +24,7 @@
 // dentro de su propio grupo, solo garantiza MOLECULA < resto-de-MODULO <
 // TAGS. Se aplica en 2 lugares a propósito:
 // 1. store/store.ts, al final de insertBannerItem/duplicateBannerItem/
-//    reorderBannerItem/setBannerImageModule — así doc.banner.items (lo que
+//    reorderBannerItem/setBannerImageModule — así las piezas de cada banner del Hero (lo que
 //    ve y puede volver a arrastrar el usuario en el panel) ya queda en el
 //    orden válido, no solo lo que se renderiza.
 // 2. components/banner/render.ts, dentro de groupBannerItems — red de
@@ -32,7 +32,7 @@
 //    vertical a horizontal con un orden que era válido en vertical pero no
 //    en horizontal (ese cambio no pasa por ninguna de las 4 acciones de
 //    arriba, ver ui/LeftPanel.tsx), y cualquier otro camino futuro que
-//    toque doc.banner.items sin pasar por el store.
+//    toque las piezas de cada banner del Hero sin pasar por el store.
 // ============================================================================
 import { getBannerItemDef } from '../../bannerItemRegistry'
 import type { BannerItem, BannerItemType } from './items/schemas'

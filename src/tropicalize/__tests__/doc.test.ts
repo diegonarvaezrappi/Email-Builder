@@ -18,16 +18,21 @@ describe('pruneTropicalizations', () => {
     expect(Object.keys(pruneTropicalizations(doc).tropicalizations)).toEqual([`block:${realId}`])
   })
 
-  it('the 3 slot keys are never orphaned — HEADER/BANNER/FOOTER always resolve', () => {
+  it('slot:FOOTER and the keys of existing hero pieces are kept; a removed hero piece is pruned', () => {
     const doc: EmailDocument = {
       ...defaultEmailDocument,
       tropicalizations: {
-        'slot:HEADER': { branches: [] },
-        'slot:BANNER': { branches: [] },
+        'header:hero-header-default': { branches: [] },
+        'banner:hero-banner-default': { branches: [] },
+        'banner:ya-no-existe': { branches: [] },
         'slot:FOOTER': { branches: [] },
       },
     }
-    expect(Object.keys(pruneTropicalizations(doc).tropicalizations).sort()).toEqual(['slot:BANNER', 'slot:FOOTER', 'slot:HEADER'])
+    expect(Object.keys(pruneTropicalizations(doc).tropicalizations).sort()).toEqual([
+      'banner:hero-banner-default',
+      'header:hero-header-default',
+      'slot:FOOTER',
+    ])
   })
 
   it('returns the SAME document (identity) when nothing needs pruning', () => {

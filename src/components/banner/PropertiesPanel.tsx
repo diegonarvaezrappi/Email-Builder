@@ -5,8 +5,10 @@ import {
   BANNER_MOLECULE_ALIGN_LABELS,
   BANNER_MOLECULE_ALIGN_VALUES,
   BANNER_TYPE_LABELS,
+  BANNER_TYPE_TITLES,
+  BANNER_TYPE_VALUES,
 } from './schema'
-import type { BannerFields } from './schema'
+import type { BannerFields, BannerType } from './schema'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 
 interface BannerPropertiesPanelProps {
@@ -34,6 +36,19 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
 
   return (
     <div className="properties-panel">
+      {/* Antes se elegía en el panel izquierdo; desde que el Hero admite varios
+          banners (2026-10-28), cada uno cambia su tipo acá. */}
+      <label className="field">
+        <span>Tipo de banner</span>
+        <select value={value.bannerType} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('bannerType', e.target.value as BannerType)}>
+          {BANNER_TYPE_VALUES.map((t) => (
+            <option key={t} value={t}>
+              {BANNER_TYPE_TITLES[t]}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className="field">
         <span>Enlace del banner</span>
         <input
@@ -43,7 +58,9 @@ export function BannerPropertiesPanel({ value, onChange }: BannerPropertiesPanel
           onChange={(e: ChangeEvent<HTMLInputElement>) => set('link', e.target.value)}
         />
         <span className="field-hint">
-          Si agregás un CTA interno o una imagen con enlace propio, dejá este campo vacío para no anidar enlaces.
+          Con un solo banner, este enlace envuelve todo el Hero (header incluido). Con varios banners, cada uno lleva el suyo y los
+          headers quedan sin enlace. Si agregás un CTA interno o una imagen con enlace propio, dejá este campo vacío para no anidar
+          enlaces.
         </span>
       </label>
 

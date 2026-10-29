@@ -11,9 +11,11 @@
 //
 // Para seleccionar un componente NO se toca el HTML del mail (debe quedar byte
 // a byte igual al exportado): se mide dónde cayó cada slot dentro del iframe
-// —el header es el div `#HEADERn`, el footer es todo lo que va después del
-// `role="paddedcontainer"`— y se dibujan capas clickeables encima, del lado de
-// la app. Medir requiere `allow-same-origin`; los scripts siguen bloqueados.
+// —el footer es todo lo que va después del `role="paddedcontainer"`; cada
+// header y cada banner del Hero, por sus comentarios `<!-- HERO:tipo:id -->`
+// (son repetibles desde 2026-10-28)— y se dibujan capas clickeables encima,
+// del lado de la app. Medir requiere `allow-same-origin`; los scripts siguen
+// bloqueados.
 //
 // Los bloques de CONTENIDOS (hoy CTA y DEALS) se miden aparte: no tienen ningún
 // atributo propio que los distinga entre sí (el contenido real viene de un
@@ -30,7 +32,7 @@
 // es lo que se copia/descarga — nunca pasa por LiquidJS.
 // ============================================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ContentBlockType, EmailDocument, SlotName } from '../model'
+import type { ContentBlockType, EmailDocument, HeroPieceType, SlotName } from '../model'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { BannerType } from '../components/banner/schema'
 import { DEAL_CARD_PIECE_LABELS, hideDealCardPiece, type DealCardPieceType } from '../components/deals/schema'
@@ -39,7 +41,8 @@ import { registry, SLOT_LABELS } from '../registry'
 import type { ViewportTab } from './viewportTab'
 import { withoutTropicalizations } from '../tropicalize/doc'
 import { normalizeBranches, type Tropicalizations } from '../tropicalize/schema'
-import { bannerItemKey, blockKey, dealCardKey, moduleItemKey, slotKey, type TropicalizeKey } from '../tropicalize/keys'
+import { bannerItemKey, blockKey, dealCardKey, heroPieceKey, moduleItemKey, slotKey, type TropicalizeKey } from '../tropicalize/keys'
+import { findBannerByItem, heroBanners, heroPieceLabels, isLastOfType } from '../components/hero/schema'
 import { getContentBlockDef, getModuleAreas } from '../contentBlockRegistry'
 import { getBannerItemDef } from '../bannerItemRegistry'
 import { getModuleItemDef } from '../bodyMoleculeRegistry'
@@ -53,6 +56,8 @@ import {
   DEAL_CARD_OPEN_RE,
   DEAL_CARD_PIECE_CLOSE_RE,
   DEAL_CARD_PIECE_OPEN_RE,
+  HERO_PIECE_CLOSE_RE,
+  HERO_PIECE_OPEN_RE,
   MODULE_ITEM_CLOSE_RE,
   MODULE_ITEM_OPEN_RE,
 } from '../template/contentBlocks'
@@ -64,6 +69,7 @@ import { ImportPanel } from './ImportPanel'
 import {
   isBannerItemSelected,
   isBlockSelected,
+  isHeroPieceSelected,
   isDealCardPieceSelected,
   isDealCardSelected,
   isModuleItemSelected,
@@ -73,6 +79,7 @@ import {
   selectDealCard,
   selectDealCardPiece,
   selectGlobalBackground,
+  selectHeroPiece,
   selectModuleItem,
   selectSlot,
   SECTION_LABELS,
@@ -88,6 +95,8 @@ import {
   BANNER_ITEM_REORDER_DRAG_TYPE,
   DEAL_CARD_REORDER_DRAG_TYPE,
   DEAL_CARD_PIECE_REORDER_DRAG_TYPE,
+  HEADER_DRAG_TYPE,
+  HERO_PIECE_REORDER_DRAG_TYPE,
   MODULE_ITEM_DRAG_TYPE,
   MODULE_ITEM_REORDER_DRAG_TYPE,
 } from './dragTypes'
@@ -103,12 +112,17 @@ interface ViewportProps {
   selected: Selection | null
   onSelect: (next: Selection) => void
   /** Escribe los campos de un slot por su docKey — igual que InspectorPanel.onChange, reutilizado acá para eliminar/restaurar singletons. */
-  onChangeSlot: (docKey: keyof EmailDocument, fields: unknown) => void
+  onChangeSlot: (docKey: 'footer' | 'contenidos', fields: unknown) => void
+  /** Piezas del Hero (headers y banners, lista libre — components/hero/schema.ts). */
+  onInsertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
+  onDuplicateHeroPiece: (id: string) => void
+  onReorderHeroPiece: (id: string, toIndex: number) => void
+  onRemoveHeroPiece: (id: string) => void
   onInsertBlock: (type: ContentBlockType, atIndex: number) => void
   onDuplicateBlock: (id: string) => void
   onReorderBlock: (id: string, toIndex: number) => void
   onRemoveBlock: (id: string) => void
-  onInsertBannerItem: (type: BannerItemType, atIndex: number) => void
+  onInsertBannerItem: (bannerId: string, type: BannerItemType, atIndex: number) => void
   onDuplicateBannerItem: (id: string) => void
   onReorderBannerItem: (id: string, toIndex: number) => void
   onRemoveBannerItem: (id: string) => void
@@ -151,15 +165,10 @@ export type PreviewDevice = 'desktop' | 'mobile'
 
 const MOBILE_WIDTH = 375
 
-/** Cómo se ubica cada slot implementado dentro del documento del mail. */
-const SLOT_LOCATORS: Record<'HEADER' | 'BANNER' | 'FOOTER', string> = {
-  // El div que envuelve la tabla del header — HEADER1..HEADER4 según la marca
-  // (ver 01-foundations/global-styles/global-styles.html).
-  HEADER: '[id^="HEADER"]',
-  // Los 2 archivos de banner traen id propio en su <table> exterior
-  // (BANNER_HORIZONTAL / BANNER_VERTICAL), del que además dependen los
-  // `@media` de global-styles.html — es el localizador más estable del mail.
-  BANNER: 'table[id^="BANNER_"]',
+/** Cómo se ubica el footer dentro del documento del mail. Header y banner ya
+ *  no van acá: son repetibles y se ubican por sus marcadores HERO (ver
+ *  measureHeroPieces). */
+const SLOT_LOCATORS: Record<'FOOTER', string> = {
   // El footer no trae id ni role propios: es el hermano que sigue al
   // contenedor con padding donde viven header/banner/contenidos.
   FOOTER: 'table[role="paddedcontainer"]',
@@ -186,6 +195,10 @@ export function Viewport({
   selected,
   onSelect,
   onChangeSlot,
+  onInsertHeroPiece,
+  onDuplicateHeroPiece,
+  onReorderHeroPiece,
+  onRemoveHeroPiece,
   onInsertBlock,
   onDuplicateBlock,
   onReorderBlock,
@@ -271,20 +284,14 @@ export function Viewport({
   // cambio, así que entra al historial de undo/redo igual que el resto.
   const handleRemove = (slot: SlotName) => {
     const def = registry[slot]
-    if (!def) return
+    if (!def?.docKey) return
     onChangeSlot(def.docKey, { ...doc[def.docKey], removed: true })
   }
 
   const handleRestore = (slot: SlotName) => {
     const def = registry[slot]
-    if (!def) return
+    if (!def?.docKey) return
     onChangeSlot(def.docKey, { ...doc[def.docKey], removed: false })
-  }
-
-  // Elegir un TIPO de banner desde la librería (arrastrando la card) fija ese
-  // tipo — el banner en sí nunca se elimina, así que no hay nada que restaurar.
-  const handleSetBannerType = (type: BannerType) => {
-    onChangeSlot('banner', { ...doc.banner, bannerType: type })
   }
 
   return (
@@ -304,13 +311,16 @@ export function Viewport({
             onSelect={onSelect}
             onRemove={handleRemove}
             onRestore={handleRestore}
-            onSetBannerType={handleSetBannerType}
+            hero={doc.hero}
+            onInsertHeroPiece={onInsertHeroPiece}
+            onDuplicateHeroPiece={onDuplicateHeroPiece}
+            onReorderHeroPiece={onReorderHeroPiece}
+            onRemoveHeroPiece={onRemoveHeroPiece}
             contenidos={doc.contenidos}
             onInsertBlock={onInsertBlock}
             onDuplicateBlock={onDuplicateBlock}
             onReorderBlock={onReorderBlock}
             onRemoveBlock={onRemoveBlock}
-            bannerItems={doc.banner.items}
             onInsertBannerItem={onInsertBannerItem}
             onDuplicateBannerItem={onDuplicateBannerItem}
             onReorderBannerItem={onReorderBannerItem}
@@ -369,14 +379,17 @@ interface EmailFrameProps {
   onSelect: (next: Selection) => void
   onRemove: (slot: SlotName) => void
   onRestore: (slot: SlotName) => void
-  onSetBannerType: (type: BannerType) => void
+  hero: EmailDocument['hero']
+  onInsertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => void
+  onDuplicateHeroPiece: (id: string) => void
+  onReorderHeroPiece: (id: string, toIndex: number) => void
+  onRemoveHeroPiece: (id: string) => void
   contenidos: EmailDocument['contenidos']
   onInsertBlock: (type: ContentBlockType, atIndex: number) => void
   onDuplicateBlock: (id: string) => void
   onReorderBlock: (id: string, toIndex: number) => void
   onRemoveBlock: (id: string) => void
-  bannerItems: EmailDocument['banner']['items']
-  onInsertBannerItem: (type: BannerItemType, atIndex: number) => void
+  onInsertBannerItem: (bannerId: string, type: BannerItemType, atIndex: number) => void
   onDuplicateBannerItem: (id: string) => void
   onReorderBannerItem: (id: string, toIndex: number) => void
   onRemoveBannerItem: (id: string) => void
@@ -428,8 +441,9 @@ interface MarkedBlockRect extends DropRect {
   type: string
 }
 
-/** Los slots que hoy se pueden seleccionar, en el orden en que van en el mail. */
-const SELECTABLE_SLOTS = ['HEADER', 'BANNER', 'FOOTER'] as const
+/** Los slots singleton que se pueden seleccionar (header y banner son piezas
+ *  del Hero, ver measureHeroPieces). */
+const SELECTABLE_SLOTS = ['FOOTER'] as const
 
 /** Las 2 secciones, en el orden en que van en el mail. */
 const SECTION_TARGETS = ['HERO_BG', 'CONTENTS_BG'] as const
@@ -460,12 +474,7 @@ function measureSlots(root: Document): SlotRect[] {
   for (const slot of SELECTABLE_SLOTS) {
     if (!registry[slot]) continue
 
-    if (slot === 'HEADER' || slot === 'BANNER') {
-      const el = root.querySelector(SLOT_LOCATORS[slot])
-      if (!el) continue
-      const r = el.getBoundingClientRect()
-      rects.push({ slot, top: r.top, left: r.left, width: r.width, height: r.height })
-    } else if (slot === 'FOOTER') {
+    if (slot === 'FOOTER') {
       // El footer no tiene contenedor propio: es todo lo que sigue al
       // paddedcontainer, hasta el final del documento.
       if (!padded || !root.body) continue
@@ -536,6 +545,8 @@ function measureMarkedBlocks(root: Document, openRe: RegExp, closeRe: RegExp): M
 }
 
 const measureContentBlocks = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, BLOCK_OPEN_RE, BLOCK_CLOSE_RE)
+/** `type` = HEADER | BANNER, `id` = el id de la pieza del Hero. */
+const measureHeroPieces = (root: Document): MarkedBlockRect[] => measureMarkedBlocks(root, HERO_PIECE_OPEN_RE, HERO_PIECE_CLOSE_RE)
 const measureBannerItems = (root: Document): MarkedBlockRect[] =>
   measureMarkedBlocks(root, BANNER_ITEM_OPEN_RE, BANNER_ITEM_CLOSE_RE)
 
@@ -596,13 +607,16 @@ function EmailFrame({
   onSelect,
   onRemove,
   onRestore,
-  onSetBannerType,
+  hero,
+  onInsertHeroPiece,
+  onDuplicateHeroPiece,
+  onReorderHeroPiece,
+  onRemoveHeroPiece,
   contenidos,
   onInsertBlock,
   onDuplicateBlock,
   onReorderBlock,
   onRemoveBlock,
-  bannerItems,
   onInsertBannerItem,
   onDuplicateBannerItem,
   onReorderBannerItem,
@@ -623,6 +637,7 @@ function EmailFrame({
   const frameElRef = useRef<HTMLDivElement>(null)
   const [height, setHeight] = useState(600)
   const [slotRects, setSlotRects] = useState<SlotRect[]>([])
+  const [heroRects, setHeroRects] = useState<MarkedBlockRect[]>([])
   const [blockRects, setBlockRects] = useState<MarkedBlockRect[]>([])
   const [bannerItemRects, setBannerItemRects] = useState<MarkedBlockRect[]>([])
   const [dealCardRects, setDealCardRects] = useState<MarkedBlockRect[]>([])
@@ -640,6 +655,7 @@ function EmailFrame({
     if (!root?.body) return
     setHeight(Math.max(root.body.scrollHeight, 200))
     setSlotRects(measureSlots(root))
+    setHeroRects(measureHeroPieces(root))
     setBlockRects(measureContentBlocks(root))
     setBannerItemRects(measureBannerItems(root))
     setDealCardRects(measureDealCards(root))
@@ -668,15 +684,37 @@ function EmailFrame({
     return resolveDropIndex(order, rectsById, dropY)
   }
 
+  // Índice de destino dentro de la lista del Hero (headers y banners).
+  const resolveIndexForHeroDrop = (e: React.DragEvent): number => {
+    const order = hero.map((p) => p.id)
+    const rectsById = new Map(heroRects.map((r) => [r.id, r]))
+    const dropY = frameElRef.current ? dropYInFrameSpace(e, frameElRef.current) : 0
+    return resolveDropIndex(order, rectsById, dropY)
+  }
+
+  // El banner sobre el que cae el cursor (para soltar una pieza NUEVA desde el
+  // catálogo); si no cae sobre ninguno, el primero.
+  const resolveBannerForDrop = (e: React.DragEvent): string | null => {
+    const banners = heroBanners(hero)
+    if (banners.length === 0) return null
+    if (!frameElRef.current) return banners[0].id
+    const dropY = dropYInFrameSpace(e, frameElRef.current)
+    const target = heroRects.find((r) => r.type === 'BANNER' && dropY >= r.top && dropY <= r.top + r.height)
+    return target?.id ?? banners[0].id
+  }
+
   // Índice de destino para piezas de banner: usa la variante "en orden de
   // lectura" (Y, salvo que el cursor caiga en la misma banda vertical de un
   // item, en cuyo caso decide por X) porque el banner horizontal apila 2
   // columnas lado a lado (moléculas + imagen) que comparten banda Y — un
   // resolveDropIndex puramente vertical sería ambiguo ahí. Para una pila a
-  // todo el ancho (banner vertical) el resultado es equivalente.
-  const resolveIndexForBannerDrop = (e: React.DragEvent): number => {
-    const order = bannerItems.map((it) => it.id)
-    const rectsById = new Map(bannerItemRects.map((r) => [r.id, r]))
+  // todo el ancho (banner vertical) el resultado es equivalente. Acotado a las
+  // piezas de UN banner (hay varios desde 2026-10-28).
+  const resolveIndexForBannerDrop = (e: React.DragEvent, bannerId: string): number => {
+    const banner = hero.find((p) => p.id === bannerId)
+    const order = banner?.type === 'BANNER' ? banner.fields.items.map((it) => it.id) : []
+    const own = new Set(order)
+    const rectsById = new Map(bannerItemRects.filter((r) => own.has(r.id)).map((r) => [r.id, r]))
     if (!frameElRef.current) return order.length
     const dropX = dropXInFrameSpace(e, frameElRef.current)
     const dropY = dropYInFrameSpace(e, frameElRef.current)
@@ -763,6 +801,8 @@ function EmailFrame({
     return { blockId: target.id, areaKey: getModuleAreas(def)[0].key }
   }
 
+  const heroLabels = heroPieceLabels(hero)
+
   return (
     <div className="viewport-canvas">
       <div
@@ -784,6 +824,7 @@ function EmailFrame({
           if (mode !== 'edit') return
           const types = e.dataTransfer.types
           const reorderTypes = [
+            HERO_PIECE_REORDER_DRAG_TYPE,
             CONTENT_BLOCK_REORDER_DRAG_TYPE,
             BANNER_ITEM_REORDER_DRAG_TYPE,
             DEAL_CARD_REORDER_DRAG_TYPE,
@@ -794,6 +835,7 @@ function EmailFrame({
             SLOT_DRAG_TYPE,
             CONTENT_BLOCK_DRAG_TYPE,
             BANNER_TYPE_DRAG_TYPE,
+            HEADER_DRAG_TYPE,
             BANNER_ITEM_DRAG_TYPE,
             MODULE_ITEM_DRAG_TYPE,
             ...reorderTypes,
@@ -816,10 +858,25 @@ function EmailFrame({
             return
           }
 
+          // Una card de la pestaña Hero: agrega un banner (de ese tipo) o un
+          // header donde se suelte, dentro de la lista del Hero.
           const bannerType = e.dataTransfer.getData(BANNER_TYPE_DRAG_TYPE)
           if (bannerType) {
             e.preventDefault()
-            onSetBannerType(bannerType as BannerType)
+            onInsertHeroPiece('BANNER', resolveIndexForHeroDrop(e), bannerType as BannerType)
+            return
+          }
+
+          if (e.dataTransfer.getData(HEADER_DRAG_TYPE)) {
+            e.preventDefault()
+            onInsertHeroPiece('HEADER', resolveIndexForHeroDrop(e))
+            return
+          }
+
+          const reorderHeroId = e.dataTransfer.getData(HERO_PIECE_REORDER_DRAG_TYPE)
+          if (reorderHeroId) {
+            e.preventDefault()
+            onReorderHeroPiece(reorderHeroId, resolveIndexForHeroDrop(e))
             return
           }
 
@@ -840,14 +897,18 @@ function EmailFrame({
           const newBannerItemType = e.dataTransfer.getData(BANNER_ITEM_DRAG_TYPE)
           if (newBannerItemType) {
             e.preventDefault()
-            onInsertBannerItem(newBannerItemType as BannerItemType, resolveIndexForBannerDrop(e))
+            const bannerId = resolveBannerForDrop(e)
+            if (bannerId) onInsertBannerItem(bannerId, newBannerItemType as BannerItemType, resolveIndexForBannerDrop(e, bannerId))
             return
           }
 
+          // Reordenar una pieza existente: acotado a SU banner (no al que esté
+          // bajo el cursor) — no se mueven piezas entre banners por error.
           const reorderBannerItemId = e.dataTransfer.getData(BANNER_ITEM_REORDER_DRAG_TYPE)
           if (reorderBannerItemId) {
             e.preventDefault()
-            onReorderBannerItem(reorderBannerItemId, resolveIndexForBannerDrop(e))
+            const owner = findBannerByItem(hero, reorderBannerItemId)
+            if (owner) onReorderBannerItem(reorderBannerItemId, resolveIndexForBannerDrop(e, owner.piece.id))
             return
           }
 
@@ -917,7 +978,7 @@ function EmailFrame({
           const section = isSectionTarget(slot)
           const label = section ? SECTION_LABELS[slot] : SLOT_LABELS[slot]
           const isSelected = isSlotSelected(selected, slot)
-          const hasLiquid = !section && isTropicalized(tropicalizations, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER'))
+          const hasLiquid = !section && isTropicalized(tropicalizations, slotKey('FOOTER'))
           return (
             <div
               key={slot}
@@ -943,6 +1004,46 @@ function EmailFrame({
                 >
                   ×
                 </button>
+              )}
+            </div>
+          )
+        })}
+        {/* Headers y banners del Hero — ANTES de las piezas de banner, que
+            quedan encima (el overlay de un banner las contiene). */}
+        {heroRects.map(({ id, type, top, left, width, height: h }) => {
+          const pieceType = type as HeroPieceType
+          const label = heroLabels.get(id) ?? SLOT_LABELS[pieceType]
+          const isSelected = isHeroPieceSelected(selected, id)
+          const lastOfType = isLastOfType(hero, id)
+          return (
+            <div
+              key={id}
+              className={`slot-hit block-hit${isSelected ? ' selected' : ''}${isTropicalized(tropicalizations, heroPieceKey(pieceType, id)) ? ' has-liquid' : ''}`}
+              style={{ top, left, width, height: h }}
+              draggable={mode === 'edit'}
+              onDragStart={
+                mode === 'edit'
+                  ? (e) => {
+                      e.dataTransfer.setData(HERO_PIECE_REORDER_DRAG_TYPE, id)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }
+                  : undefined
+              }
+            >
+              <button
+                type="button"
+                className="slot-select"
+                aria-label={`${mode === 'tropicalize' ? 'Tropicalizar' : 'Seleccionar'} ${label}`}
+                aria-pressed={isSelected}
+                onClick={() => onSelect(selectHeroPiece(pieceType, id))}
+              />
+              {mode === 'edit' && pieceType === 'HEADER' && (
+                <HeroPieceActions
+                  label={label}
+                  lastOfType={lastOfType}
+                  onDuplicate={() => onDuplicateHeroPiece(id)}
+                  onRemove={() => onRemoveHeroPiece(id)}
+                />
               )}
             </div>
           )
@@ -1277,28 +1378,87 @@ function EmailFrame({
             explícitamente (ver .slot-hit-controls en App.css). No tiene botón
             de eliminar: el banner (uno de los 2 tipos) siempre debe estar
             presente en el email, no es removable. */}
-        {slotRects
-          // Predicado tipado (no un `===` suelto): desde que SlotRect también
-          // puede traer una sección, TS no angosta solo.
-          .filter((r): r is SlotRect & { slot: 'BANNER' } => r.slot === 'BANNER')
-          .map(({ slot, top, left, width, height: h }) => (
-            <div
-              key={`${slot}-controls`}
-              className={`slot-hit-controls${isSlotSelected(selected, slot) ? ' selected' : ''}`}
-              style={{ top, left, width, height: h }}
-            >
-              <button
-                type="button"
-                className="slot-badge slot-badge-button"
-                aria-label={`Seleccionar ${SLOT_LABELS[slot]}`}
-                aria-pressed={isSlotSelected(selected, slot)}
-                onClick={() => onSelect(selectSlot(slot))}
+        {heroRects
+          .filter((r) => r.type === 'BANNER')
+          .map(({ id, top, left, width, height: h }) => {
+            const label = heroLabels.get(id) ?? SLOT_LABELS.BANNER
+            return (
+              <div
+                key={`${id}-controls`}
+                className={`slot-hit-controls${isHeroPieceSelected(selected, id) ? ' selected' : ''}`}
+                style={{ top, left, width, height: h }}
               >
-                {SLOT_LABELS[slot]}
-              </button>
-            </div>
-          ))}
+                <button
+                  type="button"
+                  className="slot-badge slot-badge-button"
+                  aria-label={`Seleccionar ${label}`}
+                  aria-pressed={isHeroPieceSelected(selected, id)}
+                  onClick={() => onSelect(selectHeroPiece('BANNER', id))}
+                >
+                  {label}
+                </button>
+                {/* Duplicar/eliminar el banner entero: van en esta capa (encima
+                    de sus piezas) por el mismo motivo que el badge. */}
+                {mode === 'edit' && (
+                  <HeroPieceActions
+                    label={label}
+                    lastOfType={isLastOfType(hero, id)}
+                    onDuplicate={() => onDuplicateHeroPiece(id)}
+                    onRemove={() => onRemoveHeroPiece(id)}
+                  />
+                )}
+              </div>
+            )
+          })}
       </div>
     </div>
+  )
+}
+
+/**
+ * Duplicar / eliminar un header o un banner del Hero desde el lienzo. Eliminar
+ * se desactiva en el último de su tipo: el Hero siempre lleva al menos un
+ * header y un banner (la regla vive en el store, ver removeHeroPiece; esto
+ * solo lo hace visible).
+ */
+function HeroPieceActions({
+  label,
+  lastOfType,
+  onDuplicate,
+  onRemove,
+}: {
+  label: string
+  lastOfType: boolean
+  onDuplicate: () => void
+  onRemove: () => void
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        className="slot-duplicate"
+        aria-label={`Duplicar ${label}`}
+        title={`Duplicar ${label}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          onDuplicate()
+        }}
+      >
+        ⧉
+      </button>
+      <button
+        type="button"
+        className="slot-delete"
+        aria-label={`Eliminar ${label}`}
+        title={lastOfType ? `El Hero necesita al menos un ${label.toLowerCase().startsWith('header') ? 'header' : 'banner'}` : `Eliminar ${label}`}
+        disabled={lastOfType}
+        onClick={(e) => {
+          e.stopPropagation()
+          onRemove()
+        }}
+      >
+        ×
+      </button>
+    </>
   )
 }

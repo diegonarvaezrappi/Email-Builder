@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import { footerSchema, type FooterFields } from './components/footer/schema'
-import { headerSchema, type HeaderFields } from './components/header/schema'
 import { ctaFieldsSchema, type CtaFields } from './components/cta/schema'
 import { dealsFieldsSchema, type DealsFields } from './components/deals/schema'
 import { titleFieldsSchema, type TitleFields } from './components/title/schema'
@@ -11,7 +10,7 @@ import { col2FieldsSchema, type Col2Fields } from './components/col2/schema'
 import { col3FieldsSchema, type Col3Fields } from './components/col3/schema'
 import { logosFieldsSchema, type LogosFields } from './components/logos/schema'
 import { cuponesFieldsSchema, type CuponesFields } from './components/cupones/schema'
-import { bannerSchema, defaultBannerFields, type BannerFields } from './components/banner/schema'
+import { defaultHero, heroPieceSchema, migrateLegacyHero, type HeroPiece } from './components/hero/schema'
 import { globalSchema, type GlobalFields } from './global/schema'
 import { tropicalizationsSchema, type Tropicalizations } from './tropicalize/schema'
 
@@ -24,7 +23,12 @@ export type { BannerItem, BannerItemType } from './components/banner/items/schem
  *  es a un bloque DEALS lo que una pieza de banner es al banner. */
 export type { DealCard, DealCardFields } from './components/deals/schema'
 
-/** Nombres de los marcadores de slot presentes en template_base.html. */
+export type { HeroPiece, HeroPieceType, HeroHeaderPiece, HeroBannerPiece } from './components/hero/schema'
+
+/** Nombres de los marcadores de slot presentes en template_base.html.
+ *  HEADER y BANNER siguen siendo nombres de slot (registry, selección, lienzo)
+ *  aunque ya no son singletons: cada pieza del Hero es una instancia de uno de
+ *  los dos, ver components/hero/schema.ts. */
 export type SlotName = 'HEADER' | 'BANNER' | 'CONTENIDOS' | 'FOOTER'
 
 /** Orden en el que aparecen los marcadores dentro del template maestro. */
@@ -51,7 +55,7 @@ export interface CtaBlock {
  * horneado por la app y, sobre todo, es el primer bloque de CONTENIDOS con
  * piezas repetibles adentro: `fields.items` es una lista de hasta 4 tarjetas,
  * cada una seleccionable/reordenable por su cuenta en el lienzo — el mismo
- * patrón de doc.banner.items, un nivel más adentro. Ver components/deals/.
+ * patrón de las piezas de un banner, un nivel más adentro. Ver components/deals/.
  */
 export interface DealsBlock {
   id: string
@@ -257,10 +261,10 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
  * (donde un diseño ES un solo tipo discriminado), acá un email tiene TODOS los
  * slots a la vez — por eso este es un mapa, no una unión discriminada.
  *
- * `banner` y `contenidos` no son singletons puros como header/footer:
- * `banner.items` y `contenidos` son listas libres y repetibles de piezas/bloques
- * (banner: 10 tipos posibles, ver components/banner/; contenidos: hoy solo
- * CTA) — ver components/banner/render.ts y components/contenidos/render.ts.
+ * `hero` y `contenidos` son listas libres y repetibles: el Hero, de headers y
+ * banners (cada banner con su propia lista de piezas, ver components/banner/);
+ * contenidos, de bloques de body — ver components/hero/schema.ts y
+ * components/contenidos/render.ts. Solo `footer` sigue siendo un singleton.
  *
  * `global` no es un slot: son los ajustes que afectan al email entero (hoy el
  * tema, el fondo y el estilo de CTA — este último global a propósito: cambiar
@@ -271,14 +275,18 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
  */
 export interface EmailDocument {
   global: GlobalFields
-  header: HeaderFields
-  banner: BannerFields
+  /**
+   * Las piezas del HERO, en orden: headers y banners mezclados, cada uno con id
+   * propio (ver components/hero/schema.ts). Siempre al menos uno de cada tipo.
+   * Reemplaza a los viejos singletons `header` y `banner` (2026-10-28).
+   */
+  hero: HeroPiece[]
   footer: FooterFields
   contenidos: ContentBlock[]
   /**
    * Condicionales de país por elemento ("Tropicalizar", ver src/tropicalize/).
-   * Mapa keyeado por una clave plana (tropicalize/keys.ts: `slot:HEADER`,
-   * `block:<id>`, `bitem:<id>`, `dcard:<id>`, `mitem:<id>`) — mismo criterio
+   * Mapa keyeado por una clave plana (tropicalize/keys.ts: `slot:FOOTER`,
+   * `header:<id>`, `banner:<id>`, `block:<id>`, `bitem:<id>`, `dcard:<id>`, `mitem:<id>`) — mismo criterio
    * que el resto del documento: los ids son únicos en todo el documento, así
    * que el dueño se busca, nunca viaja en la clave. `.default({})` en el
    * schema de abajo: un documento sin tropicalizaciones renderiza byte a
@@ -287,16 +295,17 @@ export interface EmailDocument {
   tropicalizations: Tropicalizations
 }
 
-/** Usado por store/persistence.ts para validar lo que viene de localStorage.
- *  `banner` usa `.default(defaultBannerFields)` (no solo `bannerSchema`, que ya
- *  trae sus propios defaults por campo) para que un documento viejo en
- *  localStorage sin la key `banner` en absoluto cargue con el banner vertical
- *  + tags documentado, no con `items: []` vacío. */
-export const emailDocumentSchema = z.object({
+/** Usado por store/persistence.ts para validar lo que viene de localStorage, y
+ *  por la pestaña Importar. Un documento anterior a la lista del Hero (con
+ *  `header` + `banner` sueltos) se convierte en el preprocess — ver
+ *  components/hero/schema.ts#migrateLegacyHero. Sin ninguno de los dos, carga
+ *  con el Hero por defecto. */
+const emailDocumentObjectSchema = z.object({
   global: globalSchema,
-  header: headerSchema,
-  banner: bannerSchema.default(defaultBannerFields),
+  hero: z.array(heroPieceSchema).default(defaultHero),
   footer: footerSchema,
   contenidos: z.array(contentBlockSchema).default([]),
   tropicalizations: tropicalizationsSchema,
 })
+
+export const emailDocumentSchema = z.preprocess(migrateLegacyHero, emailDocumentObjectSchema)

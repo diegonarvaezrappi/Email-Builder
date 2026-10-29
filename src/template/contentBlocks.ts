@@ -100,3 +100,19 @@ export function wrapWithModuleItemMarkers(blockId: string, itemId: string, inner
 
 export const MODULE_ITEM_OPEN_RE = /^\s*MITEM:([^:]+):(.+?)\s*$/
 export const MODULE_ITEM_CLOSE_RE = /^\s*\/MITEM:([^:]+):(.+?)\s*$/
+
+/**
+ * Sexto prefijo distinto ("HERO") — cada header y cada banner del Hero, que
+ * desde 2026-10-28 son repetibles (ver components/hero/schema.ts). Antes eran
+ * singletons y ui/Viewport.tsx los ubicaba por selector (`[id^="HEADER"]`,
+ * `table[id^="BANNER_"]`), que ya no alcanza para saber CUÁL de varios es.
+ * El primer campo es el tipo de pieza (HEADER | BANNER). Envuelve también los
+ * marcadores BITEM de las piezas de ese banner: measureMarkedBlocks camina
+ * cada familia de prefijos por separado, así que no se cruzan.
+ */
+export function wrapWithHeroMarkers(type: string, id: string, innerHtml: string): string {
+  return `<!-- HERO:${type}:${id} -->\n${innerHtml}\n<!-- /HERO:${type}:${id} -->`
+}
+
+export const HERO_PIECE_OPEN_RE = /^\s*HERO:([^:]+):(.+?)\s*$/
+export const HERO_PIECE_CLOSE_RE = /^\s*\/HERO:([^:]+):(.+?)\s*$/

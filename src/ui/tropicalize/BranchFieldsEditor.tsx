@@ -19,6 +19,7 @@ import { contentBlockRegistry } from '../../contentBlockRegistry'
 import { getBannerItemDef } from '../../bannerItemRegistry'
 import { getModuleItemDef } from '../../bodyMoleculeRegistry'
 import { registry } from '../../registry'
+import { findBannerByItem } from '../../components/hero/schema'
 import { findDealsBlockByCard } from '../../components/deals/blocks'
 import { findModuleBlockByItem } from '../../components/contentModules/blocks'
 import { DEAL_CARD_PIECE_LABELS, DEAL_CARD_PIECE_TYPES, type DealCardFields } from '../../components/deals/schema'
@@ -97,18 +98,25 @@ export function BranchFieldsEditor({ selected, doc, value, onChange, onChangeGlo
   }
 
   if (selected.slot === 'BANNER' && selected.bannerItemId) {
-    const item = doc.banner.items.find((it) => it.id === selected.bannerItemId)
+    const owner = findBannerByItem(doc.hero, selected.bannerItemId)
+    const item = owner?.piece.fields.items.find((it) => it.id === selected.bannerItemId)
     const def = item ? getBannerItemDef(item.type) : undefined
-    if (!item || !def) return null
+    if (!owner || !item || !def) return null
     return (
       <>
         {GLOBAL_WRITING_TYPES.has(item.type) && <GlobalFieldWarning />}
-        <def.PropertiesPanel value={value} onChange={onChange} doc={doc} onChangeGlobal={onChangeGlobal} />
+        <def.PropertiesPanel
+          value={value}
+          onChange={onChange}
+          doc={doc}
+          onChangeGlobal={onChangeGlobal}
+          bannerType={owner.piece.fields.bannerType}
+        />
       </>
     )
   }
 
-  // Slot singleton (HEADER / BANNER general / FOOTER) — {value, onChange} nomás.
+  // Un header / banner general del Hero, o el footer — {value, onChange} nomás.
   const def = registry[selected.slot]
   if (!def?.PropertiesPanel) return null
   const { PropertiesPanel } = def

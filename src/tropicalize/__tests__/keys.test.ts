@@ -3,6 +3,7 @@ import {
   bannerItemKey,
   blockKey,
   dealCardKey,
+  heroPieceKey,
   isTropicalizeKey,
   moduleItemKey,
   parseTargetKey,
@@ -15,6 +16,7 @@ import {
   selectBlock,
   selectDealCard,
   selectDealCardPiece,
+  selectHeroPiece,
   selectModuleItem,
   selectSlot,
 } from '../../ui/selection'
@@ -41,10 +43,15 @@ describe('parseTargetKey', () => {
     expect(parseTargetKey('slot:NOPE')).toBeNull()
   })
 
-  it('accepts the 3 real slot ids', () => {
-    expect(parseTargetKey('slot:HEADER')).toEqual({ kind: 'slot', id: 'HEADER' })
-    expect(parseTargetKey('slot:BANNER')).toEqual({ kind: 'slot', id: 'BANNER' })
+  it('accepts FOOTER, the only singleton slot left', () => {
     expect(parseTargetKey('slot:FOOTER')).toEqual({ kind: 'slot', id: 'FOOTER' })
+  })
+
+  it('rejects slot:HEADER / slot:BANNER — header and banner are hero pieces now (header:<id>, banner:<id>)', () => {
+    expect(parseTargetKey('slot:HEADER')).toBeNull()
+    expect(parseTargetKey('slot:BANNER')).toBeNull()
+    expect(parseTargetKey('header:h1')).toEqual({ kind: 'header', id: 'h1' })
+    expect(parseTargetKey('banner:b1')).toEqual({ kind: 'banner', id: 'b1' })
   })
 })
 
@@ -57,7 +64,9 @@ describe('isTropicalizeKey', () => {
 
 describe('key constructors', () => {
   it('produce the expected <kind>:<id> shape', () => {
-    expect(slotKey('HEADER')).toBe('slot:HEADER')
+    expect(slotKey('FOOTER')).toBe('slot:FOOTER')
+    expect(heroPieceKey('HEADER', 'h1')).toBe('header:h1')
+    expect(heroPieceKey('BANNER', 'b1')).toBe('banner:b1')
     expect(blockKey('b1')).toBe('block:b1')
     expect(bannerItemKey('i1')).toBe('bitem:i1')
     expect(dealCardKey('c1')).toBe('dcard:c1')
@@ -66,10 +75,23 @@ describe('key constructors', () => {
 })
 
 describe('targetKeyFromSelection / selectionFromTargetKey round-trip', () => {
-  it('round-trips a plain slot', () => {
-    const key = targetKeyFromSelection(selectSlot('HEADER'))
-    expect(key).toBe('slot:HEADER')
-    expect(selectionFromTargetKey(key!)).toEqual(selectSlot('HEADER'))
+  it('round-trips the footer slot', () => {
+    const key = targetKeyFromSelection(selectSlot('FOOTER'))
+    expect(key).toBe('slot:FOOTER')
+    expect(selectionFromTargetKey(key!)).toEqual(selectSlot('FOOTER'))
+  })
+
+  it('round-trips a header and a banner of the hero', () => {
+    const header = targetKeyFromSelection(selectHeroPiece('HEADER', 'h1'))
+    expect(header).toBe('header:h1')
+    expect(selectionFromTargetKey(header!)).toEqual(selectHeroPiece('HEADER', 'h1'))
+    const banner = targetKeyFromSelection(selectHeroPiece('BANNER', 'b1'))
+    expect(banner).toBe('banner:b1')
+    expect(selectionFromTargetKey(banner!)).toEqual(selectHeroPiece('BANNER', 'b1'))
+  })
+
+  it('a bare HEADER/BANNER selection (no heroId) is not tropicalizable', () => {
+    expect(targetKeyFromSelection(selectSlot('HEADER'))).toBeNull()
   })
 
   it('round-trips a content block', () => {

@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../../model'
 import { CTA_STYLE_SELECT_LABELS, CTA_STYLE_SELECT_VALUES } from '../../../global/schema'
 import type { GlobalFields } from '../../../global/schema'
+import type { BannerType } from '../schema'
 import { RichTextInput } from '../../../richText/RichTextInput'
 import { richTextColorsForTema } from '../../../richText/themeColors'
 import {
@@ -38,13 +39,16 @@ import type {
 /** Props uniformes para todo `BannerItemDef.PropertiesPanel` — mismo shape
  *  que `ContentBlockDef.PropertiesPanel` (CTA de CONTENIDOS): `doc`/`onChangeGlobal`
  *  existen porque CTA_INTERNO necesita leer/escribir doc.global.ctaStyle, y
- *  IMG_FIJA necesita saber doc.banner.bannerType (el campo `logoLink` solo
- *  aplica en vertical). Los demás tipos simplemente no los usan. */
+ *  `bannerType` (la orientación del banner dueño) porque IMG_FIJA solo ofrece
+ *  `logoLink` en vertical. Los demás tipos simplemente no los usan. */
 interface BannerItemPanelProps<TFields> {
   value: TFields
   onChange: (next: TFields) => void
   doc: EmailDocument
   onChangeGlobal: (next: GlobalFields) => void
+  /** Opcional: estos paneles también los usan las moléculas de body
+   *  (bodyMoleculeRegistry.ts), que no viven en ningún banner. */
+  bannerType?: BannerType
 }
 
 export function PromoPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<PromoFields>) {
@@ -228,7 +232,7 @@ export function ImgAutomaticaModuloPropertiesPanel({ value, onChange }: BannerIt
   )
 }
 
-export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanelProps<ImgFijaFields>) {
+export function ImgFijaPropertiesPanel({ value, onChange, bannerType }: BannerItemPanelProps<ImgFijaFields>) {
   return (
     <div className="properties-panel">
       <label className="field">
@@ -263,7 +267,7 @@ export function ImgFijaPropertiesPanel({ value, onChange, doc }: BannerItemPanel
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, logoImageAlt: e.target.value })}
         />
       </label>
-      {doc.banner.bannerType === 'vertical' && (
+      {bannerType === 'vertical' && (
         <label className="field">
           <span>Enlace del logo</span>
           <input

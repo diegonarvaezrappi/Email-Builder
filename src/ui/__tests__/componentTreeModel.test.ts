@@ -10,6 +10,7 @@ import {
   buildTreeViewModel,
   dealCardExpandKey,
   expandedKeysForSelection,
+  heroExpandKey,
   isSameSelection,
   type TreeNodeRow,
   type TreeRow,
@@ -20,10 +21,13 @@ import {
   selectDealCard,
   selectDealCardPiece,
   selectGlobalBackground,
+  selectHeroPiece,
   selectModuleItem,
   selectSlot,
 } from '../selection'
 
+import { bannerOf, bannerPieceOf, headerPieceOf, legacy } from '../../components/hero/testUtils'
+import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, type HeroPiece } from '../../components/hero/schema'
 /** Los defaults reales de la molécula, para no inventar un shape en el test. */
 const bulletIconFields = bodyMoleculeRegistry.BULLET_ICONO_SIMPLE.defaultFields
 
@@ -76,35 +80,68 @@ const col3Doc: EmailDocument = {
 }
 
 describe('buildTreeViewModel · Sección Hero', () => {
-  it('lists the banner pieces, flat', () => {
+  const bannerOpen = open(heroExpandKey(DEFAULT_HERO_BANNER_ID))
+
+  it('lists the hero pieces (header and banner) at the root, the banner folded', () => {
     const vm = buildTreeViewModel(defaultEmailDocument, NONE, 'hero')
+    expect(nodeLabels(vm.rows)).toEqual(['Header', 'Banner'])
+    expect(nodes(vm.rows)[0]).toMatchObject({ selection: selectHeroPiece('HEADER', DEFAULT_HERO_HEADER_ID) })
+    expect(nodes(vm.rows)[0].expandKey).toBeUndefined()
+    expect(nodes(vm.rows)[1]).toMatchObject({
+      selection: selectHeroPiece('BANNER', DEFAULT_HERO_BANNER_ID),
+      expandKey: heroExpandKey(DEFAULT_HERO_BANNER_ID),
+      expanded: false,
+      childCount: 5,
+      tag: 'vertical',
+    })
+  })
+
+  it('an open banner shows its pieces underneath, one level in', () => {
+    const vm = buildTreeViewModel(defaultEmailDocument, bannerOpen, 'hero')
     expect(nodeLabels(vm.rows)).toEqual([
+      'Header',
+      'Banner',
       'Promo',
       'Imagen automática (molécula)',
       'Texto complementario',
       'Imagen de alto fijo',
       'Tags',
     ])
-    expect(nodes(vm.rows).every((r) => r.expandKey === undefined && r.depth === 0)).toBe(true)
+    expect(nodes(vm.rows).slice(2).every((r) => r.depth === 1)).toBe(true)
+  })
+
+  it('numbers repeated types and blocks removing the last one of each', () => {
+    const header = headerPieceOf(defaultEmailDocument)
+    const banner = bannerPieceOf(defaultEmailDocument)
+    const hero: HeroPiece[] = [header, banner, { ...banner, id: 'b2' }]
+    const rows = nodes(buildTreeViewModel({ ...defaultEmailDocument, hero }, NONE, 'hero').rows)
+    expect(rows.map((r) => r.label)).toEqual(['Header', 'Banner 1', 'Banner 2'])
+    expect(rows[0].removeBlockedReason).toBeDefined()
+    expect(rows[1].removeBlockedReason).toBeUndefined()
+    expect(rows.map((r) => r.reorder)).toEqual([
+      { kind: 'heroPiece', group: 'hero', index: 0, id: header.id },
+      { kind: 'heroPiece', group: 'hero', index: 1, id: banner.id },
+      { kind: 'heroPiece', group: 'hero', index: 2, id: 'b2' },
+    ])
   })
 
   it('tags a banner piece the current orientation does not render, instead of hiding it', () => {
     // IMG_AUTOMATICA_MODULO es solo horizontal (bannerItemRegistry.ts) — en un
     // banner vertical sigue viva en el documento pero no se renderiza.
-    const doc: EmailDocument = {
+    const doc: EmailDocument = legacy({
       ...defaultEmailDocument,
       banner: {
-        ...defaultEmailDocument.banner,
+        ...bannerOf(defaultEmailDocument),
         bannerType: 'vertical',
         items: [{ id: 'x', type: 'IMG_AUTOMATICA_MODULO', fields: { imageUrl: '', imageAlt: '', widthPercent: 80, borderRadiusEnabled: false } }],
       },
-    }
-    expect(buildTreeViewModel(doc, NONE, 'hero').rows[0]).toMatchObject({ tag: 'no aplica' })
+    })
+    expect(buildTreeViewModel(doc, bannerOpen, 'hero').rows[2]).toMatchObject({ tag: 'no aplica' })
   })
 
   it('shows a hint when the banner has no pieces', () => {
-    const doc: EmailDocument = { ...defaultEmailDocument, banner: { ...defaultEmailDocument.banner, items: [] } }
-    expect(buildTreeViewModel(doc, NONE, 'hero').rows).toEqual([{ kind: 'hint', label: '(sin piezas)', depth: 0 }])
+    const doc: EmailDocument = legacy({ ...defaultEmailDocument, banner: { ...bannerOf(defaultEmailDocument), items: [] } })
+    expect(buildTreeViewModel(doc, bannerOpen, 'hero').rows[2]).toEqual({ kind: 'hint', label: '(sin piezas)', depth: 1 })
   })
 })
 
@@ -218,10 +255,10 @@ describe('descriptores de reordenamiento', () => {
     expect(rows[1].reorder).toMatchObject({ kind: 'block', group: 'contenidos', index: 1 })
   })
 
-  it('numbers banner pieces against the banner list', () => {
-    const rows = buildTreeViewModel(defaultEmailDocument, NONE, 'hero').rows
-    expect(rows[0]).toMatchObject({ reorder: { kind: 'bannerItem', group: 'banner', index: 0 } })
-    expect(rows[2]).toMatchObject({ reorder: { kind: 'bannerItem', group: 'banner', index: 2 } })
+  it('numbers banner pieces against their own banner (the group is the banner id)', () => {
+    const rows = buildTreeViewModel(defaultEmailDocument, open(heroExpandKey(DEFAULT_HERO_BANNER_ID)), 'hero').rows
+    expect(rows[2]).toMatchObject({ reorder: { kind: 'bannerItem', group: DEFAULT_HERO_BANNER_ID, index: 0 } })
+    expect(rows[4]).toMatchObject({ reorder: { kind: 'bannerItem', group: DEFAULT_HERO_BANNER_ID, index: 2 } })
   })
 
   it('scopes deal cards to their own block, so a card cannot land in another Deals row', () => {
@@ -254,8 +291,10 @@ describe('descriptores de reordenamiento', () => {
 // Duplicar/eliminar desde el árbol: cada fila declara sobre qué elemento actúa.
 describe('destinos de duplicar/eliminar', () => {
   it('targets banner pieces, blocks, deal cards and molecules by their own id', () => {
-    const item = defaultEmailDocument.banner.items[0]
-    expect(buildTreeViewModel(defaultEmailDocument, NONE, 'hero').rows[0]).toMatchObject({ actionTarget: { kind: 'bannerItem', id: item.id } })
+    const item = bannerOf(defaultEmailDocument).items[0]
+    const heroRows = buildTreeViewModel(defaultEmailDocument, open(heroExpandKey(DEFAULT_HERO_BANNER_ID)), 'hero').rows
+    expect(heroRows[1]).toMatchObject({ actionTarget: { kind: 'heroPiece', id: DEFAULT_HERO_BANNER_ID } })
+    expect(heroRows[2]).toMatchObject({ actionTarget: { kind: 'bannerItem', id: item.id } })
     const block = firstDealsBlock(defaultEmailDocument)
     const rows = nodes(buildTreeViewModel(defaultEmailDocument, open(blockExpandKey(block.id)), 'contents').rows)
     expect(rows.find((r) => r.label === 'Deals 1')).toMatchObject({ actionTarget: { kind: 'block', id: block.id } })
@@ -302,12 +341,16 @@ describe('expandedKeysForSelection · la mitad "lienzo → árbol"', () => {
   })
 
   it('opens nothing for things already visible at the root', () => {
-    const item = defaultEmailDocument.banner.items[0]
     expect(expandedKeysForSelection(defaultEmailDocument, null)).toEqual([])
     expect(expandedKeysForSelection(defaultEmailDocument, selectSlot('HEADER'))).toEqual([])
-    expect(expandedKeysForSelection(defaultEmailDocument, selectBannerItem(item.id))).toEqual([])
+    expect(expandedKeysForSelection(defaultEmailDocument, selectHeroPiece('BANNER', DEFAULT_HERO_BANNER_ID))).toEqual([])
     expect(expandedKeysForSelection(defaultEmailDocument, selectBlock(firstDealsBlock(defaultEmailDocument).id))).toEqual([])
     expect(expandedKeysForSelection(defaultEmailDocument, selectGlobalBackground('HERO_BG'))).toEqual([])
+  })
+
+  it('opens the owning banner for a banner piece', () => {
+    const item = bannerOf(defaultEmailDocument).items[0]
+    expect(expandedKeysForSelection(defaultEmailDocument, selectBannerItem(item.id))).toEqual([heroExpandKey(DEFAULT_HERO_BANNER_ID)])
   })
 
   it('opens nothing for an id that no longer resolves', () => {
@@ -318,9 +361,10 @@ describe('expandedKeysForSelection · la mitad "lienzo → árbol"', () => {
 
 describe('isSameSelection', () => {
   it('distinguishes a slot from something nested inside it', () => {
-    const item = defaultEmailDocument.banner.items[0]
+    const item = bannerOf(defaultEmailDocument).items[0]
     expect(isSameSelection(selectSlot('BANNER'), selectSlot('BANNER'))).toBe(true)
     expect(isSameSelection(selectSlot('BANNER'), selectBannerItem(item.id))).toBe(false)
+    expect(isSameSelection(selectHeroPiece('BANNER', 'b1'), selectHeroPiece('BANNER', 'b2'))).toBe(false)
   })
 
   it('distinguishes a deal card from one of its lines', () => {

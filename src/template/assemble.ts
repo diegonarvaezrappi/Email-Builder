@@ -6,11 +6,13 @@ import { cssUrlValue, resolveGlobalVars } from '../global/vars'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import { stripBannerFieldAssigns } from '../components/banner/render'
 import { stripDealsFieldAssigns } from '../components/deals/render'
-import { elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
+import { applyEdits, elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
 import { escapeHtmlAttr, insertBackgroundImageAltAtStart } from './htmlText'
 import { HERO_LINK_PLACEHOLDER, linkOrPlaceholder, numberLinkPlaceholders } from './linkPlaceholders'
-import { slotKey } from '../tropicalize/keys'
+import { heroPieceKey, slotKey } from '../tropicalize/keys'
 import { renderTropicalized } from '../tropicalize/render'
+import { heroBanners } from '../components/hero/schema'
+import { wrapWithHeroMarkers } from './contentBlocks'
 
 /**
  * El refactor HERO/CONTENTS/FOOTER del repo raíz (iniciado 2026-09-12,
@@ -22,7 +24,7 @@ import { renderTropicalized } from '../tropicalize/render'
  * "HEADER WRAPPER…CIERRE HEADER WRAPPER" / "BANNER :…" / `<!-- CIERRES -->`:
  * ya no son regexes que delimitan un bloque entero a reemplazar, son anclas
  * (texto plano) que ubican un comentario corto YA DENTRO de un contenedor que
- * el propio maestro conserva siempre — ver replaceCommentPlaceholder más abajo.
+ * el propio maestro conserva siempre — ver renderHero más abajo.
  */
 const HEADER_PLACEHOLDER_ANCHOR = 'AQUÍ VA EL HEADER'
 
@@ -54,31 +56,110 @@ const WRAPPER_DE_CONTENIDOS_ANCHOR = 'WRAPPER DE CONTENIDOS'
 const FOOTER_EXAMPLE_START = "{% assign cond = '' %}"
 const FOOTER_EXAMPLE_END = '{{content_blocks.${FOOTER_q1_2024_legales}}}'
 
-// Token de relleno manual (no es Liquid) que carga `doc.banner.link` — hasta
+// Token de relleno manual (no es Liquid) que carga el `link` de cada banner — hasta
 // el refactor HERO (2026-09-12) vivía DENTRO de cada archivo de banner
 // (`components/banner/render.ts`); ahora el link envuelve TODO el HERO
 // (header + banner + imagen full width) a nivel de estructura_general.html,
 // así que se resuelve acá, no en el render del banner. 2 ocurrencias siempre
 // (href + originalsrc). Sin link del usuario se deja el token tal cual, en vez
-// de un href="" — ver template/linkPlaceholders.ts.
+// de un href="" — ver template/linkPlaceholders.ts. Con varios banners, cada
+// uno lleva su propio <a> (ver renderHero).
+
+/** Límites del comentario `<!-- ... -->` que contiene `anchor`. */
+function commentBounds(html: string, anchor: string, fileName: string): { start: number; end: number } {
+  const anchorIdx = indexOfOrThrow(html, anchor, fileName)
+  const start = html.lastIndexOf('<!--', anchorIdx)
+  const end = html.indexOf('-->', anchorIdx)
+  if (start === -1 || end === -1) {
+    throw new Error(`${fileName}: no se encontró el comentario completo que contiene "${anchor}"`)
+  }
+  return { start, end: end + 3 }
+}
 
 /**
- * Reemplaza el comentario `<!-- ... anchor ... -->` que contiene `anchor`
- * literal por `rendered` — forma función del replace SIEMPRE (nunca un
- * string), porque `rendered` puede traer un `$` real de usuario (ver el
- * comentario grande de assembleEmailHtml más abajo).
+ * El HERO como lista libre de headers y banners (components/hero/schema.ts).
+ * El maestro trae UN contenedor de header (una `<table>` que se conserva
+ * siempre, con el comentario "AQUÍ VA EL HEADER" adentro) y UN comentario
+ * "AQUÍ VA EL BANNER" debajo. Con varias piezas en cualquier orden ya no
+ * alcanza con reemplazar cada comentario por su slot: cada header lleva su
+ * PROPIA copia de ese contenedor (el `<tr>` del header solo es válido dentro
+ * de una tabla) y la lista entera se escribe donde estaba el contenedor; el
+ * comentario del banner se quita.
+ *
+ * Links — decisión del usuario (2026-10-28), "un link por banner":
+ *  - 0 o 1 banner: igual que el maestro. El `<a>` que envuelve todo el HERO
+ *    lleva el link de ese banner (o el marcador si no tiene).
+ *  - 2 o más: ese `<a>` exterior se quita y cada banner va dentro de su
+ *    propia copia de la misma etiqueta, con su link. Los headers quedan sin
+ *    link: dos `<a>` anidados no son válidos. Sin link del usuario, el
+ *    marcador se numera (AQUIELLINKDELBANNER1, 2…) para que la implementación
+ *    distinga cuál es cuál.
  */
-function replaceCommentPlaceholder(html: string, anchor: string, rendered: string, fileName: string): string {
-  const anchorIdx = indexOfOrThrow(html, anchor, fileName)
-  const commentStart = html.lastIndexOf('<!--', anchorIdx)
-  if (commentStart === -1) {
-    throw new Error(`${fileName}: no se encontró la apertura "<!--" del comentario que contiene "${anchor}"`)
+function renderHero(html: string, doc: EmailDocument): string {
+  const fileName = 'template_base.html'
+  const linkCount = html.split(HERO_LINK_PLACEHOLDER).length - 1
+  if (linkCount !== 2) {
+    throw new Error(`Se encontraron ${linkCount} ocurrencias de ${HERO_LINK_PLACEHOLDER} en ${fileName} (se esperaban 2: href + originalsrc)`)
   }
-  const commentEnd = html.indexOf('-->', anchorIdx)
-  if (commentEnd === -1) {
-    throw new Error(`${fileName}: no se encontró el cierre "-->" del comentario que contiene "${anchor}"`)
+
+  // El <a> exterior del HERO: se mide ANTES de insertar nada, cuando todo lo
+  // que contiene es estructura del maestro (sin otros <a> adentro).
+  const linkIdx = html.indexOf(HERO_LINK_PLACEHOLDER)
+  const anchorStart = html.lastIndexOf('<a ', linkIdx)
+  if (anchorStart === -1) throw new Error(`${fileName}: no se encontró el <a> que envuelve el HERO`)
+  const anchorOpenEnd = html.indexOf('>', linkIdx) + 1
+  const anchorOpen = html.slice(anchorStart, anchorOpenEnd)
+  const anchorBounds = elementBounds(html, anchorStart + 1, 'a', fileName)
+
+  const headerComment = commentBounds(html, HEADER_PLACEHOLDER_ANCHOR, fileName)
+  const containerStart = html.lastIndexOf('<table', headerComment.start)
+  if (containerStart === -1) throw new Error(`${fileName}: no se encontró la tabla contenedora del header`)
+  const container = elementBounds(html, containerStart + 1, 'table', fileName)
+  const containerBefore = html.slice(container.start, headerComment.start)
+  const containerAfter = html.slice(headerComment.end, container.end)
+  const bannerComment = commentBounds(html, BANNER_PLACEHOLDER_ANCHOR, fileName)
+
+  const banners = heroBanners(doc.hero)
+  const linkPerBanner = banners.length > 1
+  const withLink = (link: string, inner: string) =>
+    `${anchorOpen.replaceAll(HERO_LINK_PLACEHOLDER, () => escapeHtmlAttr(link))}\n${inner}\n</a>`
+
+  const headerDef = registry.HEADER
+  const bannerDef = registry.BANNER
+  if (!headerDef || !bannerDef) throw new Error('registry: faltan HEADER/BANNER')
+
+  const pieces = doc.hero.map((piece) => {
+    if (piece.type === 'HEADER') {
+      const tr = renderTropicalized(doc, heroPieceKey('HEADER', piece.id), piece.fields, (f) => headerDef.render(f, doc))
+      return wrapWithHeroMarkers('HEADER', piece.id, containerBefore + tr + containerAfter)
+    }
+    const position = banners.indexOf(piece) + 1
+    const placeholder = linkPerBanner ? `${HERO_LINK_PLACEHOLDER}${position}` : HERO_LINK_PLACEHOLDER
+    // Con un link por banner, el <a> va DENTRO de cada rama tropicalizada: así
+    // una rama que cambia el link lo lleva, y una rama oculta no deja un <a> vacío.
+    const render = (f: typeof piece.fields) => {
+      const banner = bannerDef.render(f, doc)
+      return linkPerBanner ? withLink(linkOrPlaceholder(f.link, placeholder), banner) : banner
+    }
+    return wrapWithHeroMarkers('BANNER', piece.id, renderTropicalized(doc, heroPieceKey('BANNER', piece.id), piece.fields, render))
+  })
+
+  const edits = [
+    { start: container.start, end: container.end, replacement: pieces.join('\n') },
+    { start: bannerComment.start, end: bannerComment.end, replacement: '' },
+  ]
+  if (linkPerBanner) {
+    edits.push({ start: anchorStart, end: anchorOpenEnd, replacement: '' })
+    edits.push({ start: anchorBounds.end - '</a>'.length, end: anchorBounds.end, replacement: '' })
+  } else {
+    const link = linkOrPlaceholder(banners[0]?.fields.link ?? '', HERO_LINK_PLACEHOLDER)
+    edits.push({
+      start: anchorStart,
+      end: anchorOpenEnd,
+      replacement: anchorOpen.replaceAll(HERO_LINK_PLACEHOLDER, () => escapeHtmlAttr(link)),
+    })
   }
-  return html.slice(0, commentStart) + rendered + html.slice(commentEnd + 3)
+  return applyEdits(html, edits, fileName)
 }
 
 /** Ver el comentario grande de WRAPPER_DE_CONTENIDOS_ANCHOR: swallowea el
@@ -282,48 +363,25 @@ export function assembleEmailHtml(doc: EmailDocument): string {
     'template_base.html',
   )
 
-  // El link del HERO (ver HERO_LINK_PLACEHOLDER) — SIEMPRE 2 ocurrencias,
-  // haya o no piezas de banner: el <a> lo trae el propio maestro, no algo que
-  // el documento decida agregar.
-  const heroLinkCount = html.split(HERO_LINK_PLACEHOLDER).length - 1
-  if (heroLinkCount !== 2) {
-    throw new Error(`Se encontraron ${heroLinkCount} ocurrencias de ${HERO_LINK_PLACEHOLDER} en template_base.html (se esperaban 2: href + originalsrc)`)
-  }
-  html = html.replaceAll(HERO_LINK_PLACEHOLDER, () =>
-    escapeHtmlAttr(linkOrPlaceholder(doc.banner.link, HERO_LINK_PLACEHOLDER)),
-  )
+  // HEADER y BANNER: la lista del Hero entera, con su regla de links — ver
+  // renderHero.
+  html = renderHero(html, doc)
 
   for (const slot of SLOT_ORDER) {
     const def = registry[slot]
-    if (!def) continue
-
-    const fields = doc[def.docKey]
-    // CONTENIDOS no es un elemento tropicalizable en sí — es el array de
-    // bloques; cada bloque tiene su propia clave (`block:<id>`, ver
-    // components/contenidos/render.ts). Los otros 3 son singletons, cada uno
-    // con su propia clave `slot:<SLOT>` (tropicalize/keys.ts).
-    const rendered =
-      slot === 'CONTENIDOS'
-        ? def.render(fields, doc)
-        : renderTropicalized(doc, slotKey(slot as 'HEADER' | 'BANNER' | 'FOOTER'), fields, (f) => def.render(f, doc))
-
-    if (slot === 'HEADER') {
-      html = replaceCommentPlaceholder(html, HEADER_PLACEHOLDER_ANCHOR, rendered, 'template_base.html')
-      continue
-    }
+    if (!def?.docKey) continue
 
     if (slot === 'CONTENIDOS') {
-      html = replaceContenidosWrapper(html, rendered)
+      // CONTENIDOS no es un elemento tropicalizable en sí — es el array de
+      // bloques; cada bloque tiene su propia clave (`block:<id>`, ver
+      // components/contenidos/render.ts).
+      html = replaceContenidosWrapper(html, def.render(doc.contenidos, doc))
       continue
     }
 
-    if (slot === 'BANNER') {
-      html = replaceCommentPlaceholder(html, BANNER_PLACEHOLDER_ANCHOR, rendered, 'template_base.html')
-      continue
-    }
-
-    // Único slot que llega hasta acá hoy: FOOTER (HEADER/CONTENIDOS/BANNER
-    // ya se resolvieron arriba, cada uno con su propio branch).
+    // Único slot que llega hasta acá: FOOTER, el último singleton (clave
+    // `slot:FOOTER`, tropicalize/keys.ts).
+    const rendered = renderTropicalized(doc, slotKey('FOOTER'), doc.footer, (f) => def.render(f, doc))
     html = replaceFooterExample(html, rendered)
   }
 

@@ -35,6 +35,8 @@ interface TropicalizationIndexPanelProps {
  *  agrupan bajo BANNER, bloques/tarjetas/moléculas bajo CONTENIDOS; `slot:*`
  *  resuelve de su propio id. */
 const GROUP_BY_KIND: Partial<Record<TropicalizeKind, SlotName>> = {
+  header: 'HEADER',
+  banner: 'BANNER',
   bitem: 'BANNER',
   block: 'CONTENIDOS',
   dcard: 'CONTENIDOS',

@@ -88,6 +88,10 @@ export interface BannerItemDef<TFields> {
     onChange: (next: TFields) => void
     doc: EmailDocument
     onChangeGlobal: (next: GlobalFields) => void
+    /** Orientación del banner DUEÑO de la pieza — hay varios banners desde
+     *  2026-10-28, así que ya no se puede leer de `doc` (ej. IMG_FIJA solo
+     *  ofrece el link del logo en vertical). */
+    bannerType: BannerType
   }>
   /** Ícono SVG esquemático mostrado en el catálogo de piezas del panel derecho
    *  (components/banner/ItemCatalog.tsx) — ver ui/moleculeIcons.tsx. Opcional a

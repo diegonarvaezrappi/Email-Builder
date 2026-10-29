@@ -10,6 +10,7 @@ import {
   renderEmailPreview,
 } from '../liquidPreview'
 
+import { bannerOf, legacy } from '../../components/hero/testUtils'
 /** El documento por defecto con el tema / footer / header que pida el test. */
 const d = (over: Partial<EmailDocument> = {}): EmailDocument => ({ ...defaultEmailDocument, ...over })
 const withTema = (tema: string, fondoUrl = '') => d({ global: { ...defaultEmailDocument.global, tema, fondoUrl } })
@@ -214,10 +215,13 @@ describe('renderEmailPreview', () => {
   it('resolves a banner CTA_INTERNO alongside a free-standing CONTENIDOS CTA — no changes needed here, both share the same CTA-template content block', async () => {
     const result = await renderEmailPreview(
       d({
-        banner: {
-          ...defaultEmailDocument.banner,
-          items: [{ id: 'banner-cta', type: 'CTA_INTERNO', fields: { text: 'CTA del banner', deeplink: '#', align: 'center', size: 'big' } }],
-        },
+        ...legacy({
+          ...defaultEmailDocument,
+          banner: {
+            ...bannerOf(defaultEmailDocument),
+            items: [{ id: 'banner-cta', type: 'CTA_INTERNO', fields: { text: 'CTA del banner', deeplink: '#', align: 'center', size: 'big' } }],
+          },
+        }),
         contenidos: [ctaBlock('a', 'CTA libre')],
       }),
       'CO',

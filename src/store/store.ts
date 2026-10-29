@@ -4,7 +4,12 @@
 // ============================================================================
 import { create, useStore as useZustandStore } from 'zustand'
 import { temporal } from 'zundo'
-import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument } from '../model'
+import type { BannerItem, ContentBlock, ContentBlockType, DealCard, DealsBlock, EmailDocument, HeroPiece, HeroPieceType } from '../model'
+import type { BannerFields, BannerType } from '../components/banner/schema'
+import type { HeaderFields } from '../components/header/schema'
+import { defaultHeaderFields } from '../components/header/schema'
+import { cloneBannerFields, createBannerFields, findBannerByItem, isLastOfType } from '../components/hero/schema'
+import { headerPatchForTheme, bannerBackgroundEnabledForTheme } from '../themeDefaults'
 import type { BannerItemType } from '../components/banner/items/schemas'
 import type { GlobalFields } from '../global/schema'
 import { DEALS_MAX_CARDS, defaultDealCardFields, type DealCardFields, type DealCardPieceType } from '../components/deals/schema'
@@ -19,7 +24,7 @@ import { enforceHorizontalItemOrder } from '../components/banner/horizontalOrder
 import { bannerMoleculeAlignFor } from '../components/banner/schema'
 import { newId } from '../ids'
 import { loadDocument, saveDocument } from './persistence'
-import { bannerItemKey, blockKey, dealCardKey, moduleItemKey } from '../tropicalize/keys'
+import { bannerItemKey, blockKey, dealCardKey, heroPieceKey, moduleItemKey } from '../tropicalize/keys'
 import { copyTropicalization, diffShallow, pruneTropicalizations } from '../tropicalize/doc'
 import { normalizeBranches, type TropicalizeBranch, type TropicalizeCountry } from '../tropicalize/schema'
 
@@ -37,6 +42,23 @@ interface BuilderState {
   setGlobalFields: (fields: GlobalFields) => void
 
   /**
+   * Operaciones sobre doc.hero, la lista libre de headers y banners
+   * (components/hero/schema.ts). Mismo espíritu que las de contenidos. Siempre
+   * queda al menos un header y un banner: `removeHeroPiece` no hace nada si
+   * la pieza es la última de su tipo (la regla vive acá, no solo en el botón,
+   * mismo criterio que DEALS_MAX_CARDS).
+   *
+   * `insertHeroPiece` devuelve el id de la pieza nueva, para seleccionarla.
+   * Un banner nuevo lleva `bannerType` (default 'vertical').
+   */
+  insertHeroPiece: (type: HeroPieceType, atIndex: number, bannerType?: BannerType) => string
+  /** Devuelve el id de la copia (o null si no existe el original). */
+  duplicateHeroPiece: (id: string) => string | null
+  reorderHeroPiece: (id: string, toIndex: number) => void
+  removeHeroPiece: (id: string) => void
+  updateHeroPieceFields: (id: string, fields: unknown) => void
+
+  /**
    * Operaciones sobre doc.contenidos (el array de bloques de CONTENIDOS, hoy
    * solo CTA). A diferencia de setSlotFields (un reemplazo de campo completo,
    * perfecto para un booleano simple como `removed` en un slot removable),
@@ -50,14 +72,16 @@ interface BuilderState {
   updateContentBlockFields: (id: string, fields: unknown) => void
 
   /**
-   * Mismo espíritu que las acciones de contenidos, un nivel más adentro
-   * (doc.banner.items). `insertBannerItem`/`duplicateBannerItem` aplican
+   * Mismo espíritu que las acciones de contenidos, un nivel más adentro (las
+   * piezas de UN banner del Hero). Solo `insertBannerItem` y
+   * `setBannerImageModule` reciben el banner: las demás lo buscan por el id
+   * de la pieza (único en todo el documento, ver findBannerByItem). `insertBannerItem`/`duplicateBannerItem` aplican
    * además la única regla de exclusión dura del maestro (imagen fija vs.
    * automática, ver components/banner/exclusivity.ts) ANTES de calcular el
    * índice de inserción, para que `atIndex` se interprete contra la lista ya
    * filtrada.
    */
-  insertBannerItem: (type: BannerItemType, atIndex: number) => void
+  insertBannerItem: (bannerId: string, type: BannerItemType, atIndex: number) => void
   duplicateBannerItem: (id: string) => void
   reorderBannerItem: (id: string, toIndex: number) => void
   removeBannerItem: (id: string) => void
@@ -71,7 +95,7 @@ interface BuilderState {
    * el selector de tipo de imagen del panel derecho no reordena el resto de
    * las piezas del banner.
    */
-  setBannerImageModule: (type: ImageModuleType) => void
+  setBannerImageModule: (bannerId: string, type: ImageModuleType) => void
 
   /**
    * Operaciones sobre las tarjetas de un bloque DEALS (doc.contenidos → el
@@ -196,6 +220,21 @@ function withTropicalizationBranches(document: EmailDocument, key: string, branc
   return { ...document, tropicalizations }
 }
 
+/** Reescribe los campos de UN banner del Hero dejando el resto intacto — el
+ *  patrón se repite en todas las acciones de piezas de banner. */
+function withBannerFields(document: EmailDocument, heroIndex: number, fields: BannerFields): EmailDocument {
+  const hero = [...document.hero]
+  hero[heroIndex] = { ...hero[heroIndex], fields } as HeroPiece
+  return { ...document, hero }
+}
+
+/** Índice + campos del banner `bannerId` (null si no es un banner). */
+function bannerAt(document: EmailDocument, bannerId: string): { index: number; fields: BannerFields } | null {
+  const index = document.hero.findIndex((p) => p.id === bannerId && p.type === 'BANNER')
+  if (index === -1) return null
+  return { index, fields: document.hero[index].fields as BannerFields }
+}
+
 /** Cambios más cercanos que esto entre sí se deshacen juntos (ver handleSet). */
 export const HISTORY_BURST_MS = 500
 let lastChangeAt = 0
@@ -221,6 +260,89 @@ export const useBuilder = create<BuilderState>()(
       setSlotFields: (docKey, fields) =>
         set((s) => ({ document: { ...s.document, [docKey]: fields } as EmailDocument })),
       setGlobalFields: (fields) => set((s) => ({ document: { ...s.document, global: fields } })),
+
+      insertHeroPiece: (type, atIndex, bannerType = 'vertical') => {
+        const id = newId()
+        set((s) => {
+          const tema = s.document.global.tema
+          // Una pieza nueva arranca ajustada al tema activo, igual que la que
+          // ya estaba cuando se eligió el tema (App.tsx aplica estas mismas
+          // reglas al cambiarlo, ver themeDefaults.ts).
+          let piece: HeroPiece
+          if (type === 'HEADER') {
+            const fields: HeaderFields = { ...defaultHeaderFields, ...(headerPatchForTheme(defaultHeaderFields, tema, null) ?? {}) }
+            piece = { id, type, fields }
+          } else {
+            const fields = createBannerFields(bannerType)
+            const backgroundEnabled = bannerBackgroundEnabledForTheme(fields, tema, null)
+            piece = { id, type, fields: backgroundEnabled === null ? fields : { ...fields, backgroundEnabled } }
+          }
+          const hero = [...s.document.hero]
+          hero.splice(Math.max(0, Math.min(atIndex, hero.length)), 0, piece)
+          return { document: { ...s.document, hero } }
+        })
+        return id
+      },
+
+      duplicateHeroPiece: (id) => {
+        const copyId = newId()
+        let done = false
+        set((s) => {
+          const idx = s.document.hero.findIndex((p) => p.id === id)
+          if (idx === -1) return s
+          const original = s.document.hero[idx]
+          let tropicalizations = copyTropicalization(
+            s.document.tropicalizations,
+            heroPieceKey(original.type, id),
+            heroPieceKey(original.type, copyId),
+          )
+          let copy: HeroPiece
+          if (original.type === 'BANNER') {
+            // Las piezas del banner necesitan ids nuevos (son únicos en todo el
+            // documento) — y cada una se lleva la tropicalización de su original.
+            const cloned = cloneBannerFields(original.fields)
+            for (const [from, to] of cloned.idMap) {
+              tropicalizations = copyTropicalization(tropicalizations, bannerItemKey(from), bannerItemKey(to))
+            }
+            copy = { id: copyId, type: 'BANNER', fields: cloned.fields }
+          } else {
+            copy = { ...original, id: copyId }
+          }
+          const hero = [...s.document.hero]
+          hero.splice(idx + 1, 0, copy)
+          done = true
+          return { document: { ...s.document, hero, tropicalizations } }
+        })
+        return done ? copyId : null
+      },
+
+      /** `toIndex` se interpreta contra la lista ANTES de sacar la pieza
+       *  arrastrada — misma convención que reorderContentBlock. */
+      reorderHeroPiece: (id, toIndex) =>
+        set((s) => {
+          const from = s.document.hero.findIndex((p) => p.id === id)
+          if (from === -1) return s
+          const adjusted = toIndex > from ? toIndex - 1 : toIndex
+          const hero = [...s.document.hero]
+          const [moved] = hero.splice(from, 1)
+          hero.splice(Math.max(0, Math.min(adjusted, hero.length)), 0, moved)
+          return { document: { ...s.document, hero } }
+        }),
+
+      removeHeroPiece: (id) =>
+        set((s) => {
+          if (isLastOfType(s.document.hero, id)) return s
+          if (!s.document.hero.some((p) => p.id === id)) return s
+          return { document: pruneTropicalizations({ ...s.document, hero: s.document.hero.filter((p) => p.id !== id) }) }
+        }),
+
+      updateHeroPieceFields: (id, fields) =>
+        set((s) => ({
+          document: {
+            ...s.document,
+            hero: s.document.hero.map((p) => (p.id === id ? ({ ...p, fields } as HeroPiece) : p)),
+          },
+        })),
 
       insertContentBlock: (type, atIndex) =>
         set((s) => {
@@ -291,25 +413,28 @@ export const useBuilder = create<BuilderState>()(
           },
         })),
 
-      insertBannerItem: (type, atIndex) =>
+      insertBannerItem: (bannerId, type, atIndex) =>
         set((s) => {
           const def = getBannerItemDef(type)
-          if (!def) return s
+          const banner = bannerAt(s.document, bannerId)
+          if (!def || !banner) return s
           // Un CTA nuevo arranca alineado como el resto de piezas del banner.
-          const fields = type === 'CTA_INTERNO' ? { ...def.defaultFields, align: bannerMoleculeAlignFor(s.document.banner) } : def.defaultFields
+          const fields = type === 'CTA_INTERNO' ? { ...def.defaultFields, align: bannerMoleculeAlignFor(banner.fields) } : def.defaultFields
           const item = { id: newId(), type, fields } as BannerItem
-          const filtered = applyImageModuleExclusivity(s.document.banner.items, type)
+          const filtered = applyImageModuleExclusivity(banner.fields.items, type)
           const next = [...filtered]
           next.splice(Math.max(0, Math.min(atIndex, next.length)), 0, item)
-          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
+          const ordered = enforceHorizontalItemOrder(next, banner.fields.bannerType)
+          return { document: withBannerFields(s.document, banner.index, { ...banner.fields, items: ordered }) }
         }),
 
       duplicateBannerItem: (id) =>
         set((s) => {
-          const idx = s.document.banner.items.findIndex((it) => it.id === id)
-          if (idx === -1) return s
-          const original = s.document.banner.items[idx]
+          const owner = findBannerByItem(s.document.hero, id)
+          if (!owner) return s
+          const banner = owner.piece.fields
+          const idx = banner.items.findIndex((it) => it.id === id)
+          const original = banner.items[idx]
           const copy = { ...original, id: newId() } as BannerItem
           // Si el propio original es un módulo de imagen, applyImageModuleExclusivity
           // lo saca de `filtered` (no puede convivir con su propia copia) — por
@@ -318,60 +443,63 @@ export const useBuilder = create<BuilderState>()(
           // original (que puede haber desaparecido). Si el original SÍ
           // sobrevive (caso normal, no es un módulo de imagen), la copia va
           // justo DESPUÉS de él (+1); si no sobrevive, la copia toma su lugar.
-          const filtered = applyImageModuleExclusivity(s.document.banner.items, original.type)
+          const filtered = applyImageModuleExclusivity(banner.items, original.type)
           const originalSurvives = filtered.includes(original)
-          const survivingBefore = s.document.banner.items.slice(0, idx).filter((it) => filtered.includes(it)).length
+          const survivingBefore = banner.items.slice(0, idx).filter((it) => filtered.includes(it)).length
           const insertAt = survivingBefore + (originalSurvives ? 1 : 0)
           const next = [...filtered]
           next.splice(insertAt, 0, copy)
-          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
-          const tropicalizations = copyTropicalization(s.document.tropicalizations, bannerItemKey(id), bannerItemKey(copy.id))
-          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered }, tropicalizations } }
+          const ordered = enforceHorizontalItemOrder(next, banner.bannerType)
+          const document = withBannerFields(s.document, owner.index, { ...banner, items: ordered })
+          const tropicalizations = copyTropicalization(document.tropicalizations, bannerItemKey(id), bannerItemKey(copy.id))
+          return { document: { ...document, tropicalizations } }
         }),
 
       reorderBannerItem: (id, toIndex) =>
         set((s) => {
-          const from = s.document.banner.items.findIndex((it) => it.id === id)
-          if (from === -1) return s
+          const owner = findBannerByItem(s.document.hero, id)
+          if (!owner) return s
+          const banner = owner.piece.fields
+          const from = banner.items.findIndex((it) => it.id === id)
           const adjusted = toIndex > from ? toIndex - 1 : toIndex
-          const next = [...s.document.banner.items]
+          const next = [...banner.items]
           const [moved] = next.splice(from, 1)
           next.splice(Math.max(0, Math.min(adjusted, next.length)), 0, moved)
-          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
+          const ordered = enforceHorizontalItemOrder(next, banner.bannerType)
+          return { document: withBannerFields(s.document, owner.index, { ...banner, items: ordered }) }
         }),
 
       removeBannerItem: (id) =>
-        set((s) => ({
-          document: pruneTropicalizations({
-            ...s.document,
-            banner: { ...s.document.banner, items: s.document.banner.items.filter((it) => it.id !== id) },
-          }),
-        })),
+        set((s) => {
+          const owner = findBannerByItem(s.document.hero, id)
+          if (!owner) return s
+          const banner = owner.piece.fields
+          const items = banner.items.filter((it) => it.id !== id)
+          return { document: pruneTropicalizations(withBannerFields(s.document, owner.index, { ...banner, items })) }
+        }),
 
       updateBannerItemFields: (id, fields) =>
-        set((s) => ({
-          document: {
-            ...s.document,
-            banner: {
-              ...s.document.banner,
-              items: s.document.banner.items.map((it) => (it.id === id ? ({ ...it, fields } as BannerItem) : it)),
-            },
-          },
-        })),
+        set((s) => {
+          const owner = findBannerByItem(s.document.hero, id)
+          if (!owner) return s
+          const banner = owner.piece.fields
+          const items = banner.items.map((it) => (it.id === id ? ({ ...it, fields } as BannerItem) : it))
+          return { document: withBannerFields(s.document, owner.index, { ...banner, items }) }
+        }),
 
-      setBannerImageModule: (type) =>
+      setBannerImageModule: (bannerId, type) =>
         set((s) => {
           const def = getBannerItemDef(type)
-          if (!def) return s
-          const items = s.document.banner.items
+          const banner = bannerAt(s.document, bannerId)
+          if (!def || !banner) return s
+          const items = banner.fields.items
           const idx = findImageModuleIndex(items)
           const newItem = { id: newId(), type, fields: def.defaultFields } as BannerItem
           const next = [...items]
           if (idx === -1) next.push(newItem)
           else next[idx] = newItem
-          const ordered = enforceHorizontalItemOrder(next, s.document.banner.bannerType)
-          return { document: { ...s.document, banner: { ...s.document.banner, items: ordered } } }
+          const ordered = enforceHorizontalItemOrder(next, banner.fields.bannerType)
+          return { document: withBannerFields(s.document, banner.index, { ...banner.fields, items: ordered }) }
         }),
 
       insertDealCard: (blockId, atIndex) =>

@@ -251,7 +251,14 @@ function TreeRowItem({
             >
               <CopyIcon />
             </button>
-            <button type="button" className="tree-action tree-action-remove" aria-label={`Eliminar ${row.label}`} title="Eliminar" onClick={() => onRemove(target)}>
+            <button
+              type="button"
+              className="tree-action tree-action-remove"
+              aria-label={`Eliminar ${row.label}`}
+              title={row.removeBlockedReason ?? 'Eliminar'}
+              disabled={row.removeBlockedReason !== undefined}
+              onClick={() => onRemove(target)}
+            >
               <TrashIcon />
             </button>
           </>

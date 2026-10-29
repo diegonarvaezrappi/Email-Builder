@@ -31,7 +31,7 @@ export const SECTION_LABELS: Record<GlobalBackgroundTarget, string> = {
  * Qué está seleccionado en el Inspector/Viewport. `blockId` solo tiene
  * sentido cuando `slot === 'CONTENIDOS'` — identifica qué instancia dentro de
  * doc.contenidos está seleccionada. `bannerItemId` solo tiene sentido cuando
- * `slot === 'BANNER'` — identifica qué pieza dentro de doc.banner.items está
+ * `slot === 'BANNER'` — identifica qué pieza dentro de las piezas de cada banner del Hero está
  * seleccionada. Los demás slots son singletons, no necesitan un id de
  * instancia. `slot` también puede ser un `GlobalBackgroundTarget` — ese caso
  * nunca lleva ninguno de los campos de abajo (son singletons "de un solo
@@ -39,6 +39,12 @@ export const SECTION_LABELS: Record<GlobalBackgroundTarget, string> = {
  */
 export interface Selection {
   slot: SlotName | GlobalBackgroundTarget
+  /** Con `slot === 'HEADER' | 'BANNER'`: qué pieza de `doc.hero` está
+   *  seleccionada (headers y banners son repetibles desde 2026-10-28, ver
+   *  components/hero/schema.ts). Una pieza de banner (`bannerItemId`) no lo
+   *  lleva: su id es único en todo el documento y el banner dueño se busca
+   *  (findBannerByItem). */
+  heroId?: string
   blockId?: string
   bannerItemId?: string
   /** Solo tiene sentido con `slot === 'CONTENIDOS'` — identifica una tarjeta
@@ -60,6 +66,8 @@ export interface Selection {
 }
 
 export const selectSlot = (slot: SlotName): Selection => ({ slot })
+/** Un header o un banner puntual del Hero. */
+export const selectHeroPiece = (type: 'HEADER' | 'BANNER', heroId: string): Selection => ({ slot: type, heroId })
 export const selectBlock = (blockId: string): Selection => ({ slot: 'CONTENIDOS', blockId })
 export const selectBannerItem = (bannerItemId: string): Selection => ({ slot: 'BANNER', bannerItemId })
 export const selectDealCard = (dealCardId: string): Selection => ({ slot: 'CONTENIDOS', dealCardId })
@@ -79,6 +87,15 @@ export function isSlotSelected(selected: Selection | null, slot: SlotName | Glob
     selected.blockId === undefined &&
     selected.bannerItemId === undefined &&
     selected.dealCardId === undefined
+  )
+}
+
+/** Un header/banner del Hero seleccionado "entero" (no una de sus piezas). */
+export function isHeroPieceSelected(selected: Selection | null, heroId: string): boolean {
+  return (
+    (selected?.slot === 'HEADER' || selected?.slot === 'BANNER') &&
+    selected.heroId === heroId &&
+    selected.bannerItemId === undefined
   )
 }
 

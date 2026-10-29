@@ -5,8 +5,9 @@
 // un id de documento, un nivel más arriba.
 //
 // Formato `<kind>:<id>`, minúscula, espejando los 4 prefijos de marcador de
-// template/contentBlocks.ts (BLOCK/BITEM/DCARD/MITEM) más `slot` para los 3
-// singletons — así "bitem:xyz" se lee de un vistazo junto a
+// template/contentBlocks.ts (BLOCK/BITEM/DCARD/MITEM) más `header`/`banner`
+// para las piezas del Hero y `slot` para el footer (el único singleton que
+// queda) — así "bitem:xyz" se lee de un vistazo junto a
 // "<!-- BITEM:TAGS:xyz -->". Sin `dpiece:`: las 7 líneas de una tarjeta de
 // deal no son objetivo de tropicalización (decisión explícita del usuario).
 // ============================================================================
@@ -14,8 +15,10 @@ import type { EmailDocument, SlotName } from '../model'
 import { registry } from '../registry'
 import { findDealsBlockByCard } from '../components/deals/blocks'
 import { findModuleBlockByItem } from '../components/contentModules/blocks'
+import { findBannerByItem, findHeroPiece } from '../components/hero/schema'
 import {
   selectBannerItem,
+  selectHeroPiece,
   selectBlock,
   selectDealCard,
   selectModuleItem,
@@ -23,22 +26,26 @@ import {
   type Selection,
 } from '../ui/selection'
 
-export const TROPICALIZE_KINDS = ['slot', 'block', 'bitem', 'dcard', 'mitem'] as const
+export const TROPICALIZE_KINDS = ['slot', 'header', 'banner', 'block', 'bitem', 'dcard', 'mitem'] as const
 export type TropicalizeKind = (typeof TROPICALIZE_KINDS)[number]
 
-/** Solo `HEADER`/`BANNER`/`FOOTER` — CONTENIDOS es el array de bloques, no un
- *  elemento en sí (cada bloque tiene su propia clave `block:<id>`). */
-export type TropicalizableSlot = Exclude<SlotName, 'CONTENIDOS'>
+/** Solo `FOOTER` — CONTENIDOS es el array de bloques (cada bloque tiene su
+ *  propia clave `block:<id>`) y HEADER/BANNER son piezas repetibles del Hero
+ *  desde 2026-10-28 (`header:<id>`/`banner:<id>`: el tipo va en el prefijo
+ *  para que la clave se pueda volver a una `Selection` sin el documento). */
+export type TropicalizableSlot = Exclude<SlotName, 'CONTENIDOS' | 'HEADER' | 'BANNER'>
 
 export type TropicalizeKey = string
 
 export const slotKey = (slot: TropicalizableSlot): TropicalizeKey => `slot:${slot}`
+export const heroPieceKey = (type: 'HEADER' | 'BANNER', id: string): TropicalizeKey =>
+  `${type === 'HEADER' ? 'header' : 'banner'}:${id}`
 export const blockKey = (id: string): TropicalizeKey => `block:${id}`
 export const bannerItemKey = (id: string): TropicalizeKey => `bitem:${id}`
 export const dealCardKey = (id: string): TropicalizeKey => `dcard:${id}`
 export const moduleItemKey = (id: string): TropicalizeKey => `mitem:${id}`
 
-const SLOT_IDS: readonly string[] = ['HEADER', 'BANNER', 'FOOTER']
+const SLOT_IDS: readonly string[] = ['FOOTER']
 
 /**
  * `indexOf(':')`, NUNCA `split(':')`: `newId()` (ids.ts) genera un UUID sin
@@ -78,6 +85,9 @@ export function targetKeyFromSelection(selected: Selection | null): TropicalizeK
     return null
   }
   if (selected.slot === 'BANNER' && selected.bannerItemId) return bannerItemKey(selected.bannerItemId)
+  if (selected.slot === 'HEADER' || selected.slot === 'BANNER') {
+    return selected.heroId ? heroPieceKey(selected.slot, selected.heroId) : null
+  }
   return slotKey(selected.slot)
 }
 
@@ -90,6 +100,10 @@ export function selectionFromTargetKey(key: TropicalizeKey): Selection | null {
   switch (parsed.kind) {
     case 'slot':
       return selectSlot(parsed.id as TropicalizableSlot)
+    case 'header':
+      return selectHeroPiece('HEADER', parsed.id)
+    case 'banner':
+      return selectHeroPiece('BANNER', parsed.id)
     case 'block':
       return selectBlock(parsed.id)
     case 'bitem':
@@ -115,14 +129,20 @@ export function baseFieldsForKey(doc: EmailDocument, key: TropicalizeKey): unkno
   switch (parsed.kind) {
     case 'slot': {
       const def = registry[parsed.id as TropicalizableSlot]
-      return def ? doc[def.docKey] : null
+      return def?.docKey ? doc[def.docKey] : null
+    }
+    case 'header':
+    case 'banner': {
+      const piece = findHeroPiece(doc.hero, parsed.id)
+      return piece && piece.type === (parsed.kind === 'header' ? 'HEADER' : 'BANNER') ? piece.fields : null
     }
     case 'block': {
       const block = doc.contenidos.find((b) => b.id === parsed.id)
       return block ? block.fields : null
     }
     case 'bitem': {
-      const item = doc.banner.items.find((it) => it.id === parsed.id)
+      const found = findBannerByItem(doc.hero, parsed.id)
+      const item = found?.piece.fields.items.find((it) => it.id === parsed.id)
       return item ? item.fields : null
     }
     case 'dcard': {

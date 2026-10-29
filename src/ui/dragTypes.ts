@@ -19,8 +19,9 @@ export const CONTENT_BLOCK_DRAG_TYPE = 'application/x-email-content-block'
 /** Reordenar una instancia de bloque de contenido ya existente. Payload = el id de la instancia. */
 export const CONTENT_BLOCK_REORDER_DRAG_TYPE = 'application/x-email-content-block-reorder'
 
-/** Elegir el TIPO de banner (restaura el slot si estaba eliminado y fija su
- *  tipo en el mismo gesto). Payload = 'vertical' | 'horizontal'. */
+/** Agregar un banner NUEVO de ese tipo al Hero, donde se suelte en el lienzo
+ *  (hasta 2026-10-28 cambiaba el tipo del único banner). Payload =
+ *  'vertical' | 'horizontal'. */
 export const BANNER_TYPE_DRAG_TYPE = 'application/x-email-banner-type'
 
 /** Insertar una pieza de banner NUEVA desde LeftPanel. Payload = el BannerItemType (ej. 'PROMO'). */
@@ -67,3 +68,12 @@ export const MODULE_ITEM_REORDER_DRAG_TYPE = 'application/x-email-module-item-re
  * ningún destino del Viewport acepte una fila del árbol (y viceversa).
  */
 export const TREE_REORDER_DRAG_TYPE = 'application/x-email-tree-reorder'
+
+/** Arrastrar la card "Header" de la pestaña Hero al lienzo: agrega un header
+ *  nuevo donde se suelte (el Hero es una lista libre desde 2026-10-28, ver
+ *  components/hero/schema.ts). Análogo a BANNER_TYPE_DRAG_TYPE, que ahora
+ *  también AGREGA un banner de ese tipo en vez de cambiar el tipo del único. */
+export const HEADER_DRAG_TYPE = 'application/x-email-hero-header'
+
+/** Reordenar un header/banner del Hero arrastrándolo en el lienzo. */
+export const HERO_PIECE_REORDER_DRAG_TYPE = 'application/x-email-hero-piece-reorder'

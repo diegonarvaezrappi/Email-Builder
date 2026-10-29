@@ -4,11 +4,12 @@ import { renderBannerSnippet } from '../render'
 import { bannerSchema, type BannerFields } from '../schema'
 import { defaultImgAutomaticaMoleculaFields, defaultTextoMFields } from '../items/schemas'
 
+import { bannerOf, legacy } from '../../hero/testUtils'
 const IMG_MARGIN = /<table data-type="text"[^>]*style=" margin-bottom: (\d+)px; "/g
 
 function banner(over: Partial<BannerFields>): BannerFields {
   return bannerSchema.parse({
-    ...defaultEmailDocument.banner,
+    ...bannerOf(defaultEmailDocument),
     bannerType: 'vertical',
     items: [
       { id: 'img1', type: 'IMG_AUTOMATICA_MOLECULA', fields: defaultImgAutomaticaMoleculaFields },
@@ -20,7 +21,7 @@ function banner(over: Partial<BannerFields>): BannerFields {
 }
 
 const margins = (fields: BannerFields) =>
-  [...renderBannerSnippet(fields, { ...defaultEmailDocument, banner: fields }).matchAll(IMG_MARGIN)].map((m) => m[1])
+  [...renderBannerSnippet(fields, legacy({ ...defaultEmailDocument, banner: fields })).matchAll(IMG_MARGIN)].map((m) => m[1])
 
 describe('banner · espacio inferior', () => {
   it('por defecto cada pieza conserva su margin-bottom del maestro', () => {
@@ -41,10 +42,10 @@ describe('banner · espacio inferior', () => {
 describe('banner · espacio inferior según la última pieza', () => {
   const render = (items: BannerFields['items'], bottomSpacing: boolean) => {
     const fields = banner({ items, bottomSpacing })
-    return renderBannerSnippet(fields, { ...defaultEmailDocument, banner: fields })
+    return renderBannerSnippet(fields, legacy({ ...defaultEmailDocument, banner: fields }))
   }
-  const promo = defaultEmailDocument.banner.items.find((i) => i.type === 'PROMO')!
-  const tags = defaultEmailDocument.banner.items.find((i) => i.type === 'TAGS')!
+  const promo = bannerOf(defaultEmailDocument).items.find((i) => i.type === 'PROMO')!
+  const tags = bannerOf(defaultEmailDocument).items.find((i) => i.type === 'TAGS')!
 
   it('PROMO: el 7px del shorthand margin pasa a 0', () => {
     expect(render([promo], true)).toContain('margin: 0px auto 7px auto;')
