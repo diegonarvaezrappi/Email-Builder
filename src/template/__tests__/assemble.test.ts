@@ -14,7 +14,7 @@ import { escapeHtmlAttr } from '../htmlText'
 import type { CtaBlock, EmailDocument } from '../../model'
 
 import { bannerOf, bannerPieceOf, headerOf, headerPieceOf, legacy, withPieces } from '../../components/hero/testUtils'
-import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_SECTION_ID, type HeroPiece } from '../../components/hero/schema'
+import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_SECTION_ID, heroBackgroundSchema, type HeroPiece } from '../../components/hero/schema'
 import { defaultTextoXlFields } from '../../components/banner/items/schemas'
 import { richTextFromPlain } from '../../richText/model'
 
@@ -466,6 +466,42 @@ describe('assembleEmailHtml · fondo de HERO-SECTION y CONTENTS-SECTION', () => 
   it('escapes what would break out of the url(...), same as fondoUrl', () => {
     const html = assembleEmailHtml(withHeroBg(defaultEmailDocument, { heroBgUrl: 'https://x.test/a(b).png' }))
     expect(heroTag(html)).toContain('background-image: url(https://x.test/a%28b%29.png)')
+  })
+
+  describe('color sólido (imagen O color)', () => {
+    const heroTable = (html: string) => {
+      const i = html.indexOf('<table role="HERO-SECTION"')
+      return html.slice(i, html.indexOf('>', i) + 1)
+    }
+
+    it('con tipo color pinta el color en la celda y la tabla, y no la imagen guardada', () => {
+      const html = assembleEmailHtml(
+        withHeroBg(defaultEmailDocument, { heroBgType: 'color', heroBgColor: '#FFF0DD', heroBgUrl: 'https://x.test/hero.png', heroBgAlt: 'Fondo' }),
+      )
+      const cell = heroTag(html)
+      expect(cell).toContain('bgcolor="#FFF0DD"')
+      expect(cell).toContain('background-color: #FFF0DD;')
+      expect(cell).not.toContain('url(')
+      expect(cell).not.toContain('role="img"')
+      expect(heroTable(html)).toContain('bgcolor="#FFF0DD"')
+    })
+
+    it('con tipo imagen ignora el color guardado', () => {
+      const cell = heroTag(assembleEmailHtml(withHeroBg(defaultEmailDocument, { heroBgType: 'image', heroBgColor: '#123456', heroBgUrl: 'https://x.test/hero.png' })))
+      expect(cell).toContain('url(https://x.test/hero.png)')
+      expect(cell).not.toContain('#123456')
+    })
+
+    it('el color de un Hero no toca CONTENTS', () => {
+      const html = assembleEmailHtml(withHeroBg(defaultEmailDocument, { heroBgType: 'color', heroBgColor: '#123456' }))
+      expect(contentsTag(html)).not.toContain('#123456')
+    })
+
+    it('arranca en imagen, y un tipo o color inválido guardado no rompe el documento', () => {
+      expect(heroBackgroundSchema.parse({})).toMatchObject({ heroBgType: 'image', heroBgColor: '' })
+      expect(heroBackgroundSchema.parse({ heroBgType: 'gradiente', heroBgColor: 'rojo' })).toMatchObject({ heroBgType: 'image', heroBgColor: '' })
+      expect(heroBackgroundSchema.parse({ heroBgType: 'color', heroBgColor: '#abcdef' }).heroBgColor).toBe('#ABCDEF')
+    })
   })
 })
 

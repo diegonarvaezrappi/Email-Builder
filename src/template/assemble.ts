@@ -148,10 +148,20 @@ function renderHero(html: string, doc: EmailDocument): string {
 
   const sections = doc.heroes.map((section) => {
     const bg = section.background
+    // Imagen O color: solo se pinta el tipo elegido (el otro valor se guarda
+    // pero no sale en el HTML).
+    const isColor = bg.heroBgType === 'color'
     const withBg = applySectionBackground(
       block,
       HERO_BG_ANCHOR,
-      { url: bg.heroBgUrl, alt: bg.heroBgAlt, size: bg.heroBgSize, position: bg.heroBgPosition, repeat: bg.heroBgRepeat },
+      {
+        url: isColor ? '' : bg.heroBgUrl,
+        alt: bg.heroBgAlt,
+        size: bg.heroBgSize,
+        position: bg.heroBgPosition,
+        repeat: bg.heroBgRepeat,
+        color: isColor ? bg.heroBgColor : '',
+      },
       fileName,
     )
     return wrapWithHeroSectionMarkers(section.id, renderHeroSection(withBg, section, doc, nextPlaceholder))

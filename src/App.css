@@ -733,6 +733,30 @@
   resize: vertical;
 }
 
+/* "Tipo de fondo" de un Hero (Imagen / Color sólido). */
+.background-type .segmented {
+  display: flex;
+  gap: 4px;
+}
+
+.background-type .segmented button {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.background-type .segmented button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+
 .field-checkbox {
   flex-direction: row;
   align-items: center;

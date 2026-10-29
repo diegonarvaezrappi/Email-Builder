@@ -35,6 +35,7 @@ import {
   BACKGROUND_REPEAT_VALUES,
   BACKGROUND_SIZE_VALUES,
 } from '../../global/background'
+import { HEX_COLOR_RE } from '../../global/schema'
 
 export interface HeroHeaderPiece {
   id: string
@@ -155,17 +156,27 @@ export const heroPieceLabel = (hero: HeroPiece[], id: string): string =>
  * los paneles de fondo existentes (ui/BackgroundFields.tsx) se reusan tal
  * cual, dándoles `{ ...doc.global, ...hero.background }`.
  */
+export const HERO_BG_TYPE_VALUES = ['image', 'color'] as const
+export type HeroBgType = (typeof HERO_BG_TYPE_VALUES)[number]
+export const HERO_BG_TYPE_LABELS: Record<HeroBgType, string> = { image: 'Imagen', color: 'Color sólido' }
+
 export const heroBackgroundSchema = z.object({
   heroBgUrl: z.string().default(''),
   heroBgAlt: z.string().default('Imagen de fondo'),
   heroBgSize: z.enum(BACKGROUND_SIZE_VALUES).default('100% auto'),
   heroBgPosition: z.enum(BACKGROUND_POSITION_VALUES).default('center top'),
   heroBgRepeat: z.enum(BACKGROUND_REPEAT_VALUES).default('repeat'),
+  /** Imagen O color sólido (2026-10-29): solo se pinta el tipo elegido, pero
+   *  los dos valores se conservan, así cambiar de tipo no borra el otro. */
+  heroBgType: z.enum(HERO_BG_TYPE_VALUES).catch('image').default('image'),
+  /** `#RRGGBB` o vacío (sin color). Un valor inválido guardado cae a vacío,
+   *  mismo criterio que `contentsBgColor` (global/schema.ts). */
+  heroBgColor: z.preprocess((v) => (typeof v === 'string' && HEX_COLOR_RE.test(v) ? v.toUpperCase() : ''), z.string()).default(''),
 })
 export type HeroBackground = z.infer<typeof heroBackgroundSchema>
 export const HERO_BACKGROUND_KEYS = Object.keys(heroBackgroundSchema.shape) as (keyof HeroBackground)[]
 
-/** Solo los 5 campos de fondo de un objeto más grande (ej. el que devuelven
+/** Solo los campos de fondo de un objeto más grande (ej. el que devuelven
  *  los paneles de fondo, que trabajan sobre `{ ...global, ...background }`). */
 export function pickHeroBackground(value: Partial<Record<keyof HeroBackground, unknown>>): HeroBackground {
   return heroBackgroundSchema.parse(Object.fromEntries(HERO_BACKGROUND_KEYS.map((k) => [k, value[k]])))

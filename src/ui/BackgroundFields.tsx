@@ -20,6 +20,7 @@ import {
 } from '../global/background'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import { HEX_COLOR_RE, type GlobalFields } from '../global/schema'
+import { HERO_BG_TYPE_LABELS, HERO_BG_TYPE_VALUES, type HeroBackground, type HeroBgType } from '../components/hero/schema'
 import { Popover } from './Popover'
 
 interface BackgroundSizePositionRepeatFieldsProps {
@@ -150,7 +151,32 @@ export function ColorField({ label, value, onChange }: ColorFieldProps) {
   )
 }
 
+interface HeroBgTypeFieldProps {
+  value: HeroBgType
+  onChange: (next: HeroBgType) => void
+}
+
+/** Imagen O color sólido, para el fondo de un Hero. */
+export function HeroBgTypeField({ value, onChange }: HeroBgTypeFieldProps) {
+  return (
+    <div className="field background-type">
+      <span>Tipo de fondo</span>
+      <div className="segmented" role="group" aria-label="Tipo de fondo">
+        {HERO_BG_TYPE_VALUES.map((v) => (
+          <button key={v} type="button" className={value === v ? 'active' : ''} aria-pressed={value === v} onClick={() => onChange(v)}>
+            {HERO_BG_TYPE_LABELS[v]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export type BackgroundScope = 'general' | 'hero' | 'contents'
+
+/** Los campos de global, más los que solo tiene el fondo de un Hero (sus
+ *  paneles reciben `{ ...doc.global, ...hero.background }`). */
+type BackgroundValue = GlobalFields & Partial<Pick<HeroBackground, 'heroBgType' | 'heroBgColor'>>
 
 const BACKGROUND_KEYS = {
   general: { url: 'fondoUrl', alt: 'fondoAlt', size: 'fondoSize', position: 'fondoPosition', repeat: 'fondoRepeat' },
@@ -161,8 +187,8 @@ const BACKGROUND_KEYS = {
 interface BackgroundCardProps {
   scope: BackgroundScope
   title: string
-  value: GlobalFields
-  onChange: (next: GlobalFields) => void
+  value: BackgroundValue
+  onChange: (next: BackgroundValue) => void
 }
 
 /**
@@ -173,50 +199,61 @@ interface BackgroundCardProps {
 export function BackgroundCard({ scope, title, value, onChange }: BackgroundCardProps) {
   const keys = BACKGROUND_KEYS[scope]
   const url = value[keys.url]
-  const set = (key: keyof GlobalFields, next: unknown) => onChange({ ...value, [key]: next })
+  const set = (key: keyof BackgroundValue, next: unknown) => onChange({ ...value, [key]: next })
+  // Un Hero pinta imagen O color: con color se esconden los campos de imagen.
+  const heroColor = scope === 'hero' && value.heroBgType === 'color'
 
   return (
     <div className="left-card background-card">
       <div className="background-card-head">
         <span className="left-card-title">{title}</span>
-        <Popover label="Ajustes de fondo ⚙">
-          <BackgroundSizePositionRepeatFields
-            size={value[keys.size]}
-            position={value[keys.position]}
-            repeat={value[keys.repeat]}
-            onChangeSize={(next) => set(keys.size, next)}
-            onChangePosition={(next) => set(keys.position, next)}
-            onChangeRepeat={(next) => set(keys.repeat, next)}
-          />
-        </Popover>
+        {!heroColor && (
+          <Popover label="Ajustes de fondo ⚙">
+            <BackgroundSizePositionRepeatFields
+              size={value[keys.size]}
+              position={value[keys.position]}
+              repeat={value[keys.repeat]}
+              onChangeSize={(next) => set(keys.size, next)}
+              onChangePosition={(next) => set(keys.position, next)}
+              onChangeRepeat={(next) => set(keys.repeat, next)}
+            />
+          </Popover>
+        )}
       </div>
-      {/* type="text" y no "url": el campo también admite Liquid, que la
-          validación nativa rechazaría. */}
-      <label className="field">
-        <span>URL de la imagen</span>
-        <div className="input-with-clear">
-          <input
-            type="text"
-            placeholder="URL de la imagen de fondo"
-            value={url}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.url, e.target.value)}
-          />
-          {url !== '' && (
-            <button type="button" className="input-clear" aria-label="Quitar la imagen de fondo" title="Quitar la imagen de fondo" onClick={() => set(keys.url, '')}>
-              ×
-            </button>
-          )}
-        </div>
-      </label>
-      <label className="field">
-        <span>Sugerencia para diseño</span>
-        <input
-          type="text"
-          placeholder="Describe la imagen (alt)"
-          value={value[keys.alt]}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.alt, e.target.value)}
-        />
-      </label>
+      {scope === 'hero' && <HeroBgTypeField value={value.heroBgType ?? 'image'} onChange={(next) => set('heroBgType', next)} />}
+      {heroColor ? (
+        <ColorField label="Color de fondo" value={value.heroBgColor ?? ''} onChange={(next) => set('heroBgColor', next)} />
+      ) : (
+        <>
+          {/* type="text" y no "url": el campo también admite Liquid, que la
+              validación nativa rechazaría. */}
+          <label className="field">
+            <span>URL de la imagen</span>
+            <div className="input-with-clear">
+              <input
+                type="text"
+                placeholder="URL de la imagen de fondo"
+                value={url}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.url, e.target.value)}
+              />
+              {url !== '' && (
+                <button type="button" className="input-clear" aria-label="Quitar la imagen de fondo" title="Quitar la imagen de fondo" onClick={() => set(keys.url, '')}>
+                  ×
+                </button>
+              )}
+            </div>
+          </label>
+          <label className="field">
+            <span>Sugerencia para diseño</span>
+            <input
+              type="text"
+              placeholder="Describe la imagen (alt)"
+              value={value[keys.alt]}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => set(keys.alt, e.target.value)}
+            />
+          </label>
+        </>
+      )}
       {scope === 'contents' && (
         <ColorField label="Color de fondo" value={value.contentsBgColor} onChange={(next) => set('contentsBgColor', next)} />
       )}
@@ -227,8 +264,8 @@ export function BackgroundCard({ scope, title, value, onChange }: BackgroundCard
 interface HeroContentsBackgroundPanelProps {
   /** 'hero' → heroBgUrl/heroBgAlt/heroBgSize/…; 'contents' → contentsBg*. */
   prefix: 'hero' | 'contents'
-  value: GlobalFields
-  onChange: (next: GlobalFields) => void
+  value: BackgroundValue
+  onChange: (next: BackgroundValue) => void
 }
 
 /**
@@ -243,40 +280,48 @@ export function HeroContentsBackgroundPanel({ prefix, value, onChange }: HeroCon
   const sizeKey = `${prefix}BgSize` as const
   const positionKey = `${prefix}BgPosition` as const
   const repeatKey = `${prefix}BgRepeat` as const
+  const heroColor = prefix === 'hero' && value.heroBgType === 'color'
 
   return (
     <div className="properties-panel">
-      <label className="field">
-        <span>URL de la imagen</span>
-        <input
-          type="text"
-          placeholder="URL de la imagen de fondo"
-          value={value[urlKey]}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [urlKey]: e.target.value })}
-        />
-      </label>
+      {prefix === 'hero' && <HeroBgTypeField value={value.heroBgType ?? 'image'} onChange={(next) => onChange({ ...value, heroBgType: next })} />}
+      {heroColor ? (
+        <ColorField label="Color de fondo" value={value.heroBgColor ?? ''} onChange={(next) => onChange({ ...value, heroBgColor: next })} />
+      ) : (
+        <>
+          <label className="field">
+            <span>URL de la imagen</span>
+            <input
+              type="text"
+              placeholder="URL de la imagen de fondo"
+              value={value[urlKey]}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [urlKey]: e.target.value })}
+            />
+          </label>
 
-      <label className="field">
-        <span>Sugerencia para diseño</span>
-        <input
-          type="text"
-          value={value[altKey]}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
-        />
-      </label>
+          <label className="field">
+            <span>Sugerencia para diseño</span>
+            <input
+              type="text"
+              value={value[altKey]}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, [altKey]: e.target.value })}
+            />
+          </label>
 
-      {prefix === 'contents' && (
-        <ColorField label="Color de fondo" value={value.contentsBgColor} onChange={(next) => onChange({ ...value, contentsBgColor: next })} />
+          {prefix === 'contents' && (
+            <ColorField label="Color de fondo" value={value.contentsBgColor} onChange={(next) => onChange({ ...value, contentsBgColor: next })} />
+          )}
+
+          <BackgroundSizePositionRepeatFields
+            size={value[sizeKey]}
+            position={value[positionKey]}
+            repeat={value[repeatKey]}
+            onChangeSize={(next) => onChange({ ...value, [sizeKey]: next })}
+            onChangePosition={(next) => onChange({ ...value, [positionKey]: next })}
+            onChangeRepeat={(next) => onChange({ ...value, [repeatKey]: next })}
+          />
+        </>
       )}
-
-      <BackgroundSizePositionRepeatFields
-        size={value[sizeKey]}
-        position={value[positionKey]}
-        repeat={value[repeatKey]}
-        onChangeSize={(next) => onChange({ ...value, [sizeKey]: next })}
-        onChangePosition={(next) => onChange({ ...value, [positionKey]: next })}
-        onChangeRepeat={(next) => onChange({ ...value, [repeatKey]: next })}
-      />
     </div>
   )
 }
