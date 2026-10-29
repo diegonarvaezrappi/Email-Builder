@@ -18,7 +18,6 @@ import {
   SEPARADOR_SIZE_VALUES,
   SEPARADOR_SIZE_PX,
   SEPARADOR_CUSTOM_MIN_PX,
-  SEPARADOR_CUSTOM_MAX_PX,
   TEXTO_PASTILLA_POSITION_LABELS,
   TEXTO_PASTILLA_POSITION_VALUES,
 } from './schemas'
@@ -425,11 +424,10 @@ export function SeparadorPropertiesPanel({ value, onChange }: BannerItemPanelPro
           <input
             type="number"
             min={SEPARADOR_CUSTOM_MIN_PX}
-            max={SEPARADOR_CUSTOM_MAX_PX}
             value={value.customHeight}
             onChange={(e: ChangeEvent<HTMLInputElement>) => {
               const n = Number(e.target.value)
-              if (Number.isFinite(n) && n >= SEPARADOR_CUSTOM_MIN_PX && n <= SEPARADOR_CUSTOM_MAX_PX) onChange({ ...value, customHeight: Math.round(n) })
+              if (Number.isFinite(n) && n >= SEPARADOR_CUSTOM_MIN_PX) onChange({ ...value, customHeight: Math.round(n) })
             }}
           />
         </label>

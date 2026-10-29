@@ -595,9 +595,10 @@ describe('renderSeparadorSnippet', () => {
     expect(renderSeparadorSnippet({ size: 'M', customHeight: 37 })).toBe('<div class="separador-M"></div>')
   })
 
-  it('schema: old separators (no customHeight) still parse; an out-of-range height falls back to 16', () => {
+  it('schema: old separators (no customHeight) still parse; no upper limit; a height under 1px falls back to 16', () => {
     expect(separadorFieldsSchema.parse({ size: 'S' })).toEqual({ size: 'S', customHeight: 16 })
-    expect(separadorFieldsSchema.parse({ size: 'custom', customHeight: 9999 })).toEqual({ size: 'custom', customHeight: 16 })
+    expect(separadorFieldsSchema.parse({ size: 'custom', customHeight: 9999 })).toEqual({ size: 'custom', customHeight: 9999 })
+    expect(separadorFieldsSchema.parse({ size: 'custom', customHeight: 0 })).toEqual({ size: 'custom', customHeight: 16 })
   })
 })
 

@@ -285,10 +285,9 @@ export const SEPARADOR_SIZE_LABELS: Record<SeparadorSize, string> = {
 /** px de los 3 tamaños fijos — el personalizado arranca desde el que había. */
 export const SEPARADOR_SIZE_PX: Record<SeparadorFixedSize, number> = { general: 16, M: 10, S: 4 }
 export const SEPARADOR_CUSTOM_MIN_PX = 1
-export const SEPARADOR_CUSTOM_MAX_PX = 200
 export const separadorFieldsSchema = z.object({
   size: z.enum(SEPARADOR_SIZE_VALUES).default('general'),
-  customHeight: z.number().int().min(SEPARADOR_CUSTOM_MIN_PX).max(SEPARADOR_CUSTOM_MAX_PX).catch(SEPARADOR_SIZE_PX.general).default(SEPARADOR_SIZE_PX.general),
+  customHeight: z.number().int().min(SEPARADOR_CUSTOM_MIN_PX).catch(SEPARADOR_SIZE_PX.general).default(SEPARADOR_SIZE_PX.general),
 })
 export type SeparadorFields = z.infer<typeof separadorFieldsSchema>
 export const defaultSeparadorFields: SeparadorFields = separadorFieldsSchema.parse({})
