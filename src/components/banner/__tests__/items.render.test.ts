@@ -4,7 +4,7 @@ import type { EmailDocument } from '../../../model'
 import { plainText, richTextFromPlain } from '../../../richText/model'
 import { DARK_THEME_SLUGS, THEME_SLUGS } from '../../../themes/themes'
 import type { BannerItemRenderCtx } from '../schema'
-import { defaultFranjaLogoItem, defaultTagItem, defaultTextoXlFields, tagsFieldsSchema } from '../items/schemas'
+import { defaultFranjaLogoItem, defaultSeparadorFields, defaultTagItem, defaultTextoXlFields, separadorFieldsSchema, tagsFieldsSchema } from '../items/schemas'
 import {
   renderCreditosSnippet,
   renderCtaInternoSnippet,
@@ -578,13 +578,26 @@ describe('renderSeparadorSnippet', () => {
     ['M', 'separador-M'],
     ['S', 'separador-S'],
   ] as const)('%s -> class="%s"', (size, className) => {
-    expect(renderSeparadorSnippet({ size })).toBe(`<div class="${className}"></div>`)
+    expect(renderSeparadorSnippet({ ...defaultSeparadorFields, size })).toBe(`<div class="${className}"></div>`)
   })
 
   it('has no Liquid left — a plain empty div, nothing to resolve', () => {
-    const html = renderSeparadorSnippet({ size: 'general' })
+    const html = renderSeparadorSnippet(defaultSeparadorFields)
     expect(html).not.toMatch(NO_LIQUID_TAG_RE)
     expect(html).not.toMatch(/\{\{/)
+  })
+
+  it('custom -> the same empty div with the height inline', () => {
+    expect(renderSeparadorSnippet({ size: 'custom', customHeight: 37 })).toBe('<div style="height: 37px;"></div>')
+  })
+
+  it('a fixed size ignores customHeight', () => {
+    expect(renderSeparadorSnippet({ size: 'M', customHeight: 37 })).toBe('<div class="separador-M"></div>')
+  })
+
+  it('schema: old separators (no customHeight) still parse; an out-of-range height falls back to 16', () => {
+    expect(separadorFieldsSchema.parse({ size: 'S' })).toEqual({ size: 'S', customHeight: 16 })
+    expect(separadorFieldsSchema.parse({ size: 'custom', customHeight: 9999 })).toEqual({ size: 'custom', customHeight: 16 })
   })
 })
 

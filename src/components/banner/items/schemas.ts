@@ -267,15 +267,29 @@ export const defaultCtaInternoFields: CtaInternoFields = ctaInternoFieldsSchema.
  * 'M' (10px, entre moléculas de un mismo módulo) y 'S' (4px, separación mínima
  * dentro de una celda). Sin campo de alineado: un `<div>` vacío no tiene nada
  * que alinear.
+ *
+ * 'custom' no viene del maestro: pedido del usuario (2026-10-29), un alto a
+ * mano en `customHeight` (px). Se renderiza como el mismo `<div>` vacío con el
+ * alto inline, en vez de una clase — que es todo lo que las 3 clases hacen
+ * (`height: Npx`, template_base.html).
  */
-export const SEPARADOR_SIZE_VALUES = ['general', 'M', 'S'] as const
+export const SEPARADOR_SIZE_VALUES = ['general', 'M', 'S', 'custom'] as const
 export type SeparadorSize = (typeof SEPARADOR_SIZE_VALUES)[number]
+export type SeparadorFixedSize = Exclude<SeparadorSize, 'custom'>
 export const SEPARADOR_SIZE_LABELS: Record<SeparadorSize, string> = {
   general: 'General (16px)',
   M: 'Mediano (10px)',
   S: 'Chico (4px)',
+  custom: 'Personalizado',
 }
-export const separadorFieldsSchema = z.object({ size: z.enum(SEPARADOR_SIZE_VALUES).default('general') })
+/** px de los 3 tamaños fijos — el personalizado arranca desde el que había. */
+export const SEPARADOR_SIZE_PX: Record<SeparadorFixedSize, number> = { general: 16, M: 10, S: 4 }
+export const SEPARADOR_CUSTOM_MIN_PX = 1
+export const SEPARADOR_CUSTOM_MAX_PX = 200
+export const separadorFieldsSchema = z.object({
+  size: z.enum(SEPARADOR_SIZE_VALUES).default('general'),
+  customHeight: z.number().int().min(SEPARADOR_CUSTOM_MIN_PX).max(SEPARADOR_CUSTOM_MAX_PX).catch(SEPARADOR_SIZE_PX.general).default(SEPARADOR_SIZE_PX.general),
+})
 export type SeparadorFields = z.infer<typeof separadorFieldsSchema>
 export const defaultSeparadorFields: SeparadorFields = separadorFieldsSchema.parse({})
 

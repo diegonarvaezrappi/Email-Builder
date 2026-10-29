@@ -16,6 +16,9 @@ import {
   FRANJA_LOGOS_SIZE_VALUES,
   SEPARADOR_SIZE_LABELS,
   SEPARADOR_SIZE_VALUES,
+  SEPARADOR_SIZE_PX,
+  SEPARADOR_CUSTOM_MIN_PX,
+  SEPARADOR_CUSTOM_MAX_PX,
   TEXTO_PASTILLA_POSITION_LABELS,
   TEXTO_PASTILLA_POSITION_VALUES,
 } from './schemas'
@@ -400,11 +403,15 @@ export function TagsPropertiesPanel({ value, onChange, doc }: BannerItemPanelPro
 }
 
 export function SeparadorPropertiesPanel({ value, onChange }: BannerItemPanelProps<SeparadorFields>) {
+  // Al pasar a personalizado, el alto arranca con el del tamaño que había, para
+  // ajustar desde ahí y no desde un salto (mismo criterio que TEXTOXL).
+  const changeSize = (size: SeparadorFields['size']) =>
+    onChange({ ...value, size, ...(size === 'custom' && value.size !== 'custom' ? { customHeight: SEPARADOR_SIZE_PX[value.size] } : {}) })
   return (
     <div className="properties-panel">
       <label className="field">
         <span>Tamaño</span>
-        <select value={value.size} onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ size: e.target.value as SeparadorFields['size'] })}>
+        <select value={value.size} onChange={(e: ChangeEvent<HTMLSelectElement>) => changeSize(e.target.value as SeparadorFields['size'])}>
           {SEPARADOR_SIZE_VALUES.map((s) => (
             <option key={s} value={s}>
               {SEPARADOR_SIZE_LABELS[s]}
@@ -412,6 +419,21 @@ export function SeparadorPropertiesPanel({ value, onChange }: BannerItemPanelPro
           ))}
         </select>
       </label>
+      {value.size === 'custom' && (
+        <label className="field">
+          <span>Alto (px)</span>
+          <input
+            type="number"
+            min={SEPARADOR_CUSTOM_MIN_PX}
+            max={SEPARADOR_CUSTOM_MAX_PX}
+            value={value.customHeight}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => {
+              const n = Number(e.target.value)
+              if (Number.isFinite(n) && n >= SEPARADOR_CUSTOM_MIN_PX && n <= SEPARADOR_CUSTOM_MAX_PX) onChange({ ...value, customHeight: Math.round(n) })
+            }}
+          />
+        </label>
+      )}
     </div>
   )
 }

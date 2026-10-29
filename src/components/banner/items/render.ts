@@ -41,7 +41,7 @@ import type {
   ImgFijaFields,
   PromoFields,
   SeparadorFields,
-  SeparadorSize,
+  SeparadorFixedSize,
   TagItem,
   TagsFields,
   TextoComplementarioFields,
@@ -517,13 +517,15 @@ export function renderTagsSnippet(fields: TagsFields, _doc: EmailDocument, ctx: 
 // CSS (.separador/.separador-M/.separador-S) ya viven en global-styles.html,
 // sincronizado aparte — nada que inyectar acá.
 
-const SEPARADOR_DIV_LITERAL: Record<SeparadorSize, string> = {
+const SEPARADOR_DIV_LITERAL: Record<SeparadorFixedSize, string> = {
   general: '<div class="separador"></div>',
   M: '<div class="separador-M"></div>',
   S: '<div class="separador-S"></div>',
 }
 
 export function renderSeparadorSnippet(fields: SeparadorFields): string {
+  // Personalizado: el mismo <div> vacío, con el alto inline (ver schemas.ts).
+  if (fields.size === 'custom') return `<div style="height: ${fields.customHeight}px;"></div>`
   const fileName = 'molecula_separadores.html'
   const raw = stripComments(loadBannerMoleculaFile(fileName))
   const literal = SEPARADOR_DIV_LITERAL[fields.size]
