@@ -201,6 +201,53 @@ describe('renderDealsSnippet · piezas opcionales', () => {
     expect(withoutLogo).not.toContain('alt="LOGO"')
   })
 
+  // Tag sobre la imagen (pull b62e4ea 2026-11-13) — pedido explícito del
+  // usuario: toggle para activarlo/desactivarlo, y URL vacía = sin tag.
+  describe('tag sobre la imagen', () => {
+    const TAG_URL = '1aIQWboJbrekU57kEb_4RsZreJw3zZy-x'
+
+    it('viene activado por defecto con el tag del maestro, encima de la fila de logos', () => {
+      const html = render(cards(card('a')))
+      expect(count(html, 'role="molecula-tag-imagen"')).toBe(1)
+      expect(html).toContain(TAG_URL)
+      expect(html).toContain('alt="TAG"')
+      expect(html.indexOf('role="molecula-tag-imagen"')).toBeLessThan(html.indexOf('role="molecula-iconoL"'))
+    })
+
+    it('sustituye la URL y el alt por los del usuario (escapados)', () => {
+      const html = render(cards(card('a', { imageTagUrl: 'https://x.test/tag.png?a=1&b=2', imageTagAlt: 'Pro "Rewards"' })))
+      expect(html).toContain('src="https://x.test/tag.png?a=1&amp;b=2"')
+      expect(html).toContain('alt="Pro &quot;Rewards&quot;"')
+      expect(html).not.toContain(TAG_URL)
+    })
+
+    it.each([
+      ['desactivado', { imageTagEnabled: false }],
+      ['con la URL vacía', { imageTagUrl: '   ' }],
+    ] as const)('%s elimina la fila <tr> completa del tag, sin tocar el logo ni dejar filas vacías', (_label, over) => {
+      const withTag = render(cards(card('a')))
+      const html = render(cards(card('a', over)))
+      expect(html).not.toContain('role="molecula-tag-imagen"')
+      expect(html).not.toContain(TAG_URL)
+      expect(html).not.toContain('<img src=""')
+      expect(count(html, '<tr')).toBe(count(withTag, '<tr') - 1)
+      expect(count(html, '</tr>')).toBe(count(withTag, '</tr>') - 1)
+      expect(html).toContain('role="molecula-iconoL"')
+    })
+
+    it('cada tarjeta decide su propio tag', () => {
+      const html = render(cards(card('a', { imageTagEnabled: false }), card('b')))
+      expect(count(html, 'role="molecula-tag-imagen"')).toBe(1)
+      expect(html.indexOf('role="molecula-tag-imagen"')).toBeGreaterThan(html.indexOf(`DCARD:${BLOCK_ID}:b`))
+    })
+
+    it('un documento viejo sin los campos del tag lo recibe activado (default del schema)', () => {
+      const parsed = dealCardFieldsSchema.parse({ productImageUrl: 'https://x.test/p.png' })
+      expect(parsed.imageTagEnabled).toBe(true)
+      expect(parsed.imageTagUrl).toContain(TAG_URL)
+    })
+  })
+
   // logoShape: pedido explícito del usuario 2026-08-25 — exponer la "logo
   // pastilla" del maestro (bd9f4a5) como una 2da forma elegible, en vez de
   // ocultarla siempre. Ver DEAL_LOGO_SHAPE_VALUES en schema.ts.

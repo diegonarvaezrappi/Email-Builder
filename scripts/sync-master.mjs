@@ -850,7 +850,9 @@ const DEALS_ANCHOR_COUNTS = {
   '<td width="50%" style="width: 50%" >': 2,
   '<td width="50%" style="width: 50%; vertical-align: top;': 2,
   '<td width="50%" style="width: 50%;" >': 2,
-  '</table></td>': 2,
+  // 4 desde el pull b62e4ea (tag sobre la imagen): 2 por celda de imagen, la
+  // de la tabla interna tag/logos + la de la tabla externa del overlay.
+  '</table></td>': 4,
   '</a></td>': 2,
   // Link (token de relleno manual, no Liquid) — 1 por celda, cada tarjeta
   // resuelve el suyo. No hay LINKDEAL1/LINKDEAL2 en el archivo real.
@@ -891,6 +893,11 @@ const DEALS_ANCHOR_COUNTS = {
   // vez de dejar que components/deals/render.ts oculte el elemento equivocado
   // en silencio.
   'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe': 2,
+  // Tag sobre la imagen (pull b62e4ea 2026-11-13): su role y la URL por
+  // defecto ("Pro Rewards"), 1 por celda — components/deals/render.ts corta
+  // su fila <tr> entera si el tag está apagado o sin URL.
+  'role="molecula-tag-imagen"': 2,
+  'https://lh3.googleusercontent.com/d/1aIQWboJbrekU57kEb_4RsZreJw3zZy-x': 2,
   // Íconos por defecto de TAG1 y TAG2 — distintos entre sí, y es justamente
   // por eso que el render los usa para desambiguar cuál tag es cuál.
   'https://lh3.googleusercontent.com/d/1rofiEyeYdjqVsiEL3-NWsOfXOSMQRVNa': 2,

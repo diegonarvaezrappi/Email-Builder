@@ -143,6 +143,29 @@ export function DealCardPropertiesPanel({ value, onChange, doc }: DealCardProper
         <span>Alt de la imagen del producto</span>
         <input type="text" value={value.productImageAlt} onChange={(e) => set('productImageAlt', e.target.value)} />
       </label>
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.imageTagEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set('imageTagEnabled', e.target.checked)}
+        />
+        <span>Mostrar tag sobre la imagen</span>
+      </label>
+      <label className="field">
+        <span>Tag sobre la imagen</span>
+        <input
+          type="text"
+          placeholder="https://..."
+          value={value.imageTagUrl}
+          disabled={!value.imageTagEnabled}
+          onChange={(e) => set('imageTagUrl', e.target.value)}
+        />
+        <span className="field-hint">Va arriba a la izquierda (20px de alto, hasta 120px de ancho). Vacío = se quita el tag.</span>
+      </label>
+      <label className="field">
+        <span>Alt del tag</span>
+        <input type="text" value={value.imageTagAlt} disabled={!value.imageTagEnabled} onChange={(e) => set('imageTagAlt', e.target.value)} />
+      </label>
       <label className="field">
         <span>Forma del logo</span>
         <select value={value.logoShape} onChange={(e: ChangeEvent<HTMLSelectElement>) => set('logoShape', e.target.value as DealLogoShape)}>

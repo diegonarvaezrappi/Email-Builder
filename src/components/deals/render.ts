@@ -118,6 +118,10 @@ const LOGO_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1ZYWddltBXkpcjXzkd
  * exponerla como una 2da forma de logo elegible, no solo ocultarla.
  */
 const LOGO_PASTILLA_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1IY3lFRQnvb9g7cGALAbRBywZ6YpO6QLe'
+/** Tag sobre la imagen (pull b62e4ea 2026-11-13) — vive en su propia fila
+ *  `<tr>` de la tabla interna de la celda de imagen, arriba de la de logos. */
+const IMAGE_TAG_ANCHOR = 'role="molecula-tag-imagen"'
+const IMAGE_TAG_PLACEHOLDER = 'https://lh3.googleusercontent.com/d/1aIQWboJbrekU57kEb_4RsZreJw3zZy-x'
 
 /** Ubica el `alt="..."` DENTRO de los bounds ya calculados de un `<img>` y arma
  *  el Edit que lo reemplaza — mismo criterio "fallar ruidoso" que
@@ -147,6 +151,26 @@ function renderImageCell(cell: string, fields: DealCardFields): string {
   })
   const productTdInsertAt = htmlEdits.tagOpenInsertionPoint(cell, productIndex, 'td', FILE_NAME)
   edits.push({ start: productTdInsertAt, end: productTdInsertAt, replacement: backgroundImageAltAttrs(fields.productImageAlt) })
+
+  // Tag sobre la imagen: "si no hay tag, se elimina la fila <tr> completa"
+  // (maestro). Apagado o con la URL vacía → se corta la fila entera, así la
+  // fila de logos (valign="bottom") se queda con todo el alto, igual que antes
+  // de que existiera el tag. No se usa elementBounds(…, 'tr') porque la
+  // celda tiene un <tr> EXTERNO que contiene a éste; el <tr> del tag es el
+  // más cercano hacia atrás desde su role y no anida otra fila.
+  const imageTagIndex = indexOfOrThrow(cell, IMAGE_TAG_ANCHOR)
+  if (!fields.imageTagEnabled || fields.imageTagUrl.trim() === '') {
+    const rowStart = cell.lastIndexOf('<tr', imageTagIndex)
+    if (rowStart === -1) {
+      throw new Error(`${FILE_NAME}: no se encontró el <tr> del tag sobre la imagen — revisar components/deals/render.ts`)
+    }
+    const rowEnd = indexOfOrThrow(cell, '</tr>', imageTagIndex) + '</tr>'.length
+    edits.push({ start: rowStart, end: rowEnd, replacement: '' })
+  } else {
+    const tagSrcIndex = indexOfOrThrow(cell, IMAGE_TAG_PLACEHOLDER, imageTagIndex)
+    edits.push({ start: tagSrcIndex, end: tagSrcIndex + IMAGE_TAG_PLACEHOLDER.length, replacement: escapeHtmlAttr(fields.imageTagUrl) })
+    edits.push(altAttrEdit(cell, voidElementBounds(cell, tagSrcIndex, 'img'), fields.imageTagAlt))
+  }
 
   // LOGO_ANCHOR (`role="molecula-iconoL"`) se repite en los 2 <img> del maestro
   // (cuadrado Y pastilla) — indexOfOrThrow toma el PRIMERO, que en el HTML real
@@ -481,7 +505,11 @@ function renderLegalCell(cell: string, card: DealCard): string {
  * scripts/sync-master.mjs) — así que se extrae cada celda por separado y se
  * rellena con los datos de su propia tarjeta.
  */
-const IMAGE_CELL_RE = /<td width="50%" style="width: 50%" >[\s\S]*?<\/table><\/td>/g
+// Desde el pull b62e4ea (tag sobre la imagen) la celda de imagen anida DOS
+// tablas (la del overlay y, dentro, la de 2 filas tag/logos), así que el
+// primer `</table></td>` ya no es el cierre de la celda: se ancla en la
+// secuencia completa de cierre (tabla interna → `</tr>` → tabla externa).
+const IMAGE_CELL_RE = /<td width="50%" style="width: 50%" >[\s\S]*?<\/table><\/td>\s*<\/tr>\s*<\/table><\/td>/g
 const TEXT_CELL_RE = /<td width="50%" style="width: 50%; vertical-align: top;[\s\S]*?<\/a><\/td>/g
 const LEGAL_CELL_RE = /<td width="50%" style="width: 50%;" >[\s\S]*?<\/div><\/td>/g
 

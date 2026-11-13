@@ -136,6 +136,21 @@ export const dealCardFieldsSchema = z.object({
    *  las imagenes que son agregadas como fondo, tambien agregales un campo
    *  ALT, por ejemplo las imagenes de productos de los deals, no tienen ALT". */
   productImageAlt: z.string().default('Producto'),
+  /**
+   * Tag SOBRE la imagen del producto, arriba a la izquierda
+   * (`role="molecula-tag-imagen"`, pull b62e4ea 2026-11-13 del maestro). El
+   * maestro: "Se puede reemplazar el src por otro tag; si no hay tag, se
+   * elimina la fila <tr> completa". Pedido explícito del usuario 2026-11-13:
+   * un toggle para activarlo/desactivarlo Y que dejar la URL vacía también lo
+   * elimine del HTML — cualquiera de los 2 borra la fila `<tr>` entera (ver
+   * renderImageCell). Default `true` + la URL del maestro (tag "Pro Rewards"):
+   * reproduce el archivo tal cual viene, también para documentos viejos de
+   * localStorage que no traen estos campos.
+   */
+  imageTagEnabled: z.boolean().default(true),
+  imageTagUrl: z.string().default('https://lh3.googleusercontent.com/d/1aIQWboJbrekU57kEb_4RsZreJw3zZy-x'),
+  /** Alt del tag — default reproduce el `alt="TAG"` de fábrica del maestro. */
+  imageTagAlt: z.string().default('TAG'),
   /** Cuál de las 2 formas de logo del maestro se muestra — ver el comentario
    *  grande de DEAL_LOGO_SHAPE_VALUES arriba. Default 'cuadrado': preserva el
    *  comportamiento de siempre para toda tarjeta/documento ya existente. */
