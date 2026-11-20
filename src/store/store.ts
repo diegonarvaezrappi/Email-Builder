@@ -48,6 +48,7 @@ interface BuilderState {
    */
   setSlotFields: (docKey: keyof EmailDocument, fields: unknown) => void
   setGlobalFields: (fields: GlobalFields) => void
+  setProjectName: (name: string) => void
 
   /**
    * Operaciones sobre los Heros (doc.heroes, components/hero/schema.ts). Un
@@ -295,6 +296,7 @@ export const useBuilder = create<BuilderState>()(
       setSlotFields: (docKey, fields) =>
         set((s) => ({ document: { ...s.document, [docKey]: fields } as EmailDocument })),
       setGlobalFields: (fields) => set((s) => ({ document: { ...s.document, global: fields } })),
+      setProjectName: (name) => set((s) => ({ document: { ...s.document, name } })),
 
       duplicateHeroSection: (id) => {
         let copyId: string | null = null

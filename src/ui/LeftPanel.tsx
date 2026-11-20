@@ -47,6 +47,8 @@ interface LeftPanelProps {
   selected: Selection | null
   onSelect: (next: Selection) => void
   onChangeGlobal: (next: GlobalFields) => void
+  /** Renombra el proyecto — da nombre a los archivos exportados. */
+  onChangeName: (name: string) => void
   onAddBlock: (type: ContentBlockType) => void
   /** Agrega un header o un banner (de ese tipo) al final del Hero y lo selecciona. */
   onAddHeroPiece: (type: HeroPieceType, bannerType?: BannerType) => void
@@ -59,9 +61,19 @@ interface LeftPanelProps {
 }
 
 export function LeftPanel(props: LeftPanelProps) {
-  const { tab, onChangeTab } = props
+  const { tab, onChangeTab, document: doc, onChangeName } = props
   return (
     <aside className="panel-library left-panel">
+      <label className="project-name">
+        <span className="project-name-label">Nombre del proyecto</span>
+        <input
+          type="text"
+          value={doc.name}
+          placeholder="Sin nombre (se exporta como “email”)"
+          onChange={(e) => onChangeName(e.target.value)}
+          title="Los archivos .html, .json y .png se descargan con este nombre"
+        />
+      </label>
       <nav className="left-tabs" role="tablist" aria-label="Secciones del mail">
         {LEFT_TAB_ORDER.map((t) => (
           <button

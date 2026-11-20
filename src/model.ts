@@ -275,6 +275,9 @@ export const contentBlockSchema = z.discriminatedUnion('type', [
  * template/assemble.ts.
  */
 export interface EmailDocument {
+  /** Nombre del proyecto, editable arriba del panel izquierdo. Da nombre a
+   *  los archivos exportados (.html, .json, .png) — ver export/exporters.ts. */
+  name: string
   global: GlobalFields
   /**
    * Los HEROS, en orden: cada uno es una copia de la sección HERO del maestro,
@@ -304,6 +307,7 @@ export interface EmailDocument {
  *  preprocess — ver components/hero/schema.ts#migrateLegacyHero. Sin nada de
  *  eso, carga con el Hero por defecto. */
 const emailDocumentObjectSchema = z.object({
+  name: z.string().default(''),
   global: globalSchema,
   heroes: z.array(heroSectionSchema).min(1).default(defaultHeroSections),
   footer: footerSchema,

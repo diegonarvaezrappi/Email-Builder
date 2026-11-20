@@ -6,7 +6,7 @@
 // globals a mano en cada caso en vez de usar vi.spyOn (no hay nada
 // preexistente para "espiar").
 import { afterEach, describe, expect, it } from 'vitest'
-import { copyHtmlToClipboard, neutralizeVerticalWritingModeForCapture } from '../exporters'
+import { copyHtmlToClipboard, neutralizeVerticalWritingModeForCapture, projectFileName } from '../exporters'
 import { assembleEmailHtml } from '../../template/assemble'
 import { defaultEmailDocument } from '../../registry'
 
@@ -119,5 +119,20 @@ describe('neutralizeVerticalWritingModeForCapture', () => {
     const el = elWithWritingMode('sideways-lr')
     neutralizeVerticalWritingModeForCapture(document)
     expect(el.style.getPropertyValue('writing-mode')).toBe('')
+  })
+})
+
+describe('projectFileName', () => {
+  it('conserva el nombre tal como se escribió', () => {
+    expect(projectFileName('Promo Pro Noviembre – Méx')).toBe('Promo Pro Noviembre – Méx')
+  })
+
+  it('quita los caracteres que no valen en un nombre de archivo', () => {
+    expect(projectFileName('Pro: 50% off / CO?')).toBe('Pro 50% off CO')
+  })
+
+  it('cae a "email" si el nombre queda vacío', () => {
+    expect(projectFileName('')).toBe('email')
+    expect(projectFileName('  ...  ')).toBe('email')
   })
 })

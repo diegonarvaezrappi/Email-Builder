@@ -12,15 +12,18 @@ import { renderEmailPreview } from '../preview/liquidPreview'
 import type { PreviewCountry } from '../preview/countries'
 import type { EmailDocument } from '../model'
 
-export function slug(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'email'
-  )
+/**
+ * Nombre de archivo a partir del nombre del proyecto (doc.name). Conserva el
+ * nombre tal como lo escribió el usuario —mayúsculas, tildes y espacios—:
+ * solo quita los caracteres que Windows/macOS no aceptan
+ * en un nombre de archivo. Sin nombre, cae a 'email'.
+ */
+export function projectFileName(name: string): string {
+  const clean = name
+    .replace(/[<>:"/\|?*\u0000-\u001f]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.]+|[\s.]+$/g, '')
+  return clean || 'email'
 }
 
 function triggerDownload(blob: Blob, filename: string) {
@@ -69,9 +72,9 @@ export async function copyHtmlToClipboard(doc: EmailDocument): Promise<number> {
   return Math.round((new Blob([html]).size / 1024) * 10) / 10
 }
 
-export function downloadHtml(doc: EmailDocument, filename = 'email'): void {
+export function downloadHtml(doc: EmailDocument, filename = doc.name): void {
   const html = assembleEmailHtml(doc)
-  triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), `${slug(filename)}.html`)
+  triggerDownload(new Blob([html], { type: 'text/html;charset=utf-8' }), `${projectFileName(filename)}.html`)
 }
 
 /**
@@ -83,9 +86,9 @@ export function downloadHtml(doc: EmailDocument, filename = 'email'): void {
  * se agrega un "Importar plantilla", reusar `emailDocumentSchema.safeParse`
  * alcanza sin inventar un shape nuevo.
  */
-export function downloadJson(doc: EmailDocument, filename = 'email'): void {
+export function downloadJson(doc: EmailDocument, filename = doc.name): void {
   const json = JSON.stringify(doc, null, 2)
-  triggerDownload(new Blob([json], { type: 'application/json;charset=utf-8' }), `${slug(filename)}.json`)
+  triggerDownload(new Blob([json], { type: 'application/json;charset=utf-8' }), `${projectFileName(filename)}.json`)
 }
 
 /**
@@ -373,7 +376,7 @@ async function inlineAllImagesForCapture(frameDoc: Document): Promise<void> {
  * trae Liquid vivo — {{color_x_mail_general}}, {% if %} de tema, etc. — y se
  * vería roto en una captura).
  */
-export async function downloadPng(doc: EmailDocument, filename = 'email', country: PreviewCountry = PNG_PREVIEW_COUNTRY): Promise<void> {
+export async function downloadPng(doc: EmailDocument, filename = doc.name, country: PreviewCountry = PNG_PREVIEW_COUNTRY): Promise<void> {
   const { html, error } = await renderEmailPreview(doc, country)
   if (error) throw new Error(error)
 
@@ -430,7 +433,7 @@ export async function downloadPng(doc: EmailDocument, filename = 'email', countr
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo generar el PNG'))), 'image/png')
     })
-    triggerDownload(blob, `${slug(filename)}.png`)
+    triggerDownload(blob, `${projectFileName(filename)}.png`)
   } finally {
     iframe.remove()
   }

@@ -151,6 +151,7 @@ function defaultDealsBlock(row: 1 | 2 | 3): DealsBlock {
 }
 
 export const defaultEmailDocument: EmailDocument = {
+  name: '',
   global: defaultGlobalFields,
   heroes: defaultHeroSections,
   footer: defaultFooterFields,

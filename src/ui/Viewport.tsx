@@ -290,7 +290,7 @@ export function Viewport({
   const handleDownloadPng = async () => {
     setPngStatus('generating')
     try {
-      await downloadPng(doc, 'email-footer', country)
+      await downloadPng(doc, doc.name, country)
       setPngStatus('idle')
     } catch {
       setPngStatus('error')
@@ -365,10 +365,10 @@ export function Viewport({
             <button type="button" className="primary" onClick={handleCopy}>
               {copyStatus === 'copied' ? 'Copiado ✓' : copyStatus === 'error' ? 'Error al copiar' : 'Copiar HTML'}
             </button>
-            <button type="button" onClick={() => downloadHtml(doc, 'email-footer')}>
+            <button type="button" onClick={() => downloadHtml(doc)}>
               Descargar .html
             </button>
-            <button type="button" onClick={() => downloadJson(doc, 'email-footer')}>
+            <button type="button" onClick={() => downloadJson(doc)}>
               Descargar JSON
             </button>
             <button type="button" onClick={handleDownloadPng} disabled={pngStatus === 'generating'}>

@@ -34,6 +34,7 @@ function App() {
   const doc = useBuilder((s) => s.document)
   const setSlotFields = useBuilder((s) => s.setSlotFields)
   const setGlobalFields = useBuilder((s) => s.setGlobalFields)
+  const setProjectName = useBuilder((s) => s.setProjectName)
   const insertHeroPiece = useBuilder((s) => s.insertHeroPiece)
   const duplicateHeroSection = useBuilder((s) => s.duplicateHeroSection)
   const removeHeroSection = useBuilder((s) => s.removeHeroSection)
@@ -375,6 +376,7 @@ function App() {
             selected={selected}
             onSelect={applySelection}
             onChangeGlobal={setGlobalFields}
+            onChangeName={setProjectName}
             onAddBlock={handleAddBlock}
             onAddHeroPiece={handleAddHeroPiece}
             onChangeHeroBackground={handleChangeHeroBackground}

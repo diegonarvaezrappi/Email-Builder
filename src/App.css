@@ -12,6 +12,36 @@
   overflow: hidden;
 }
 
+/* Nombre del proyecto: encima de las pestañas, da nombre a los exportes. */
+.project-name {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 14px 0;
+  flex-shrink: 0;
+}
+
+.project-name-label {
+  font-size: 11px;
+  color: var(--text);
+}
+
+.project-name input {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.project-name input:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
 .left-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
