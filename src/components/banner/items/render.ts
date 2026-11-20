@@ -49,7 +49,7 @@ import type {
   TextoPastillaFields,
   TextoXlFields,
 } from './schemas'
-import { ahoraSizing, liveTextSizing, sizingVars, textoXlCustomClass } from './sizing'
+import { ahoraSizing, imgAutomaticaMobileClass, liveTextSizing, sizingVars, textoXlCustomClass } from './sizing'
 import { resolveBannerVars, substituteAll, substituteOnce } from './vars'
 
 const HTML_COMMENT_RE = /<!--[\s\S]*?-->/g
@@ -352,6 +352,12 @@ export function renderImgAutomaticaMoleculaSnippet(
       `${IMG_AUTOMATICA_MOLECULA_STYLE_ANCHOR} border-radius: ${radius};`,
       fileName,
     )
+    // Ancho de móvil: solo si difiere del de escritorio, para que una pieza
+    // sin ancho de móvil propio salga byte a byte igual que antes.
+    const mobile = fields.mobileWidthPercent
+    if (mobile !== undefined && mobile !== fields.widthPercent) {
+      html = substituteOnce(html, '<img src=', `<img class="${imgAutomaticaMobileClass(mobile)}" src=`, fileName)
+    }
   }
   html = substituteImgSrcOrRemove(html, IMG_AUTOMATICA_MOLECULA_URL_PLACEHOLDER, fields.imageUrl, fields.imageAlt, fileName)
   return resolveBannerVars(html, { banner_img_modulo_auto_ancho: String(fields.widthPercent) }, fileName)

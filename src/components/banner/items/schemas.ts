@@ -150,7 +150,14 @@ export const imgAutomaticaMoleculaFieldsSchema = z.object({
   /** Alt del `<img>` — default reproduce el `alt="img"` que
    *  molecula_img_automatica_{horizontal,vertical}.html ya trae de fábrica. */
   imageAlt: z.string().default('img'),
+  /** Ancho en escritorio — va inline en la <img>. */
   widthPercent: z.number().int().min(1).max(100).default(80),
+  /** Ancho en móvil (pedido del usuario 2026-11-20). Opcional: sin valor,
+   *  móvil hereda `widthPercent` y el HTML sale igual que antes de existir
+   *  este campo. Con valor distinto, la <img> lleva una clase
+   *  `bnr-imgauto-m<N>` y template/assemble.ts agrega su regla en las media
+   *  queries del maestro — ver imgAutomaticaMobileClass en ./sizing.ts. */
+  mobileWidthPercent: z.number().int().min(1).max(100).optional(),
   /** Pedido explícito del usuario 2026-08-26: mismo control que ya tiene
    *  IMG_AUTOMATICA_MODULO (ver ese schema más abajo), acá extendido a la
    *  molécula — a diferencia del módulo, el maestro NO trae NINGÚN

@@ -15,7 +15,7 @@ import type { CtaBlock, EmailDocument } from '../../model'
 
 import { bannerOf, bannerPieceOf, headerOf, headerPieceOf, legacy, withPieces } from '../../components/hero/testUtils'
 import { DEFAULT_HERO_BANNER_ID, DEFAULT_HERO_HEADER_ID, DEFAULT_HERO_SECTION_ID, heroBackgroundSchema, type HeroPiece } from '../../components/hero/schema'
-import { defaultTextoXlFields } from '../../components/banner/items/schemas'
+import { defaultImgAutomaticaMoleculaFields, defaultTextoXlFields, type ImgAutomaticaMoleculaFields } from '../../components/banner/items/schemas'
 import { richTextFromPlain } from '../../richText/model'
 
 const ctaBlock = (id: string, text: string): CtaBlock => ({
@@ -759,5 +759,28 @@ describe('assembleEmailHtml · Texto XL con tamaño de móvil propio', () => {
     const rule = '#BANNER_HORIZONTAL .bnr-txl-m30-33, #BANNER_VERTICAL .bnr-txl-m30-33 {\n    font-size: 30px!important;\n    line-height: 33px!important;\n}'
     expect(html.split(rule).length - 1).toBe(2)
     expect(assembleEmailHtml(defaultEmailDocument)).not.toContain('bnr-txl-m')
+  })
+})
+
+describe('assembleEmailHtml · Imagen automática con ancho de móvil propio', () => {
+  const docWith = (fields: ImgAutomaticaMoleculaFields): EmailDocument => {
+    const banner = bannerPieceOf(defaultEmailDocument)
+    return withPieces(defaultEmailDocument, [
+      headerPieceOf(defaultEmailDocument),
+      { ...banner, fields: { ...banner.fields, items: [{ id: 'i1', type: 'IMG_AUTOMATICA_MOLECULA', fields }] } },
+    ])
+  }
+
+  it('escritorio inline y móvil en una regla !important en las 2 media queries', () => {
+    const html = assembleEmailHtml(docWith({ ...defaultImgAutomaticaMoleculaFields, widthPercent: 60, mobileWidthPercent: 90 }))
+    expect(html).toContain('<img class="bnr-imgauto-m90" src=')
+    expect(html).toContain('width: 60%;')
+    const rule = '#BANNER_HORIZONTAL .bnr-imgauto-m90, #BANNER_VERTICAL .bnr-imgauto-m90 {\n    width: 90%!important;\n}'
+    expect(html.split(rule).length - 1).toBe(2)
+  })
+
+  it('sin ancho de móvil (o igual al de escritorio) no agrega clase ni regla', () => {
+    expect(assembleEmailHtml(docWith({ ...defaultImgAutomaticaMoleculaFields, widthPercent: 60 }))).not.toContain('bnr-imgauto-m')
+    expect(assembleEmailHtml(docWith({ ...defaultImgAutomaticaMoleculaFields, widthPercent: 60, mobileWidthPercent: 60 }))).not.toContain('bnr-imgauto-m')
   })
 })

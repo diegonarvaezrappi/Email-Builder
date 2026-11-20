@@ -209,6 +209,13 @@ export function TextoComplementarioPropertiesPanel({ value, onChange, doc }: Ban
   )
 }
 
+/** Valor entero 1–100 de un input de porcentaje, o null si no es válido (vacío
+ *  mientras se escribe, fuera de rango). */
+function percentInput(raw: string): number | null {
+  const n = Number(raw)
+  return raw !== '' && Number.isFinite(n) && n >= 1 && n <= 100 ? Math.round(n) : null
+}
+
 export function ImgAutomaticaMoleculaPropertiesPanel({ value, onChange }: BannerItemPanelProps<ImgAutomaticaMoleculaFields>) {
   return (
     <div className="properties-panel">
@@ -224,14 +231,31 @@ export function ImgAutomaticaMoleculaPropertiesPanel({ value, onChange }: Banner
         <span>Alt de la imagen</span>
         <input type="text" value={value.imageAlt} onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, imageAlt: e.target.value })} />
       </label>
+      <p className="field-group-label">Ancho (%)</p>
       <label className="field">
-        <span>Ancho (%)</span>
+        <span>Escritorio</span>
         <input
           type="number"
           min={1}
           max={100}
           value={value.widthPercent}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...value, widthPercent: Number(e.target.value) })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            const n = percentInput(e.target.value)
+            if (n !== null) onChange({ ...value, widthPercent: n })
+          }}
+        />
+      </label>
+      <label className="field">
+        <span>Móvil</span>
+        <input
+          type="number"
+          min={1}
+          max={100}
+          value={value.mobileWidthPercent ?? value.widthPercent}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => {
+            const n = percentInput(e.target.value)
+            if (n !== null) onChange({ ...value, mobileWidthPercent: n })
+          }}
         />
       </label>
       <label className="field field-checkbox">

@@ -5,7 +5,7 @@ import { inlineTheme } from '../themes/inlineTheme'
 import { cssUrlValue, resolveGlobalVars } from '../global/vars'
 import type { BackgroundPosition, BackgroundRepeat, BackgroundSize } from '../global/background'
 import { stripBannerFieldAssigns } from '../components/banner/render'
-import { TEXTOXL_CUSTOM_CLASS_RE } from '../components/banner/items/sizing'
+import { IMG_AUTOMATICA_MOBILE_CLASS_RE, TEXTOXL_CUSTOM_CLASS_RE } from '../components/banner/items/sizing'
 import { stripDealsFieldAssigns } from '../components/deals/render'
 import { applyEdits, elementBounds, indexOfOrThrow, voidElementBounds } from './htmlEdits'
 import { escapeHtmlAttr, insertBackgroundImageAltAtStart } from './htmlText'
@@ -80,13 +80,19 @@ const BNR_XL_MOBILE_RULE = '#BANNER_HORIZONTAL .bnr-xl, #BANNER_VERTICAL .bnr-xl
 function injectTextoXlMobileRules(html: string): string {
   const pairs = new Map<string, [string, string]>()
   for (const m of html.matchAll(TEXTOXL_CUSTOM_CLASS_RE)) pairs.set(m[0], [m[1], m[2]])
-  if (pairs.size === 0) return html
-  const rules = [...pairs]
-    .map(
-      ([cls, [size, line]]) =>
-        `#BANNER_HORIZONTAL .${cls}, #BANNER_VERTICAL .${cls} {\n    font-size: ${size}px!important;\n    line-height: ${line}px!important;\n}\n`,
-    )
-    .join('')
+  // Mismo mecanismo para el ancho de móvil de la Imagen automática
+  // (bnr-imgauto-m<N>, ver components/banner/items/sizing.ts).
+  const widths = new Map<string, string>()
+  for (const m of html.matchAll(IMG_AUTOMATICA_MOBILE_CLASS_RE)) widths.set(m[0], m[1])
+  if (pairs.size === 0 && widths.size === 0) return html
+  const rules =
+    [...pairs]
+      .map(
+        ([cls, [size, line]]) =>
+          `#BANNER_HORIZONTAL .${cls}, #BANNER_VERTICAL .${cls} {\n    font-size: ${size}px!important;\n    line-height: ${line}px!important;\n}\n`,
+      )
+      .join('') +
+    [...widths].map(([cls, pct]) => `#BANNER_HORIZONTAL .${cls}, #BANNER_VERTICAL .${cls} {\n    width: ${pct}%!important;\n}\n`).join('')
   if (!html.includes(BNR_XL_MOBILE_RULE)) {
     throw new Error(`template_base.html: ya no contiene "${BNR_XL_MOBILE_RULE}" — revisar injectTextoXlMobileRules`)
   }

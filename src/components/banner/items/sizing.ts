@@ -93,3 +93,10 @@ export function sizingVars(
     [`${names.lineheightVar}${suffix}`]: sizing.lineHeight,
   }
 }
+
+/** Clase del ancho de MÓVIL de la Imagen automática (molécula): lleva el
+ *  porcentaje en el nombre, igual que textoXlCustomClass, así assemble.ts
+ *  arma la regla leyendo el HTML final sin conocer el documento. */
+export const imgAutomaticaMobileClass = (mobileWidthPercent: number): string => `bnr-imgauto-m${mobileWidthPercent}`
+
+export const IMG_AUTOMATICA_MOBILE_CLASS_RE = /bnr-imgauto-m(\d+)/g
