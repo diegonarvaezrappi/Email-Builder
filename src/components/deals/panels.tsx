@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react'
 import type { EmailDocument } from '../../model'
 import type { GlobalFields } from '../../global/schema'
 import { RichTextInput } from '../../richText/RichTextInput'
+import { ColorField } from '../../ui/BackgroundFields'
 import { plainText, type RichText, type RichTextColorMap } from '../../richText/model'
 import { richTextColorsForTema } from '../../richText/themeColors'
 import {
@@ -192,6 +193,19 @@ export function DealCardPropertiesPanel({ value, onChange, doc }: DealCardProper
         <input type="text" placeholder="https://..." value={value.link} onChange={(e) => set('link', e.target.value)} />
         <span className="field-hint">Todo el deal es clickeable — es el único módulo de contenido con enlace activo por defecto.</span>
       </label>
+
+      <p className="field-group-label">Fondo</p>
+      <label className="field field-checkbox">
+        <input
+          type="checkbox"
+          checked={value.customBgEnabled}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => set('customBgEnabled', e.target.checked)}
+        />
+        <span>Fondo personalizado</span>
+      </label>
+      {value.customBgEnabled && (
+        <ColorField label="Color de fondo" value={value.customBgColor} onChange={(next) => set('customBgColor', next || '#FFFFFF')} />
+      )}
 
       <p className="field-group-label">Legales</p>
       <TogglableTextField

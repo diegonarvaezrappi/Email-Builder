@@ -431,6 +431,28 @@ function assertPiecesContiguous(cell: string, ordered: { type: DealCardPieceType
   }
 }
 
+/** El `<a>` que envuelve las piezas y el `<div>` que trae el padding y el
+ *  radio de la tarjeta — 1 de cada uno por celda de textos. */
+const TEXT_LINK_STYLE_ANCHOR = 'style="display: table; text-decoration: none;'
+const TEXT_BOX_STYLE_ANCHOR = 'style="padding:{{padd_deal_mail_general}};'
+
+/**
+ * Fondo sólido propio de la tarjeta. Va en el `<div>` interior —que ya lleva el
+ * padding y el `border-radius`— y no en el `<td>` (CLAUDE.md §4.1). El `<a>` es
+ * `display: table`, que se encoge a su contenido, así que con fondo también
+ * gana `width: 100%` para que la caja ocupe la celda entera. Apagado = sin
+ * edits, salida idéntica a la de antes.
+ */
+function customBgEdits(cell: string, fields: DealCardFields): Edit[] {
+  if (!fields.customBgEnabled) return []
+  const linkAt = indexOfOrThrow(cell, TEXT_LINK_STYLE_ANCHOR) + 'style="'.length
+  const boxAt = indexOfOrThrow(cell, TEXT_BOX_STYLE_ANCHOR) + 'style="'.length
+  return [
+    { start: linkAt, end: linkAt, replacement: 'width: 100%; ' },
+    { start: boxAt, end: boxAt, replacement: `background: ${fields.customBgColor}; ` },
+  ]
+}
+
 function renderTextCell(cell: string, card: DealCard): string {
   const fields = card.fields
 
@@ -448,6 +470,7 @@ function renderTextCell(cell: string, card: DealCard): string {
       end: linkIndex + LINK_PLACEHOLDER.length,
       replacement: escapeHtmlAttr(linkOrPlaceholder(fields.link, DEAL_LINK_PLACEHOLDER)),
     },
+    ...customBgEdits(cell, fields),
   ])
 
   // Límites de las 7 piezas en orden NATURAL (el literal del maestro) —

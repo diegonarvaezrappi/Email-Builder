@@ -613,3 +613,32 @@ describe('renderDealsSnippet · tropicalización', () => {
     expect(withEmptyBranch).toBe(base)
   })
 })
+
+describe('renderDealsSnippet · fondo personalizado por tarjeta', () => {
+  it('apagado por defecto: sin fondo propio', () => {
+    const html = render(cards(card('a'), card('b')))
+    expect(html).not.toContain('background: #')
+    expect(defaultDealCardFields.customBgEnabled).toBe(false)
+  })
+
+  it('cada tarjeta lleva su propio color, en el <div> de la celda de textos', () => {
+    const html = render(cards(card('a', { customBgEnabled: true, customBgColor: '#123456' }), card('b')))
+    expect(count(html, 'style="background: #123456; padding:')).toBe(1)
+    expect(count(html, 'style="width: 100%; display: table;')).toBe(1)
+    // La tarjeta b no se entera.
+    expect(count(html, 'background: #')).toBe(1)
+  })
+
+  it('las dos tarjetas con colores distintos', () => {
+    const html = render(
+      cards(card('a', { customBgEnabled: true, customBgColor: '#111111' }), card('b', { customBgEnabled: true, customBgColor: '#EEEEEE' })),
+    )
+    expect(html).toContain('background: #111111;')
+    expect(html).toContain('background: #EEEEEE;')
+  })
+
+  it('un color inválido cae al blanco al parsear', () => {
+    expect(dealCardFieldsSchema.parse({ customBgColor: 'rojo' }).customBgColor).toBe('#FFFFFF')
+    expect(dealCardFieldsSchema.parse({ customBgColor: '#abcdef' }).customBgColor).toBe('#ABCDEF')
+  })
+})

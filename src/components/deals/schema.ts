@@ -34,6 +34,7 @@
 import { z } from 'zod'
 import { newId } from '../../ids'
 import { defaultRichText, plainText, richTextSchema } from '../../richText/model'
+import { HEX_COLOR_RE } from '../../global/schema'
 
 /** "los deeals vienen de a dos en celdas" (comentario de apertura del maestro):
  *  cada copia de deal_columnas.html renderiza 2 tarjetas, una por celda — y
@@ -254,6 +255,19 @@ export const dealCardFieldsSchema = z.object({
    */
   legalEnabled: z.boolean().default(false),
   legalText: richTextSchema.default(defaultRichText('Aplican términos y condiciones |')),
+
+  /**
+   * Fondo personalizado de la celda de textos — pedido explícito del usuario
+   * (2026-11-25): un color sólido por deal, independiente del de al lado.
+   * Apagado por defecto, así un documento viejo sale byte a byte igual. El
+   * color va en el `<div>` interior (que ya trae el padding y el radio), nunca
+   * en el `<td>` — la regla de CLAUDE.md §4.1 —, y siempre como `#RRGGBB`:
+   * un valor inválido cae al blanco al parsear.
+   */
+  customBgEnabled: z.boolean().default(false),
+  customBgColor: z
+    .preprocess((v) => (typeof v === 'string' && HEX_COLOR_RE.test(v) ? v.toUpperCase() : '#FFFFFF'), z.string())
+    .default('#FFFFFF'),
 })
 export type DealCardFields = z.infer<typeof dealCardFieldsSchema>
 export const defaultDealCardFields: DealCardFields = dealCardFieldsSchema.parse({})
