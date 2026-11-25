@@ -138,7 +138,7 @@ function altAttrEdit(cell: string, imgBounds: Bounds, alt: string): Edit {
 }
 
 function renderImageCell(cell: string, fields: DealCardFields): string {
-  const edits: Edit[] = []
+  const edits: Edit[] = [...cardBgTdEdits(cell, fields, `${CARD_RADIUS} ${CARD_RADIUS} 0px 0px`)]
 
   // El asset de producto va dentro de `background-image: url(...)` SIN comillas:
   // cssUrlValue, no escapeHtmlAttr (un `)` cerraría el paréntesis antes de
@@ -431,25 +431,26 @@ function assertPiecesContiguous(cell: string, ordered: { type: DealCardPieceType
   }
 }
 
-/** El `<a>` que envuelve las piezas y el `<div>` que trae el padding y el
- *  radio de la tarjeta — 1 de cada uno por celda de textos. */
-const TEXT_LINK_STYLE_ANCHOR = 'style="display: table; text-decoration: none;'
-const TEXT_BOX_STYLE_ANCHOR = 'style="padding:{{padd_deal_mail_general}};'
-
 /**
- * Fondo sólido propio de la tarjeta. Va en el `<div>` interior —que ya lleva el
- * padding y el `border-radius`— y no en el `<td>` (CLAUDE.md §4.1). El `<a>` es
- * `display: table`, que se encoge a su contenido, así que con fondo también
- * gana `width: 100%` para que la caja ocupe la celda entera. Apagado = sin
- * edits, salida idéntica a la de antes.
+ * Fondo sólido propio de la tarjeta — cubre el deal ENTERO (pedido del usuario,
+ * 2026-11-25): la celda de imagen se pinta con las esquinas de arriba
+ * redondeadas y la de textos con las de abajo, así las dos se leen como una
+ * sola tarjeta. Va en el `<td>` (atributo `bgcolor` + CSS) y no en un `<div>`:
+ * el color es siempre un `#RRGGBB` sólido, que sí sobrevive en una celda —lo
+ * que muere ahí es `rgba()`, CLAUDE.md §4.1—, y así la celda de textos se
+ * estira a la altura de la fila aunque la tarjeta vecina sea más alta. El
+ * hueco de 5px que el `cellspacing` deja entre las dos filas lo cierra
+ * `pairSpacingEdits`. Apagado = sin edits, salida idéntica a la de antes.
  */
-function customBgEdits(cell: string, fields: DealCardFields): Edit[] {
+const CARD_RADIUS = '10px'
+
+function cardBgTdEdits(cell: string, fields: DealCardFields, radius: string): Edit[] {
   if (!fields.customBgEnabled) return []
-  const linkAt = indexOfOrThrow(cell, TEXT_LINK_STYLE_ANCHOR) + 'style="'.length
-  const boxAt = indexOfOrThrow(cell, TEXT_BOX_STYLE_ANCHOR) + 'style="'.length
+  const tdStyleAt = indexOfOrThrow(cell, ' style="') // la celda arranca en su propio <td>
+  const at = tdStyleAt + ' style="'.length
   return [
-    { start: linkAt, end: linkAt, replacement: 'width: 100%; ' },
-    { start: boxAt, end: boxAt, replacement: `background: ${fields.customBgColor}; ` },
+    { start: tdStyleAt, end: tdStyleAt, replacement: ` bgcolor="${fields.customBgColor}"` },
+    { start: at, end: at, replacement: `background: ${fields.customBgColor}; border-radius: ${radius}; ` },
   ]
 }
 
@@ -470,7 +471,7 @@ function renderTextCell(cell: string, card: DealCard): string {
       end: linkIndex + LINK_PLACEHOLDER.length,
       replacement: escapeHtmlAttr(linkOrPlaceholder(fields.link, DEAL_LINK_PLACEHOLDER)),
     },
-    ...customBgEdits(cell, fields),
+    ...cardBgTdEdits(cell, fields, `0px 0px ${CARD_RADIUS} ${CARD_RADIUS}`),
   ])
 
   // Límites de las 7 piezas en orden NATURAL (el literal del maestro) —
@@ -607,8 +608,30 @@ function renderDealPair(cards: (DealCard | undefined)[], blockId: string, doc: E
     ? spliceRow(html, LEGAL_CELL_RE, 'legales', (cell, slot) => cellFor(cell, slot, (card) => renderLegalCell(cell, card)))
     : removeLegalRow(html)
 
+  if (cards.some((card) => card !== undefined && fieldVariants(doc, dealCardKey(card.id), card.fields).some((f) => f.customBgEnabled))) {
+    html = pairSpacingEdits(html, showLegal)
+  }
+
   return html
 }
+
+/**
+ * Con alguna tarjeta con fondo, el `cellspacing="5"` del par dejaría una franja
+ * de 5px entre su imagen y sus textos. Se anula el espacio VERTICAL con
+ * `border-spacing: 5px 0` (el horizontal entre tarjetas se conserva) y se le
+ * devuelven esos 5px a la fila de legales con `padding-top`, para que no quede
+ * pegada a la tarjeta. Outlook de escritorio ignora `border-spacing` y respeta
+ * el atributo, así que ahí la franja sigue: se acepta como degradación.
+ */
+function pairSpacingEdits(html: string, showLegal: boolean): string {
+  const tableAt = indexOfOrThrow(html, PAIR_TABLE_STYLE_ANCHOR) + PAIR_TABLE_STYLE_ANCHOR.length
+  let out = html.slice(0, tableAt) + 'border-collapse: separate; border-spacing: 5px 0px; ' + html.slice(tableAt)
+  if (showLegal) out = out.split(LEGAL_TD_OPEN).join(LEGAL_TD_OPEN_SPACED)
+  return out
+}
+const PAIR_TABLE_STYLE_ANCHOR = '<table role="module" border="0" cellpadding="0" cellspacing="5" width="100%" style="'
+const LEGAL_TD_OPEN = '<td width="50%" style="width: 50%;" >'
+const LEGAL_TD_OPEN_SPACED = '<td width="50%" style="width: 50%; padding-top: 5px;" >'
 
 // --- Liquid muerto del maestro ----------------------------------------------
 

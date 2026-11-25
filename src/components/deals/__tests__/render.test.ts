@@ -615,26 +615,35 @@ describe('renderDealsSnippet · tropicalización', () => {
 })
 
 describe('renderDealsSnippet · fondo personalizado por tarjeta', () => {
-  it('apagado por defecto: sin fondo propio', () => {
+  it('apagado por defecto: sin fondo propio ni cambio de espaciado', () => {
     const html = render(cards(card('a'), card('b')))
-    expect(html).not.toContain('background: #')
+    expect(html).not.toContain('bgcolor="#')
+    expect(html).not.toContain('border-spacing')
     expect(defaultDealCardFields.customBgEnabled).toBe(false)
   })
 
-  it('cada tarjeta lleva su propio color, en el <div> de la celda de textos', () => {
+  it('cubre la tarjeta entera: celda de imagen arriba y de textos abajo', () => {
     const html = render(cards(card('a', { customBgEnabled: true, customBgColor: '#123456' }), card('b')))
-    expect(count(html, 'style="background: #123456; padding:')).toBe(1)
-    expect(count(html, 'style="width: 100%; display: table;')).toBe(1)
+    expect(count(html, 'bgcolor="#123456"')).toBe(2)
+    expect(count(html, 'background: #123456; border-radius: 10px 10px 0px 0px; width: 50%"')).toBe(1)
+    expect(count(html, 'background: #123456; border-radius: 0px 0px 10px 10px; width: 50%; vertical-align: top;')).toBe(1)
     // La tarjeta b no se entera.
-    expect(count(html, 'background: #')).toBe(1)
+    expect(count(html, 'bgcolor="#')).toBe(2)
+    // Se cierra el hueco vertical del cellspacing entre imagen y textos.
+    expect(count(html, 'border-collapse: separate; border-spacing: 5px 0px;')).toBe(1)
   })
 
   it('las dos tarjetas con colores distintos', () => {
     const html = render(
       cards(card('a', { customBgEnabled: true, customBgColor: '#111111' }), card('b', { customBgEnabled: true, customBgColor: '#EEEEEE' })),
     )
-    expect(html).toContain('background: #111111;')
-    expect(html).toContain('background: #EEEEEE;')
+    expect(count(html, 'bgcolor="#111111"')).toBe(2)
+    expect(count(html, 'bgcolor="#EEEEEE"')).toBe(2)
+  })
+
+  it('con legales, la fila de legales recupera su separación', () => {
+    const html = render(cards(card('a', { customBgEnabled: true, legalEnabled: true }), card('b')))
+    expect(count(html, 'style="width: 50%; padding-top: 5px;" >')).toBe(2)
   })
 
   it('un color inválido cae al blanco al parsear', () => {
