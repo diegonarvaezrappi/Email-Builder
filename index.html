@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Las rutas del build son relativas (base './'). Bajo una subruta
+      // (app.vibes.rappi.com/email-builder) hace falta la barra final, o
+      // ./assets/ apuntaría a la raíz del dominio, que es de otra app.
+      if (!location.pathname.endsWith('/') && !/\.[a-z0-9]+$/i.test(location.pathname)) {
+        location.replace(location.pathname + '/' + location.search + location.hash)
+      }
+    </script>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Email Builder — Braze / Liquid</title>
   </head>
